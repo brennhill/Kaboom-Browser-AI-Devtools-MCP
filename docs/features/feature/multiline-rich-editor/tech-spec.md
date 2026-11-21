@@ -1,9 +1,9 @@
 ---
 feature: multiline-rich-editor
-status: proposed
+status: implemented
 doc_type: tech-spec
 feature_id: feature-multiline-rich-editor
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -14,12 +14,14 @@ last_verified_date: 2026-03-05
 
 ## Architecture Overview
 
-This feature modifies the `type` and `paste` action handlers in `dom-primitives.js` to add a detection + dispatch layer before text insertion. The change is entirely within the extension's content script — no MCP server changes, no new wire types, no new commands.
+This feature modifies the `type` and `paste` action handlers of the injected DOM primitives to add a detection + dispatch layer before text insertion. The primitives are authored as templates (`scripts/templates/partials/_dom-action-helpers.tpl`, `scripts/templates/partials/_dom-action-handlers-input.tpl`) and generated into the `dom-primitives-*` files under `src/background/dom/primitives/` (e.g. `src/background/dom/primitives/dom-primitives-form.ts`). The change is entirely within the extension — no MCP server changes, no new wire types, no new commands.
+
+> Status (reviewed 2026-11-21): implemented. `detectRichEditor`, `insertViaRichEditor`, and `insertViaKeyboardSim` exist in the templates and the generated primitives; results report `insertion_strategy` (`<editor>_native`, `keyboard_simulation`, `native_setter`).
 
 ```
 Caller sends: interact({ what: "type", text: "line1\nline2\nline3" })
                                     |
-                            dom-primitives.js
+                     DOM primitives (type/paste)
                                     |
                     +---------------+---------------+
                     |               |               |
@@ -65,9 +67,8 @@ For detected editors, the content script directly manipulates the editor's DOM:
 - Dispatch `input` event with `{ bubbles: true }` so the editor's internal model syncs
 - Read back the final text content for the response
 
-**Strategy for Draft.js:**
-- Draft.js uses a more opaque DOM structure with `data-block` divs
-- Same HTML insertion approach but wrap each line in `<div data-block="true"><div class="public-DraftStyleDefault-block"><span>text</span></div></div>`
+**Draft.js:**
+- As implemented, Draft.js uses the same `<p>`-per-line insertion as the other editors (the originally proposed `data-block` wrapper structure was not built)
 - Dispatch `input` event on the editor root
 
 **Why this works despite CSP:**
@@ -92,18 +93,18 @@ For `<input>` and `<textarea>` elements, the existing `nativeSetter` path is unc
 1. MCP server receives `interact({ what: "type", selector: ".ql-editor", text: "Hello\n\nWorld" })`
 2. Server creates a pending query, extension picks it up
 3. Extension resolves selector to DOM node
-4. `dom-primitives.js` `type` handler runs
+4. The DOM primitives `type` handler runs
 5. Editor detection: finds `.ql-editor` -> returns `{ type: "quill", target: <div.ql-editor> }`
 6. Native insertion: builds `<p>Hello</p><p><br></p><p>World</p>`, sets innerHTML, dispatches input event
 7. Returns `{ success: true, insertion_strategy: "quill_native", value: "Hello\n\nWorld" }`
-8. Extension posts result to `/execute-result`
+8. Extension returns the command result to the server on the next `/sync` round trip
 9. Client receives completed result
 
 ## Implementation Strategy
 
 ### Phase 1: Editor Detection + Native Insertion
-- Add `detectRichEditor(node)` function to `dom-primitives.js`
-- Add `insertViaEditorDOM(editorType, target, text, clear)` function
+- Add `detectRichEditor(node)` function to the DOM action helpers template
+- Add `insertViaRichEditor(editorType, target, text, clear)` function
 - Modify `type` handler: call detection first, dispatch to native insertion or fallback
 - Modify `paste` handler: same detection and dispatch logic
 
@@ -119,12 +120,14 @@ For `<input>` and `<textarea>` elements, the existing `nativeSetter` path is unc
 - Test empty lines, single lines, very long text
 - Regression test standard inputs and textareas
 
-## Files to Modify
+## Files
 
 | File | Change |
 |---|---|
-| `extension/background/dom/primitives/dom-primitives.js` | Add editor detection, native insertion, modify type/paste handlers |
-| `extension/background/dom-primitives-richtext.test.js` | Add tests for each editor type, multiline insertion, fallback chain |
+| `scripts/templates/partials/_dom-action-helpers.tpl` | Editor detection, native insertion, keyboard simulation; `type` path via `typeIntoContentEditable` |
+| `scripts/templates/partials/_dom-action-handlers-input.tpl` | `paste` handler dispatches through detection |
+| `src/background/dom/primitives/dom-primitives-form.ts` | Generated output (regenerate, do not hand-edit) |
+| `extension/background/dom-primitives-richtext.test.js` | Tests for each editor type, multiline insertion, fallback chain |
 | `docs/features/feature-navigation.md` | Add entry for this feature |
 
 No changes to: MCP server (Go), wire types, MCP tool schemas, content script messaging, or background service worker.

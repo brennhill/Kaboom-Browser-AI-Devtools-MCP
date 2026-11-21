@@ -3,7 +3,7 @@ feature: seo-audit
 status: proposed
 doc_type: tech-spec
 feature_id: feature-seo-audit
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -14,7 +14,9 @@ last_verified_date: 2026-03-05
 
 ## Architecture Overview
 
-SEO Audit adds `observe({what: "seo_audit"})` -- validates page SEO health by checking metadata, heading structure, links, images, and structured data. Implemented in inject.js using DOM queries and meta tag inspection.
+> **Status: proposed, not implemented (reviewed 2026-11-21).** No `seo_audit` mode exists in the codebase. The closest shipped behaviour is the llms.txt recommendation inside `analyze({what: "audit"})`.
+
+SEO Audit would add `observe({what: "seo_audit"})` -- validating page SEO health by checking metadata, heading structure, links, images, and structured data, using DOM queries and meta tag inspection in the page context.
 
 ## Key Components
 
@@ -53,12 +55,12 @@ Return audit report
 
 ## Implementation Strategy
 
-**Extension files**:
-- `extension/lib/seo-audit.js` (new): DOM queries, validation logic
+**Extension (planned)**:
+- A new TypeScript page-context module under the extension source tree for DOM queries and validation logic
 - Constants: Recommended title length (30-60), description length (120-160)
 
-**Server files**:
-- `cmd/browser-agent/queries.go`: Add handler
+**Server (planned)**:
+- A new `seo_audit` mode registered in the observe schema and dispatched to the extension like the other page queries
 
 **Trade-offs**:
 - Basic validation only (not full Lighthouse-level SEO audit)

@@ -3,7 +3,7 @@ feature: a11y-tree-snapshots
 status: proposed
 doc_type: tech-spec
 feature_id: feature-a11y-tree-snapshots
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 ## Architecture Overview
 
-A11y Tree Snapshots adds `observe({what: "a11y_tree"})` -- a new observation mode that traverses the page's accessibility tree and returns a compact, indented text representation with stable UIDs for interactive elements. This is implemented as a new query type dispatched through the existing pending-queries infrastructure.
+A11y Tree Snapshots adds `observe({what: "a11y_tree"})` -- a new observation mode that traverses the page's accessibility tree and returns a compact, indented text representation with stable UIDs for interactive elements. This is implemented as a new query type dispatched through the existing pending-query infrastructure.
 
 The feature requires no `chrome.automation` API (which requires special permissions). Instead, it uses manual DOM traversal with `TreeWalker` and ARIA attribute extraction, running in inject.js alongside existing DOM query code. This is the same approach used by Playwright's accessibility tree implementation.
 
@@ -37,7 +37,7 @@ role "name" [uid=N] attributes
 
 Indentation = 2 spaces per depth level. Tables and lists summarized (`table "Name" (N rows)`, `list "Name" (N items)`) with first few items shown. Text content > 100 chars truncated with ellipsis.
 
-**Query Dispatch**: Uses existing pending-queries polling. Server creates `PendingQuery{Type: "a11y_tree"}` -> Extension polls /pending-queries -> background.js dispatches to content.js -> content.js forwards to inject.js -> inject.js traverses DOM and builds tree -> result posted to /a11y-result -> Server returns to AI.
+**Query Dispatch**: Uses existing pending-query delivery (`/sync`). Server creates `PendingQuery{Type: "a11y_tree"}` -> Extension picks up the query via /sync -> background.js dispatches to content.js -> content.js forwards to inject.js -> inject.js traverses DOM and builds tree -> result posted to /query-result -> Server returns to AI.
 
 ## Data Flows
 
@@ -48,7 +48,7 @@ AI calls observe({what: "a11y_tree", scope: "#main", interactive_only: false, ma
 Server creates PendingQuery{Type: "a11y_tree", Params: {scope, interactive_only, max_depth}}
   |
   v
-Extension polls /pending-queries, receives query
+Extension picks up the query via /sync, receives query
   |
   v
 background.js dispatches to content.js: {type: "A11Y_TREE_QUERY", params: {...}}
@@ -72,7 +72,7 @@ inject.js posts result to content.js
 content.js forwards to background.js
   |
   v
-background.js POSTs to /a11y-result
+background.js POSTs to /query-result
   |
   v
 Server returns response to AI with tree text, uidMap, metadata
@@ -80,19 +80,22 @@ Server returns response to AI with tree text, uidMap, metadata
 
 ## Implementation Strategy
 
-**New extension files**:
-- `extension/lib/a11y-tree.js` (~200 lines): Tree traversal, UID assignment, text formatting
-- Constants added to `extension/lib/constants.js`: `MAX_A11Y_TREE_NODES` (5000), `MAX_A11Y_TREE_DEPTH` (15), `MAX_TEXT_LENGTH` (100)
+Not yet built (reviewed 2026-11-21: no `a11y_tree` observe mode, handler, or extension module exists). The plan, mapped onto the current code layout:
 
-**Modified extension files**:
-- `extension/background.js`: Add handler for `A11Y_TREE_QUERY` message type, dispatch to content script
-- `extension/content.js`: Add postMessage listener for `KABOOM_A11Y_TREE_QUERY`, forward to inject.js
-- `extension/inject.js`: Import a11y-tree.js module, handle tree query message
+**New extension code (planned)**:
+- A new TypeScript module under the extension `lib/` sources (~200 lines): tree traversal, UID assignment, text formatting, compiled into the extension bundle
+- Constants in the shared extension constants module: `MAX_A11Y_TREE_NODES` (5000), `MAX_A11Y_TREE_DEPTH` (15), `MAX_TEXT_LENGTH` (100)
 
-**Server files**:
-- `cmd/browser-agent/queries.go`: Add `toolObserveA11yTree()` handler, creates pending query, waits for result
-- `cmd/browser-agent/types.go`: Add `A11yTreeResult` struct
-- `cmd/browser-agent/internal/toolruntime/tools_core.go`: Wire up `observe({what: "a11y_tree"})` to `toolObserveA11yTree()`
+**Modified extension code (planned)**:
+- Background: register an `a11y_tree` command alongside the existing `dom`/`a11y` commands in `src/background/commands/analyze.ts` (or a sibling observe command module), dispatching to the content script
+- Content script: handle an `A11Y_TREE_QUERY` message in `src/content/message-handlers.ts` and forward to the inject context
+- Inject: handle the tree query in `src/inject/message-handlers.ts`
+- Declare the new runtime message types in `src/types/runtime-messages.ts` first
+
+**Server code (planned)**:
+- A `toolObserveA11yTree()` handler in the observe tool package (`cmd/browser-agent/internal/toolobserve/`) that creates a pending query and waits for the result
+- An `A11yTreeResult` wire type (with its TypeScript counterpart, per the wire-type rule)
+- Register the `a11y_tree` mode in the observe dispatcher/registry (`cmd/browser-agent/internal/toolobserve/registry.go`) and the observe schema
 
 **Trade-offs**:
 - Text format vs JSON: Text is 3-5x more token-efficient but harder to parse programmatically. Chosen because token efficiency is core value proposition.
@@ -154,7 +157,7 @@ Server returns response to AI with tree text, uidMap, metadata
 ## Dependencies
 
 ### Depends on:
-- Existing query dispatch infrastructure (`pending-queries` polling, content.js message bridge, inject.js execution context)
+- Existing query dispatch infrastructure (pending-query delivery over `/sync`, content.js message bridge, inject.js execution context)
 - `dom-queries.js` module for shared constants and utilities (element visibility check, text truncation limits)
 
 ### Depended on by:

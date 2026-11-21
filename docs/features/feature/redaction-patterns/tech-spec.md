@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-redaction-patterns
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -20,7 +20,7 @@ last_verified_date: 2026-03-05
 
 ## Overview
 
-Kaboom's redaction engine scrubs sensitive data from MCP tool responses before they reach AI clients. Currently, redaction uses a fixed set of built-in patterns loaded at startup. This feature adds user-defined regex patterns via an MCP tool, supporting custom patterns for domain-specific sensitive data (internal account numbers, proprietary tokens, PII formats), with configurable replacement strategies (mask, hash, remove) and per-field targeting.
+Kaboom's redaction engine scrubs sensitive data from MCP tool responses before they reach AI clients. Currently, redaction uses a fixed set of built-in patterns plus an optional JSON config file loaded at startup (`internal/redaction/redaction_engine.go`). Status: proposed, not built — `configure_redaction` below is the original design name; it would ship as a `configure` mode. This feature adds user-defined regex patterns via an MCP tool, supporting custom patterns for domain-specific sensitive data (internal account numbers, proprietary tokens, PII formats), with configurable replacement strategies (mask, hash, remove) and per-field targeting.
 
 ---
 
@@ -939,17 +939,17 @@ func (c *RedactionCache) Invalidate() {
 
 | File | Purpose |
 |------|---------|
-| `cmd/browser-agent/redaction.go` | Existing redaction engine (extend) |
-| `cmd/browser-agent/redaction_config.go` | New: Pattern configuration management |
-| `cmd/browser-agent/redaction_test.go` | Existing tests (extend) |
-| `cmd/browser-agent/redaction_config_test.go` | New: Configuration tests |
-| `cmd/browser-agent/internal/toolruntime/tools_core.go` | Add `configure_redaction` tool registration |
+| `internal/redaction/redaction_engine.go` | Existing redaction engine (`RedactionEngine`, `NewRedactionEngine`) — extend |
+| Planned new file in `internal/redaction/` | Pattern configuration management (not built) |
+| `internal/redaction/redaction_engine_test.go`, `internal/redaction/redaction_test.go` | Existing tests (extend) |
+| Planned new test file in `internal/redaction/` | Configuration tests (not built) |
+| `cmd/browser-agent/internal/toolruntime/tools_configure.go`, `internal/schema/configure/properties_core.go` | Register as a `configure` mode (the 5-tool rule forbids a separate `configure_redaction` tool) |
 
 ---
 
 ## Migration Notes
 
-The existing `RedactionEngine` in `redaction.go` will be extended rather than replaced:
+The existing `RedactionEngine` in `internal/redaction/redaction_engine.go` will be extended rather than replaced:
 
 1. Rename `RedactionEngine` to `RedactionManager` for clarity
 2. Add pattern management methods (Add, Update, Remove, etc.)

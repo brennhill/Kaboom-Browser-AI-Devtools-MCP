@@ -1,5 +1,5 @@
 ---
-status: shipped
+status: proposed
 scope: feature/reproduction-enhancements/implementation
 ai-priority: high
 tags: [implementation, architecture]
@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-reproduction-enhancements
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -18,9 +18,11 @@ last_verified_date: 2026-03-05
 
 # Technical Spec: Reproduction Script Enhancements
 
+> **Status: proposed.** The enhancements below are not implemented; see [File Locations](#file-locations) for what ships today. Tool names in the design (`get_reproduction_script`, `generate_test`, `capture_screenshot`) predate the 5-tool surface.
+
 ## Purpose
 
-Kaboom's existing `get_reproduction_script` and `generate_test` tools produce basic Playwright scripts: they replay user actions (clicks, inputs, navigations) and optionally assert on network responses. This is useful for bug reproduction but limited in three ways:
+Kaboom's existing `generate({what:"reproduction"})` and `generate({what:"test"})` modes (originally named `get_reproduction_script` / `generate_test`) produce basic Playwright scripts: they replay user actions (clicks, inputs, navigations) and optionally assert on network responses. This is useful for bug reproduction but limited in three ways:
 
 1. **No visual verification**: The script clicks buttons and types text, but can't verify that the page LOOKS correct. A visual regression (broken layout, missing element, wrong color) passes the test because the assertions only check network responses.
 
@@ -291,8 +293,11 @@ By default, only `on_error` is true (screenshots on errors are the highest-value
 
 ## File Locations
 
-Server implementation: `cmd/browser-agent/internal/testgenhandler/generate.go` (enhanced script generation, fixture derivation, bug report).
+Current state (reviewed 2026-11-21): the base generators ship, the enhancements in this spec do not.
 
-Extension implementation: `extension/background.js` (screenshot capture, auto-capture configuration).
+- Reproduction scripts: `internal/reproduction/reproduction.go` (`Params`, dispatch on `output_format`), `internal/reproduction/reproduction_playwright.go`, `internal/reproduction/reproduction_kaboom.go`; tests in `internal/reproduction/reproduction_test.go` and `internal/reproduction/golden_test.go`.
+- Test generation: `cmd/browser-agent/internal/testgenhandler/generate.go`; tests in `cmd/browser-agent/internal/testgenhandler/entrypoints_test.go`.
+- Schema: `internal/schema/generate.go` already advertises `include_screenshots`, `generate_fixtures` and `visual_assertions` for `generate({what:"reproduction"})`, but the generator ignores them (`IncludeScreenshots` is parsed and unused; the other two are not parsed).
+- Screenshots: the shipped path is `observe({what:"screenshot"})`; the auto-capture configuration, `capture_screenshot` tool and Markdown bug report are not built.
 
-Tests: `cmd/browser-agent/codegen_test.go` (server-side), `extension-tests/screenshot.test.js` (extension-side).
+Planned: implement the flags in `internal/reproduction/`, with tests alongside, and any extension-side capture in `src/background/`.

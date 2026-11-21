@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-persistent-memory
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -22,7 +22,7 @@ last_verified_date: 2026-03-05
 
 Without persistence, every time the Kaboom server restarts, the agent starts from zero — no noise rules, no baselines, no knowledge of previous errors. In an AI-driven workflow where agents work in sessions (start, code, stop), this means re-discovering the same noise patterns, re-saving baselines, and losing error history every time.
 
-Persistent memory gives the server a disk-backed store that survives restarts. When a new session starts, the agent can call `load_session_context` and immediately know: what baselines exist, what noise rules were configured, what errors were seen before, and how many sessions have been recorded for this project.
+Persistent memory gives the server a disk-backed store that survives restarts. When a new session starts, the agent can call `configure({what:"load"})` and immediately know: what baselines exist, what noise rules were configured, what errors were seen before, and how many sessions have been recorded for this project.
 
 ---
 
@@ -30,16 +30,14 @@ Persistent memory gives the server a disk-backed store that survives restarts. W
 
 ### Project-Local Storage
 
-Persistent data lives in `.kaboom/` at the project root (the server's working directory), gitignored. No hashing, no indirection — the project directory IS the identity.
+Persistent data lives in a centralized per-project directory under the Kaboom state root: `<state-root>/projects/<absolute-project-path>/`, where the state root is `$KABOOM_STATE_DIR`, else `$XDG_STATE_HOME/kaboom`, else `~/.kaboom` (see `state.ProjectDir` in `internal/state/paths.go`). The absolute project path is the identity; nothing is written into the project tree.
 
-This follows the same pattern as `.vscode/`, `.next/`, `.turbo/`, and other tool-local state directories. The developer can inspect, delete, or back up the data trivially.
-
-The server adds `.kaboom/` to `.gitignore` automatically on first use if not already present.
+The developer can inspect, delete, or back up the data trivially.
 
 ### Storage Layout
 
 ```
-<project-root>/.kaboom/
+<state-root>/projects/<absolute-project-path>/
 ├── meta.json              # Session metadata (count, timestamps)
 ├── baselines/             # Behavioral baselines
 │   ├── login.json
@@ -59,7 +57,7 @@ Each namespace is a subdirectory. Each key is a JSON file within that directory.
 ### Session Lifecycle
 
 1. **Server starts**: Creates a `SessionStore`, reads `meta.json` (or creates it fresh). Increments session count. Starts a background flush goroutine.
-2. **Agent calls `load_session_context`**: Server reads summaries from all namespaces and returns a combined context object. Also applies any loaded configuration (e.g., restoring noise rules so they're immediately active).
+2. **Agent calls `configure({what:"load"})`**: Server reads summaries from all namespaces and returns a combined context object. Also applies any loaded configuration (e.g., restoring noise rules so they're immediately active).
 3. **During the session**: Other features (baselines, noise, schema) call `Save` to persist their state. Writes happen immediately to disk.
 4. **Server shuts down**: The shutdown handler persists any in-memory state that hasn't been saved yet (current noise config, baselines). Stops the background flush goroutine. Writes final meta.json.
 
@@ -81,7 +79,7 @@ Stored in `meta.json`:
 - When the last session occurred
 - Total session count
 
-### Session Context (load_session_context response)
+### Session Context (`configure({what:"load"})` response)
 
 A combined summary of all persisted data:
 - Project path and session count
@@ -106,7 +104,7 @@ Error history is capped at 500 entries. Entries older than 30 days are evicted.
 
 ## Tool Interface
 
-### `load_session_context`
+### `configure({what:"load"})`
 
 **Parameters**: None
 
@@ -114,12 +112,12 @@ Error history is capped at 500 entries. Entries older than 30 days are evicted.
 
 If the store has never been used for this project, returns a fresh context with session_count=1 and no data in any namespace.
 
-### `session_store`
+### `configure({what:"store"})`
 
 A general-purpose key-value interface for storing/loading arbitrary data.
 
 **Parameters**:
-- `action` (required): "save", "load", "list", "delete", or "stats"
+- `store_action`: "save", "load", "list", "delete", or "stats" (defaults to "list")
 - `namespace`: Logical grouping (required for save/load/delete)
 - `key`: Storage key (required for save/load/delete)
 - `data`: JSON data to persist (for action "save")
@@ -156,8 +154,7 @@ The `V4Server` struct holds a reference to the `SessionStore`. Initialization cr
 
 - **Sensitive data**: Same sanitization as in-memory data applies. Auth headers are stripped, passwords are redacted before they ever reach the store.
 - **File permissions**: Files are created with 0644, directories with 0755 (user-readable by default).
-- **Gitignored by default**: The server adds `.kaboom/` to `.gitignore` on first use. Persistent data never enters version control.
-- **Concurrent instances**: If multiple Kaboom server instances run for the same project, the first one takes a file lock (`flock()`) on meta.json. The second instance operates in read-only mode for persistence.
+- **Outside the project tree**: Data is stored under the Kaboom state root, not the project, so it never enters version control.
 
 ---
 
@@ -167,7 +164,7 @@ The `V4Server` struct holds a reference to the `SessionStore`. Initialization cr
 - **Corrupted JSON**: If a stored file can't be parsed, it's silently skipped on load. The feature starts fresh as if no data existed.
 - **Missing directories**: The store creates directories on demand (MkdirAll).
 - **Concurrent access**: All store operations are mutex-protected. Saves take a write lock, loads take a read lock.
-- **Store not initialized**: If `load_session_context` is called before the store is ready, it returns a specific error message rather than crashing.
+- **Store not initialized**: If `configure({what:"load"})` is called before the store is ready, it returns a specific error message rather than crashing.
 
 ---
 
@@ -185,8 +182,8 @@ The `V4Server` struct holds a reference to the `SessionStore`. Initialization cr
 
 ## Test Scenarios
 
-1. Store created at `.kaboom/` in working directory
-2. `.kaboom/` added to `.gitignore` if not already present
+1. Store created under `<state-root>/projects/<absolute-project-path>/`
+2. No files are written inside the project directory
 3. Save then load returns identical data
 4. Load nonexistent key → error
 5. List returns all keys without .json extension
@@ -208,4 +205,4 @@ The `V4Server` struct holds a reference to the `SessionStore`. Initialization cr
 
 ## File Location
 
-Implementation goes in `cmd/browser-agent/ai_persistence.go` with tests in `cmd/browser-agent/ai_persistence_test.go`.
+Implementation lives in `internal/persistence/` (`persistence_store.go`, `persistence_crud.go`, `persistence_context.go`, `persistence_dirty.go`, `persistence_handler.go`) with tests in `internal/persistence/persistence_test.go` and siblings. MCP wiring: `cmd/browser-agent/internal/toolconfigure/session.go` (`SessionHandler.Store`, `SessionHandler.Load`).

@@ -3,7 +3,7 @@ feature: Draw Mode
 version: v0.7-rev1
 doc_type: qa-plan
 feature_id: draw-mode
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -24,9 +24,9 @@ last_verified_date: 2026-03-05
 
 ### Test Locations
 
-- **Extension:** `tests/extension/draw-mode/draw-mode.test.js`, `tests/extension/draw-mode-export.test.js`
-- **Go Server:** `cmd/browser-agent/draw_mode_test.go`, `cmd/browser-agent/internal/mediaapi/annotation_store_test.go`
-- **Integration:** `tests/integration/draw_mode_test.go`
+- **Extension:** `tests/extension/draw-mode/` (`draw-mode.test.js`, `draw-mode-drawing.test.js`, `draw-mode-handler.test.js`, `draw-mode-routing.test.js`, `draw-mode-enrichment.test.js`, `draw-mode-generation.test.js`, `draw-mode-shortcut-hint.test.js`)
+- **Go Server:** `cmd/browser-agent/internal/toolinteract/interact_browser_test.go` (draw_mode_start), `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler_test.go` (annotations / annotation_detail), `cmd/browser-agent/internal/mediaapi/draw_mode_http_test.go` and `cmd/browser-agent/internal/mediaapi/annotation_store_test.go` (`POST /draw-mode/complete`), `internal/annotation/store_test.go` (store, TTL)
+- **Integration:** no Go integration test file exists; end-to-end coverage is the shell suites `scripts/smoke-tests/media/13-draw-mode.sh` and `scripts/tests/browser/cat-23-draw-mode.sh`
 
 ---
 
@@ -122,7 +122,7 @@ last_verified_date: 2026-03-05
 
 ## Unit Tests: Extension -- Screenshot Export
 
-**Location:** `tests/extension/draw-mode-export.test.js`
+**Location:** `tests/extension/draw-mode/draw-mode-handler.test.js` (no separate export test file exists; the shipped payload field is `screenshot_data_url`, a PNG data URL, rather than `screenshot_base64`)
 
 ### 1. Screenshot Capture
 
@@ -149,7 +149,7 @@ last_verified_date: 2026-03-05
 
 ## Unit Tests: Go Server
 
-**Location:** `cmd/browser-agent/draw_mode_test.go`
+**Location:** `cmd/browser-agent/internal/toolinteract/interact_browser_test.go`, `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler_test.go`, `cmd/browser-agent/internal/mediaapi/draw_mode_http_test.go`
 
 ### 1. Interact Handler (draw_mode_start)
 
@@ -168,8 +168,8 @@ last_verified_date: 2026-03-05
 |---------|-----------|-----------------|
 | DM-GO-010 | analyze({what: "annotations"}) returns stored annotations | annotations array returned |
 | DM-GO-011 | analyze({what: "annotations"}) with no session returns empty | count: 0, hint message included |
-| DM-GO-012 | analyze({what: "annotations", wait: true}) blocks until results | Response received only after draw-mode-result POST |
-| DM-GO-013 | Blocking analyze times out after 5 minutes | Returns timeout error after 300s |
+| DM-GO-012 | analyze({what: "annotations", wait: true}) blocks until results | Response received only after `/draw-mode/complete` POST |
+| DM-GO-013 | Blocking analyze wait is bounded | Default 15s, `timeout_ms` capped at 10 min; on expiry returns an async correlation id, not an error |
 | DM-GO-014 | Blocking analyze resolves when results posted | Response includes annotations and screenshot_path |
 | DM-GO-015 | Screenshot saved to temp directory | File exists at returned path |
 | DM-GO-016 | Screenshot path uses correct format | `/tmp/kaboom-draw-mode-{timestamp}.png` |
@@ -179,21 +179,19 @@ last_verified_date: 2026-03-05
 | Test ID | Test Case | Expected Result |
 |---------|-----------|-----------------|
 | DM-GO-020 | annotation_detail returns full detail for valid correlation_id | computed_styles, selector, etc. present |
-| DM-GO-021 | annotation_detail with expired correlation_id returns error | error code: "correlation_expired" |
-| DM-GO-022 | annotation_detail with unknown correlation_id returns error | error code: "correlation_expired" |
-| DM-GO-023 | annotation_detail creates PendingQuery for extension | Query type: "annotation_detail" |
+| DM-GO-021 | annotation_detail with expired correlation_id returns error | error code: "no_data" (detail expires after 10 min) |
+| DM-GO-022 | annotation_detail with unknown correlation_id returns error | error code: "no_data" |
+| DM-GO-023 | annotation_detail is served from the store | No extension round trip; detail comes from `element_details` posted with the session |
 
 ### 4. HTTP Endpoints
 
 | Test ID | Test Case | Expected Result |
 |---------|-----------|-----------------|
-| DM-GO-030 | POST /draw-mode-result accepts valid payload | 200 OK, annotations stored |
-| DM-GO-031 | POST /draw-mode-result with missing correlation_id | 400 Bad Request |
-| DM-GO-032 | POST /draw-mode-result resolves blocked analyze call | Blocked goroutine receives data |
-| DM-GO-033 | POST /draw-mode-result with screenshot | Screenshot decoded and saved to disk |
-| DM-GO-034 | POST /annotation-detail-result accepts valid payload | 200 OK, detail stored |
-| DM-GO-035 | POST /annotation-detail-result with missing correlation_id | 400 Bad Request |
-| DM-GO-036 | POST /draw-mode-result body > 10MB rejected | 413 Payload Too Large |
+| DM-GO-030 | POST /draw-mode/complete accepts valid payload | 200 OK, annotations and `element_details` stored |
+| DM-GO-031 | POST /draw-mode/complete with missing or non-positive tab_id | 400 Bad Request |
+| DM-GO-032 | POST /draw-mode/complete resolves blocked analyze call | Blocked goroutine receives data |
+| DM-GO-033 | POST /draw-mode/complete with screenshot_data_url | Screenshot decoded and saved to disk |
+| DM-GO-036 | POST /draw-mode/complete body over the max post size rejected | Request rejected by `http.MaxBytesReader` |
 
 ---
 
@@ -229,7 +227,7 @@ last_verified_date: 2026-03-05
 
 ## Integration Tests
 
-**Location:** `tests/integration/draw_mode_test.go`
+**Location:** `scripts/smoke-tests/media/13-draw-mode.sh`, `scripts/tests/browser/cat-23-draw-mode.sh` (the table below lists the intended scenarios; not every row has an automated case)
 
 ### End-to-End Flows
 
@@ -410,10 +408,9 @@ After any changes to draw mode:
 ### 1. Quick Smoke Test (2 min)
 
 ```bash
-node --test tests/extension/draw-mode/draw-mode.test.js
-node --test tests/extension/draw-mode-export.test.js
-go test -short ./cmd/browser-agent/... -run DrawMode
-go test -short ./cmd/browser-agent/... -run AnnotationStore
+node --test tests/extension/draw-mode/*.test.js
+go test -short ./cmd/browser-agent/... -run 'DrawMode|Annotation'
+go test -short ./internal/annotation/...
 ```
 
 ### 2. Full Test Suite (8 min)

@@ -4,7 +4,7 @@ status: in-progress
 version: 0.7.12
 doc_type: tech-spec
 feature_id: feature-flow-recording
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -27,6 +27,8 @@ Flow Recording & Playback enables developers to regression test by recording a u
 ## Architecture
 
 ### Recording Flow
+
+> Target design. Today the extension does not forward actions into flow recordings (see Implementation Details).
 
 ```
 User Interacts                Extension Captures            Server Stores
@@ -66,11 +68,11 @@ User Interacts                Extension Captures            Server Stores
 LLM Invokes Playback         Playback Executes            Log Diffing
 ────────────────────        ─────────────────            ────────────
 
-interact({                   start_boundary('replay-X')
-  action: 'playback',            ↓
-  recording: 'checkout-X',   replay action sequence:
-  test_id: 'replay-X'            ├─ navigate (wait 5s)
-})                               ├─ click (find selector)
+configure({                  start_boundary('replay-X')
+  what: 'playback',              ↓
+  recording_id: 'checkout-X' replay action sequence:
+})                               ├─ navigate (wait 5s)
+                                 ├─ click (find selector)
                                  ├─ type (verify input)
                                  └─ capture logs + network
                                        ↓
@@ -201,29 +203,31 @@ type ValueDiff struct {
 
 ## MCP API Design
 
+> Shipped surface (verified 2026-11-21). Recording lifecycle, playback and log diff are `configure` modes; queries are `observe` modes. Handlers: `cmd/browser-agent/internal/toolrecording/handler.go`, registered in `cmd/browser-agent/internal/toolruntime/tools_configure.go` and `cmd/browser-agent/internal/toolobserve/dispatcher.go`.
+
 ### Recording Actions
 
 #### Start Recording:
 ```javascript
 configure({
-  action: 'recording_start',
+  what: 'event_recording_start',
   name?: 'shopping-checkout',
-  url?: 'https://example.com/shop',
+  url?: 'https://example.com/shop',   // defaults to about:blank
   sensitive_data_enabled?: false
 })
 ```
 
-Response: `{status: "ok", recording_id: "shopping-checkout-20260130T..."}`
+Response includes `recording_id` (format `name-YYYYMMDDTHHMMSSZ`). Starting while a recording is active returns an "already recording" error.
 
 #### Stop Recording:
 ```javascript
 configure({
-  action: 'recording_stop',
-  recording_id?: 'shopping-checkout-20260130T...'
+  what: 'event_recording_stop',
+  recording_id?: 'shopping-checkout-20260130T...'  // defaults to the active recording
 })
 ```
 
-Response: `{status: "ok", action_count: 8, duration_ms: 45000}`
+Response includes `action_count` and `duration_ms`.
 
 ### Recording Queries
 
@@ -235,20 +239,7 @@ observe({
 })
 ```
 
-Response:
-```json
-{
-  "recordings": [
-    {
-      "id": "shopping-checkout-20260130T143022Z",
-      "name": "shopping-checkout",
-      "created_at": "2026-01-30T14:30:22Z",
-      "action_count": 8,
-      "url": "https://example.com/shop"
-    }
-  ]
-}
-```
+Response: recording summaries (`id`, `name`, `created_at`, `start_url`, `duration_ms`, `action_count`, `sensitive_data_enabled`, `test_id`), bounded to a response budget.
 
 #### Get Recording Actions:
 ```javascript
@@ -264,56 +255,23 @@ Response: `{recording_id: "...", actions: [...]}`
 
 #### Execute Playback (Recorded Flow):
 ```javascript
-interact({
-  action: 'playback',
-  recording: 'shopping-checkout-20260130T143022Z',  // Load from saved recording
-  test_id?: 'replay-shopping-checkout',
-  sequence_mode?: true,
-  timeout_ms?: 30000
+configure({
+  what: 'playback',
+  recording_id: 'shopping-checkout-20260130T143022Z'
 })
 ```
 
-#### Execute Playback (LLM-Generated Variation):
-```javascript
-interact({
-  action: 'playback',
-  actions: [  // Custom action array (LLM-generated)
-    {type: "navigate", url: "https://example.com/shop", timestamp_ms: 0},
-    {type: "click", selector: "[data-testid=product-2]", x: 500, y: 300, timestamp_ms: 1000},
-    {type: "type", selector: "input#coupon", text: "SUMMER2026", x: 520, y: 450, timestamp_ms: 3000}
-  ],
-  test_id?: 'variation-summer-coupon',
-  sequence_mode?: true,
-  timeout_ms?: 30000
-})
-```
+Results are stored per recording and can be re-read with `observe({what: 'playback_results', recording_id})`.
 
-**Note:** Either `recording` (string ID) or `actions` (array) required; not both.
-
-Response:
-```json
-{
-  "status": "ok",
-  "recording_id": "shopping-checkout-20260130T143022Z",
-  "test_id": "replay-shopping-checkout",
-  "actions_executed": 8,
-  "errors": [
-    {
-      "action_index": 3,
-      "type": "selector_not_found",
-      "selector": "[data-testid=product-1]",
-      "message": "Element not found after self-healing"
-    }
-  ],
-  "duration_ms": 12000
-}
-```
+**Not implemented:** an inline `actions` array (LLM-generated variation), `test_id`, `sequence_mode` and `timeout_ms` parameters. Playback only accepts `recording_id`.
 
 ### Test Generation (LLM-Generated Variations)
 
+> **Status: proposed, not implemented.** The shipped `playback` mode only accepts `recording_id`.
+
 #### LLM Can Generate Action Variations:
 
-Playback accepts both recorded AND LLM-generated action sequences. LLM can synthesize variations by modifying the action array JSON:
+Playback would accept both recorded AND LLM-generated action sequences. LLM can synthesize variations by modifying the action array JSON:
 
 ```javascript
 // Original recorded actions
@@ -322,9 +280,9 @@ observe({what: 'recording_actions', recording_id: 'checkout-flow'})
 
 // LLM generates variation (e.g., different coupon code)
 // LLM modifies actions array and invokes playback with custom actions:
-interact({
-  action: 'playback',
-  actions: [  // Instead of 'recording', pass custom action array
+configure({
+  what: 'playback',
+  actions: [  // proposed: custom action array instead of recording_id
     {type: "navigate", url: "https://example.com/shop", timestamp_ms: 0},
     {type: "click", selector: "[data-testid=product-2]", x: 500, y: 300, timestamp_ms: 1000},
     {type: "type", selector: "input#coupon", text: "SUMMER2026", x: 520, y: 450, timestamp_ms: 3000},
@@ -347,88 +305,57 @@ interact({
 - LLM can generate, playback, and compare results
 
 #### MVP Scope:
-- [x] Playback accepts custom action arrays
+- [ ] Playback accepts custom action arrays (not implemented)
 - [x] No special "test generation" feature needed (LLM generates JSON directly)
-- [x] Variations logged and compared like recorded flows
+- [ ] Variations logged and compared like recorded flows (depends on the above)
 
 ### Log Diffing & Regression Detection
 
 #### Compare Logs:
 ```javascript
-// LLM reads both sets of logs via test boundaries
-observe({what: 'logs', test_boundary: 'original-checkout'})
-observe({what: 'logs', test_boundary: 'replay-checkout'})
-observe({what: 'logs', test_boundary: 'variation-coupon-summer2026'})
-
-// LLM internally diffs and analyzes
-// Kaboom provides structured diff via logs themselves
+configure({
+  what: 'log_diff',
+  original_id: 'shopping-checkout-20260130T143022Z',
+  replay_id: 'shopping-checkout-20260131T090000Z'
+})
+// Re-read the stored report later:
+observe({what: 'log_diff_report', original_id: '...', replay_id: '...'})
 ```
+
+The diff compares two recordings (`internal/recording/logdiff/compare.go`: action counts, new errors, fixed errors, value changes, overall status). Logs can also be read per test boundary via `configure({what: 'test_boundary_start' | 'test_boundary_end'})` tagging.
 
 ---
 
 ## Implementation Details
 
-### Extension Recording (JavaScript)
+> Verified 2026-11-21 against the code. Sections marked **not built** remain design.
 
-**Files:** `extension/background/recording/index.js` (new), modify `extension/inject/recording.ts` (new)
+### Extension Action Capture (TypeScript)
 
-#### Server-Side Storage (`extension/background/recording/index.js`):
-- Manage recording lifecycle (start/stop)
-- Buffer actions in memory
-- Persist recording to server via POST /query
-- Metadata management (name, timestamp, duration)
-- Size target: ~150 LOC
-
-#### Page-Side Capture (`extension/inject/recording.ts`):
-- **REUSE existing infrastructure:** inject.js already has `installActionCapture`, `recordEnhancedAction`, `handleClick`, `handleInput`, `handleKeydown`
-- Extend existing action capture to include recording-specific metadata (selector, x/y, screenshot_path)
-- Send actions to background via postMessage (existing pattern)
-- Size target: ~150 LOC (mostly integration with existing capture)
-
-#### Screenshot Capture:
-- Reuse existing screenshot functionality (used by error detection)
-- Capture on: page load, selector failure, error
-- Store locally at `~/.kaboom/recordings/{recording_id}/screenshots/`
-
-#### Why Minimal New Code:
-- Extension already captures click/input/keydown/navigation via `inject/action-capture.ts`
-- We extend that to add recording metadata (selector, x/y, screenshots)
-- Existing infrastructure: message passing, storage, screenshot, selector extraction
-- Recording = filtering + tagging existing action stream
+- Page-side action capture already exists in `src/lib/page/actions.ts` (`handleClick`, input/scroll handlers) calling `recordEnhancedAction` in `src/lib/page/reproduction.ts`; these feed the general `observe({what: 'actions'})` buffer.
+- `src/background/recording/` is the **video** (tab capture) recording module, not flow-event recording.
+- **Not built:** recording-specific metadata (screenshot_path per action) and forwarding captured actions into the active flow recording. On the server, `RecordingManager.AddRecordingAction` exists but has no production caller, so recordings currently stay empty unless actions are added programmatically (tests).
 
 ### Server Recording Storage (Go)
 
-**File:** `cmd/browser-agent/recording.go` (new)
+**Files:** `internal/recording/manager.go`, `internal/recording/manager_store.go`, `internal/recording/manager_storage.go`, `internal/recording/types.go`
 
-#### Responsibilities:
-- In-memory recording buffer (ring, max 100 recordings)
-- Persist recordings to disk (~/.kaboom/recordings/)
-- Query recordings by ID/name
-- Load recordings from disk on startup
-- Cleanup old recordings (manual, not auto)
-
-**Size Target:** ~200 LOC
-
-#### Data:
-- `Recording` struct with actions array
-- `RecordingBuffer` with ring buffer + mutex
-- File I/O for metadata.json
+- `RecordingManager` holds recordings in memory (map keyed by ID) with a single active recording
+- `StartRecording` / `StopRecording` / `AddRecordingAction` manage the lifecycle
+- Recordings persist as `metadata.json` under the Kaboom state recordings directory and are loaded from disk
+- Storage capped at 1GB (`RecordingStorageMax`); start fails with `recording_storage_full` when exceeded
+- `DeleteRecording` / `GetStorageInfo` for manual cleanup (exposed over HTTP via `HandleRecordingStorage` in `internal/capture/httpingest/handlers.go`)
 
 ### Playback Engine (Go)
 
-**File:** `cmd/browser-agent/playback.go` (new)
+**Files:** `internal/recording/playback/session.go`, `internal/recording/playback/actions.go`, `internal/recording/playback/fragile.go`
 
-#### Responsibilities:
-- Load recording by ID
-- Execute actions in sequence (fast-forward)
-- Find elements using self-healing strategy (R4)
-- Capture logs/network during playback
-- Tag all captured events with test_boundary_id
-- Return playback result with error list
+- `playback.Execute` loads a recording and runs `executeAction` for each action, producing a `Session` with per-action `Result`s
+- Current execution is **server-side simulation only**: navigate/type/scroll are marked ok, and click runs the self-healing strategy against the recorded metadata. It does not yet drive the browser through the extension, wait for network idle, or take screenshots on error.
+- `DetectFragileSelectors` flags selectors that fail across sessions
 
-**Size Target:** ~250 LOC
+The algorithm and network-idle rules below are the target design:
 
-#### Algorithm:
 ```
 1. Load recording
 2. For each action:
@@ -442,117 +369,36 @@ observe({what: 'logs', test_boundary: 'variation-coupon-summer2026'})
 4. Return {actions_executed, errors, duration}
 ```
 
-#### Network Idle Definition (Fast-Forward Playback):
-- "Network idle" = 0 active HTTP/XHR requests
-- Polling interval: check every 100ms (non-blocking)
-- Hard timeout: 5 seconds
-- If timeout: log warning "Navigation timeout (5s)" and continue playback
-- Rationale: In sequence mode (fast-forward), we execute actions rapidly and wait for prior network to settle before next action (not for user think-time)
+### WebSocket Migration — not built
 
-### WebSocket Migration (Go + TypeScript) — Phase 1
-
-**Files:** `cmd/browser-agent/websocket.go` (new), `extension/src/ws.ts` (new)
-
-**Problem:** Current polling-based recording (extension polls GET /pending-queries every 200ms) introduces timing inaccuracy (~100-200ms jitter). Recording needs millisecond precision for accurate playback.
-
-**Solution:** WebSocket streaming for real-time event propagation.
-
-#### Architecture:
-```
-Extension                    Server
-─────────────────           ──────────
-POST /api/ws-connect        → Check API key + session
-  ↓
-WebSocket upgrade           ← Upgrade to WS:// (ws://localhost:3001/api/stream)
-  ↓
-Connect & subscribe         → Join broadcast channel (global stream)
-  ↓
-Real-time events           ← Server sends logs/network/WebSocket/actions as they occur
- (< 1ms latency)             (push model, not polling)
-  ↓
-Buffer overflow?           → Server: drop oldest, log warning to extension
-                            Extension: show warning icon in popup
-  ↓
-Connection drop?           → Fall back to polling (graceful degradation)
-```
-
-#### Implementation Details:
-- Server: WebSocket upgrade handler (ws package for Go)
-- Server: Broadcast buffer with ring (max 10,000 events)
-- Server: Drop oldest on overflow, log warning
-- Extension: Establish WS connection on startup
-- Extension: Listen to stream, update ring buffers
-- Extension: Fall back to polling if WS unavailable (5s timeout)
-- Extension: Reconnect logic (exponential backoff on failure)
-
-**Size Target:** ~300 LOC total (150 Go, 150 TypeScript)
-
-#### Testing:
-- Test normal WS flow (events received in real-time)
-- Test buffer overflow (oldest events dropped)
-- Test connection drop + polling fallback
-- Test reconnection after network outage
-
-#### Success Criteria:
-- Recording timestamps accurate to < 10ms
-- No gaps in event stream during recording
-- Graceful fallback to polling if WS unavailable
-- Buffer overflow handled without data loss (oldest dropped, not newest)
+A server push stream (`/api/stream`) with an extension WebSocket client and polling fallback was proposed to reduce timing jitter. No such endpoint or extension client exists; the extension still talks to the server over HTTP.
 
 ### Element Selector Self-Healing (Go)
 
-**File:** `cmd/browser-agent/playback.go` (in Playback section)
+**File:** `internal/recording/playback/actions.go` (`executeClickWithHealing`)
 
-#### Strategy (Priority Order):
-1. Try data-testid match: `querySelector('[data-testid=X]')`
-2. Try CSS selector: `querySelector(original_selector)`
-3. Search nearby: Look for element near old x/y coordinates
-4. OCR recovery: (Phase 2) Use screenshot OCR to find by visible text
-5. Fallback: Use last-known x/y with warning
+Shipped strategy (priority order):
+1. data-testid match: `[data-testid=X]`
+2. Recorded CSS selector
+3. Recorded x/y coordinates (`nearby_xy`)
+4. Last-known position when a screenshot path exists (`last_known`)
+5. Otherwise `selector_not_found`
 
-**Size Target:** ~150 LOC
+OCR recovery remains Phase 2.
 
 ### Log Diffing Engine (Go)
 
-**File:** `cmd/browser-agent/log-diff.go` (new)
+**Files:** `internal/recording/logdiff/compare.go`, `internal/recording/logdiff/report.go`, `internal/recording/logdiff/types.go`
 
-#### Responsibilities:
-- Query logs from both test boundaries
-- Compare error counts
-- Detect new errors (in replay, not in original)
-- Detect missing events (in original, not in replay)
-- Detect value changes (response different)
-- Return structured diff
-
-**Size Target:** ~150 LOC
-
-#### Algorithm:
-```
-1. Fetch logs from test_boundary A (original)
-2. Fetch logs from test_boundary B (replay)
-3. Categorize all entries: network, console, dom
-4. For each error in B:
-   - Is it in A? (expected)
-   - New in B? (regression)
-5. For each event in A:
-   - Is it in B? (expected)
-   - Missing in B? (broken feature)
-6. Compare values (response codes, messages)
-7. Return LogDiff with summary
-```
+- `logdiff.Compare(src, originalID, replayID)` compares two recordings
+- `compareActions` compares action counts; `detectRegressions` / `detectFixes` find errors new in the replay or gone from it; `detectValueChanges` flags changed values
+- `determineStatus` sets the overall verdict
 
 ### Test Boundary Tagging (Go)
 
-**File:** `cmd/browser-agent/types.go` (modify existing)
-
-Already implemented in prior work:
-- `Capture.activeTestIDs map[string]bool`
-- `NetworkBody.TestIDs []string`
-- `WebSocketEvent.TestIDs []string`
-- `EnhancedAction.TestIDs []string`
-- Filter structs with `TestID` field
-
-**No changes needed** — reuse existing test boundary infrastructure.
+Already implemented and reused unchanged:
+- Active boundary set: `activeTestIDs` in `internal/capture/syncruntime/runtime.go`
+- `TestIDs []string` on network bodies, WebSocket events and enhanced actions, plus `TestID` filter fields, in `internal/types/network.go`
 
 ---
 
@@ -601,9 +447,9 @@ Already implemented in prior work:
 
 #### Storage Quota Enforcement (1GB Hard Limit):
 - At 80% capacity (800MB): Log warning to user: "Recording storage at 80%. Consider deleting old recordings."
-- At 100% capacity (1GB): `recording_start` returns error: "Recording storage at capacity (1GB). Delete old recordings to continue."
+- At 100% capacity (1GB): `event_recording_start` returns error: "Recording storage at capacity (1GB). Delete old recordings to continue."
 - User must manually delete old recordings: `rm ~/.kaboom/recordings/{recording_id}`
-- Next `recording_start` call still fails if capacity not freed
+- Next `event_recording_start` call still fails if capacity not freed
 - Design: No auto-delete (data loss risk per PRODUCT_SPEC)
 
 Implementation in server:
@@ -661,7 +507,7 @@ When `sensitive_data_enabled=true` (explicit opt-in - FOR LOGIN TESTING):
 
 Implementation in extension:
 ```javascript
-// When recording_start called with sensitive_data_enabled=true:
+// When event_recording_start called with sensitive_data_enabled=true:
 1. Show warning popup
 2. Require user to acknowledge: "I confirm this is test data, not production credentials"
 3. Only then proceed with full text recording
@@ -703,25 +549,23 @@ configure({what: 'test_boundary_start', test_id: 'original-checkout'})
 // user performs flow, extension captures actions + logs
 configure({what: 'test_boundary_end', test_id: 'original-checkout'})
 
-// Later: replay
-interact({
-  action: 'playback',
-  recording: 'shopping-checkout-20260130T...',
-  test_id: 'replay-checkout'
-})
+// Later: replay inside a boundary (playback itself takes only recording_id)
+configure({what: 'test_boundary_start', test_id: 'replay-checkout'})
+configure({what: 'playback', recording_id: 'shopping-checkout-20260130T...'})
+configure({what: 'test_boundary_end', test_id: 'replay-checkout'})
 
 // Compare
 observe({what: 'logs', test_id: 'original-checkout'})  // original logs
 observe({what: 'logs', test_id: 'replay-checkout'})    // replay logs
 
 // Option B: Record without explicit test boundary
-configure({what: 'recording_start', name: 'checkout-flow'})
+configure({what: 'event_recording_start', name: 'checkout-flow'})
 // user performs flow, extension captures (no test_id tagging)
-configure({what: 'recording_stop', recording_id: '...'})
+configure({what: 'event_recording_stop', recording_id: '...'})
 
 // Later: replay with explicit test boundary
 configure({what: 'test_boundary_start', test_id: 'replay-1'})
-interact({what: 'playback', recording: 'checkout-flow', test_id: 'replay-1'})
+configure({what: 'playback', recording_id: 'checkout-flow-20260130T...'})
 configure({what: 'test_boundary_end', test_id: 'replay-1'})
 ```
 
@@ -729,33 +573,36 @@ configure({what: 'test_boundary_end', test_id: 'replay-1'})
 
 ---
 
-## Files to Create/Modify
+## Files
 
-### New Files
+### Shipped
 
-| File | Purpose | Size |
-|------|---------|------|
-| `extension/background/recording/index.js` | Recording lifecycle + metadata + server communication | ~150 LOC |
-| `extension/inject/recording.ts` | Extend action capture with recording metadata | ~150 LOC |
-| `extension/background/ws.js` | WebSocket client + fallback to polling | ~150 LOC |
-| `cmd/browser-agent/recording.go` | Store + query recordings (disk I/O, file management) | ~250 LOC |
-| `cmd/browser-agent/websocket.go` | WebSocket upgrade + broadcast + buffer management | ~150 LOC |
-| `cmd/browser-agent/playback.go` | Replay actions + self-healing selectors | ~250 LOC |
-| `cmd/browser-agent/log-diff.go` | Compare logs, detect regressions | ~180 LOC |
-| `cmd/browser-agent/recording_test.go` | Unit tests (storage, playback, diffing) | ~450 LOC |
-| `tests/extension/recording-lifecycle/recording.test.js` | Extension tests (capture, playback, metadata) | ~300 LOC |
+| File | Purpose |
+|------|---------|
+| `internal/recording/manager.go` | Recording lifecycle, active recording, storage cap |
+| `internal/recording/manager_store.go` / `internal/recording/manager_storage.go` | Disk persistence and storage accounting |
+| `internal/recording/types.go` | `Recording`, `RecordingAction`, summaries |
+| `internal/recording/playback/` | Playback sessions, self-healing click, fragile-selector detection |
+| `internal/recording/logdiff/` | Recording comparison and reports |
+| `internal/recording/actionlog/recorder.go` | Server-side recorder for the general actions buffer |
+| `cmd/browser-agent/internal/toolrecording/handler.go` | MCP handlers (`EventRecordingStart/Stop`, `Recordings`, `RecordingActions`, `Playback`, `PlaybackResults`, `LogDiff`, `LogDiffReport`) |
+| `cmd/browser-agent/internal/toolruntime/tools_configure.go` | Registers the configure modes |
+| `cmd/browser-agent/internal/toolobserve/dispatcher.go` | Registers the observe modes |
+| `src/lib/page/actions.ts` | Page-side action capture (reused) |
 
-### Modified Files
+### Tests
 
-| File | Changes | Impact |
-|------|---------|--------|
-| `cmd/browser-agent/internal/toolruntime/tools_core.go` | Add recording_start, recording_stop, playback actions | ~50 LOC |
-| `cmd/browser-agent/queries.go` | Add handlers for recordings, recording_actions, WebSocket upgrade | ~60 LOC |
-| `cmd/browser-agent/main.go` | Initialize WebSocket router | ~20 LOC |
-| `extension/inject/action-capture.ts` | Extend with recording metadata (selector, x/y, screenshots) | ~30 LOC |
-| `extension/background/init.js` | Initialize recording module | ~15 LOC |
+- `internal/recording/manager_test.go`, `internal/recording/manager_active_test.go`, `internal/recording/types_test.go`
+- `internal/recording/playback/playback_test.go`, `internal/recording/logdiff/logdiff_test.go`
+- `cmd/browser-agent/internal/toolrecording/handler_test.go`, `cmd/browser-agent/internal/toolrecording/playback_result_test.go`
+- `tests/extension/recording-lifecycle/` (extension recording lifecycle tests)
 
-**Total New Code:** ~1,930 LOC (reuses existing action capture infrastructure)
+### Not built
+
+- Extension wiring that streams captured actions into the active flow recording
+- WebSocket push stream and extension client
+- Browser-driven playback (extension execution, network idle waits, screenshots on error)
+- Inline `actions` array playback (LLM variations)
 
 ---
 
@@ -819,42 +666,19 @@ configure({what: 'test_boundary_end', test_id: 'replay-1'})
 - Extension message passing
 - Screenshot functionality
 
-### New MCP Extensions:
-- `configure` action: `recording_start`, `recording_stop`
-- `interact` action: `playback`
-- `observe` what: `recordings`, `recording_actions`
+### MCP Modes (shipped):
+- `configure` what: `event_recording_start`, `event_recording_stop`, `playback`, `log_diff`
+- `observe` what: `recordings`, `recording_actions`, `playback_results`, `log_diff_report`
 
 ---
 
-## Reference Implementation Order
+## Remaining Implementation Order
 
-1. **Phase 1a** (Week 1): WebSocket Migration + Recording Infrastructure
-   - Implement `websocket.go` (server-side WebSocket upgrade + broadcast)
-   - Implement `ws.js` (extension client + polling fallback)
-   - Extend `action-capture.ts` with recording metadata (selector, x/y, screenshot_path)
-   - Implement `recording.js` (extension recording lifecycle: start/stop)
-   - Implement `recording.go` (server storage: disk I/O, file management)
-   - Add MCP actions (recording_start/stop, recordings, recording_actions)
-   - Tests for WebSocket, action capture extension, storage layer
-   - **Note:** Reuses existing action capture infrastructure; minimal new code for capture logic
-
-2. **Phase 1b** (Week 2): Playback + Self-Healing + Test Generation
-   - Implement `playback.go` (action replay, both recorded + LLM-generated)
-   - Implement selector self-healing logic
-   - Add playback MCP action (with `recording` or `actions` param support)
-   - Tests for playback, selector matching, LLM-generated variations
-
-3. **Phase 1c** (Week 3): Log Diffing + Regression Detection
-   - Implement `log-diff.go` (comparison)
-   - Hook into test boundary logs
-   - Regression detection (new errors, missing events, value changes)
-   - Tests for log diffing
-
-4. **Integration & UAT** (Week 4)
-   - End-to-end test: record → replay → diff → analyze
-   - WebSocket + polling fallback testing
-   - Performance testing (< 5% CPU, 10+ actions/sec)
-   - Manual UAT with LLM (real regression workflow)
+1. Wire extension action capture into the active flow recording (call path to `AddRecordingAction`), with recording metadata (selector, x/y, screenshot_path)
+2. Drive playback through the extension (real clicks/typing, network-idle waits, screenshots on error)
+3. Accept inline `actions` arrays for LLM-generated variations
+4. Optional: WebSocket push stream if HTTP timing jitter proves to matter
+5. End-to-end UAT: record → replay → diff → analyze
 
 ---
 

@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-api-key-auth
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -798,7 +798,7 @@ test('handles 401 response gracefully', async () => {
 | `cmd/browser-agent/internal/httpguard/apikey_test.go` | New test file for auth middleware |
 | `cmd/browser-agent/main.go` | Add CLI flags, wire up middleware |
 | `cmd/browser-agent/config.go` | Add auth config parsing (env, flags, key file) |
-| `cmd/browser-agent/audit.go` | Add auth attempt logging |
+| `internal/audit/` (e.g. `internal/audit/audit_recording.go`) | Add auth attempt logging (audit trail now lives in the `internal/audit` package) |
 | `extension/background.js` | Include API key in requests |
 | `extension/options.html` | Add API key input field |
 | `extension/options.js` | Handle API key storage |

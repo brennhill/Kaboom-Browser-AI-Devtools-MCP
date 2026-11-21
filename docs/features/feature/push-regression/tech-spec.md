@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-push-regression
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -17,6 +17,8 @@ last_verified_date: 2026-03-05
 > See also: [Product Spec](product-spec.md) and [Push Regression Review](./index.md).
 
 # Technical Spec: Push Notification on Regression
+
+> **Status: proposed, not built.** Tool names below (`get_changes_since`, `check_performance`) are from the original design and do not exist in the current 5-tool MCP surface. See [File Locations](#file-locations).
 
 ## Purpose
 
@@ -179,6 +181,8 @@ The alert's `recommendation` field suggests this: "Use `check_performance` for f
 
 ## File Locations
 
-Server implementation: Changes to `cmd/browser-agent/performance.go` (alert detection and storage) and `cmd/browser-agent/ai_checkpoint.go` (alert inclusion in `get_changes_since` response).
+Not built (reviewed 2026-11-21). There is no `get_changes_since` tool, no `check_performance` tool, and no pending-alert store; the files this section originally named never existed.
 
-Tests: `cmd/browser-agent/performance_test.go` (alert detection) and `cmd/browser-agent/ai_checkpoint_test.go` (delivery lifecycle).
+Planned: alert detection and storage alongside the performance snapshot pipeline (`internal/performance/`, `internal/capture/perfstore/store.go`), and delivery through whatever change-polling surface the observe tool exposes. Planned tests sit next to that code.
+
+Related shipped behavior today: `refresh`/`navigate` results carry a `perf_diff` (`internal/performance/diff.go`, attached in `cmd/browser-agent/internal/asynccommand/handler.go`), and `configure({what:"diff_sessions"})` counts performance regressions (`internal/session/snapdiff/errors.go`, type `PerformanceRegression` in `internal/performance/types.go`).

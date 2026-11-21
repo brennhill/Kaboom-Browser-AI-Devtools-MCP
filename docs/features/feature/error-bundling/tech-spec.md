@@ -1,12 +1,12 @@
 ---
-status: proposed
+status: shipped
 scope: v5.9
 ai-priority: critical
 tags: [implementation, architecture, v5.9]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-error-bundling
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -173,7 +173,7 @@ The bundling code normalizes all to `time.Time` for comparison, then serializes 
 
 ## Implementation
 
-### Files Changed (3 modified, 1 new)
+### Shipped Files
 
 #### 1. `internal/tools/observe/timeline/correlation.go`
 
@@ -181,42 +181,34 @@ The bundling code normalizes all to `time.Time` for comparison, then serializes 
 func GetErrorBundles(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 ```
 
-- Parse params: `limit` (default 5), `window_seconds` (default 3, clamp 1-10)
-- Copy errors + logs from `Server.entries` under RLock (single pass)
-- Copy network bodies and actions from Capture (via existing getters)
-- For each error, window-join by timestamp
-- Return assembled bundles
+- `normalizeErrorBundlesParams` parses `limit` (default 5), `window_seconds` (default 3, capped at 10) and `scope` (`current_page` default, or `all`; unknown values fall back with a hint)
+- `collectErrorsAndLogs` copies errors + logs from the server log store in a single pass (filtered by `url` and tracked tab when `scope: current_page`)
+- `bundleContextFromCapture` snapshots network bodies, network waterfall entries and actions from Capture, filtered by tracked tab
+- `buildBundles` window-joins each error by timestamp (`matchNetworkBodies`, `matchWaterfall`, `matchActions`, `matchLogs`)
+- `buildErrorBundlesSummary` backs the `summary: true` response
 
-#### 2. `cmd/browser-agent/tools_observe.go` (~3 lines)
+#### 2. `cmd/browser-agent/internal/toolobserve/dispatcher.go`
 
-Add case to dispatcher:
-```go
-case "error_bundles":
-    resp = h.toolGetErrorBundles(req, args)
-```
+The observe dispatcher maps `"error_bundles"` to `observetimeline.GetErrorBundles`.
 
-Update the valid modes hint string to include `error_bundles`.
+#### 3. `internal/schema/observe.go`
 
-#### 3. `internal/schema/analyze.go` (~2 lines)
-
-Add `"error_bundles"` to the `what` enum and description.
+`"error_bundles"` is in the observe `what` enum; `window_seconds`, `scope`, `url` and `summary` parameter descriptions mention it.
 
 #### 4. `cmd/browser-agent/testdata/mcp-tools-list.golden.json`
 
-Regenerate (includes new enum value).
+Golden tool list includes the enum value.
 
 ### Tests: `internal/tools/observe/timeline/correlation_test.go`
 
-Following existing patterns in `tools_observe_test.go`:
+Covers:
 
-1. **Empty buffers** — returns `{bundles: [], count: 0}`
-2. **Error with no context** — returns bundle with error populated, empty network/actions/logs arrays
-3. **Error with matching network body** — body within window appears in bundle
-4. **Error with matching action** — action within window appears in bundle
-5. **Error with matching log** — log within window appears in bundle
-6. **Window boundary** — event at T-4s excluded with 3s window, event at T-2s included
-7. **Limit** — 10 errors, limit 3, returns 3 bundles
-8. **Multiple errors share context** — same network body appears in both bundles
+1. **Empty buffers** — handler explains the empty state
+2. **Window join** — only entries inside `[T - window, T]` are attached
+3. **Limit and custom window** — `limit` caps bundles; `window_seconds` widens the join
+4. **Tab/scope filtering** — `current_page` restricts context to the tracked tab
+5. **Timestamp fallback** — extension timestamps accepted when the RFC3339 field is missing
+6. **Summary counts** — `buildErrorBundlesSummary`
 
 ---
 
@@ -226,11 +218,7 @@ Following existing patterns in `tools_observe_test.go`:
 - **No new message types** — reads existing ring buffers
 - **No screenshot capture** — that's a separate roadmap item
 - **No DOM state** — would require extension query at error time (future enhancement)
-- **No stack frame analysis** — that's `error_clusters`, a different tool
+- **No stack frame analysis** — that's `analyze({what: 'error_clusters'})`, a separate mode
 - **No deduplication** — if the same error fires 5 times, you get 5 bundles (use `limit` to control)
 
 ---
-
-## Effort
-
-~2-3 days. One new Go file, one test file, three lines changed in existing files. No extension work, no protocol changes, no schema migration.

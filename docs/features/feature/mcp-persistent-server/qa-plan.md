@@ -2,7 +2,7 @@
 doc_type: qa-plan
 feature_id: feature-mcp-persistent-server
 status: shipped
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -12,7 +12,9 @@ last_verified_date: 2026-03-05
 ## Automated Coverage
 - `cmd/browser-agent/integration/bridge/startup_contention_test.go`
 - `cmd/browser-agent/integration/bridge/faststart_extended_test.go`
-- `cmd/browser-agent/bridge_spawn_race_test.go`
+- `cmd/browser-agent/internal/bridge/bridge_startup_test.go` (single-leader election, stale-lock reclaim, respawn)
+- `cmd/browser-agent/internal/bridge/startuplock/lock_test.go`
+- `cmd/browser-agent/internal/bridge/bridge_coverage_extra_test.go` (respawn peer signals, restart path)
 
 ## Required Scenarios
 1. Multiple concurrent clients converge to one daemon.

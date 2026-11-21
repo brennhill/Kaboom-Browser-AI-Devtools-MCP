@@ -3,7 +3,7 @@ feature: best-practices-audit
 status: proposed
 doc_type: tech-spec
 feature_id: feature-best-practices-audit
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 ## Architecture Overview
 
-Best Practices Audit adds `observe({what: "best_practices_audit"})` -- a new observation mode that checks for common web development best practice violations. Runs four audit categories: HTTPS usage, deprecated APIs, security headers, and console warnings. Implemented in inject.js using DOM inspection, Location API, and performance entries.
+Best Practices Audit would add `observe({what: "best_practices_audit"})` -- a new observation mode that checks for common web development best practice violations. Runs four audit categories: HTTPS usage, deprecated APIs, security headers, and console warnings. Planned to run in the extension page context using DOM inspection, Location API, and performance entries.
 
 ## Key Components
 
@@ -53,12 +53,11 @@ Return audit report to server
 
 ## Implementation Strategy
 
-**Extension files**:
-- `extension/lib/best-practices-audit.js` (new): Audit logic, severity classification
-- `extension/inject.js` (modified): Invoke audit on query
+Not yet implemented as a standalone `observe` mode. Planned:
+- Extension: a new best-practices audit module in the TypeScript extension (`src/`), invoked from the page-inspection path, holding audit logic and severity classification.
+- Server: a new `observe` mode handler for `best_practices_audit` in the observe tool package.
 
-**Server files**:
-- `cmd/browser-agent/queries.go`: Add handler
+Current state: `analyze({what: "audit"})` already reports a `best_practices` category (`cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go`), but it is backed by the third-party script audit (`securityaudit.HandleThirdPartyAudit`) and scored by `scoreBestPractices` in `cmd/browser-agent/internal/toolanalyze/audit_scoring.go`. HTTPS, deprecated-API, and security-header checks described above are not part of it.
 
 **Trade-offs**:
 - Extension-side analysis because requires DOM and network access

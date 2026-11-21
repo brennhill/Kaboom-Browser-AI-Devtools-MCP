@@ -2,7 +2,7 @@
 doc_type: tech-spec
 feature_id: feature-framework-selector-resilience
 status: shipped
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -17,7 +17,7 @@ last_verified_date: 2026-03-05
    - Vue bundle (`esbuild`)
    - Svelte bundle (`svelte/compiler` + `esbuild`)
    - Next.js static export (`next build` with `output: "export"`)
-3. Output target is `cmd/browser-agent/internal/testpages/pages/frameworks/`.
+3. Output target is the generated, gitignored `frameworks/` subdirectory of `cmd/browser-agent/internal/testpages/pages/` (`outputDir` in `scripts/smoke-tests/framework/build-framework-fixtures.mjs`); Next.js static assets are also copied to `pages/_next/`.
 4. Smoke module `29-framework-selector-resilience.sh` runs a shared hard-case matrix per framework.
 
 ## Fixture Contract

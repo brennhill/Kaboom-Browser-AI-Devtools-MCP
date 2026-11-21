@@ -1,5 +1,5 @@
 ---
-status: shipped
+status: proposed
 scope: feature/budget-thresholds/implementation
 ai-priority: high
 tags: [implementation, architecture]
@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-budget-thresholds
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -226,10 +226,8 @@ The server checks the config file's modification time every 30 seconds. If chang
 
 ---
 
-## File Locations
+## Implementation Status
 
-Server implementation: `cmd/browser-agent/budgets.go` (config loading, evaluation, MCP tool).
+Not yet implemented as specified: there is no config-file loader (`.kaboom.json` / `.kaboom/budgets.json` budgets), no config watch, no presets, and no `check_budgets` tool. Planned: a budgets module in the Go server covering config loading, evaluation, and an MCP mode, with co-located unit tests.
 
-Config file: `.kaboom.json` or `.kaboom/budgets.json` at project root.
-
-Tests: `cmd/browser-agent/budgets_test.go`.
+What exists today is narrower: `configure({what: "diff_sessions"})` accepts an optional per-call `performance_budgets` map when comparing two snapshots. Metric names are validated by `performance.IsBudgetMetric` (`internal/performance/types.go`), and evaluation happens in `SessionManager.CompareWithBudgets` (`internal/session/comparison.go`, dispatched from `internal/session/tool-handler.go`). Note that `.kaboom.json` is currently scaffolded by `configure({what: "setup_quality_gates"})` for code quality gates, not performance budgets.

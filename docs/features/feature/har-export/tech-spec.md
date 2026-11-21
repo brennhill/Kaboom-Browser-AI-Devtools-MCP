@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-har-export
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -17,6 +17,8 @@ last_verified_date: 2026-03-05
 > See also: [Product Spec](product-spec.md) and [Har Export Review](./index.md).
 
 # Technical Spec: HAR Export
+
+> **Implementation status (reviewed 2026-11-21):** HAR export shipped as `generate({what: "har"})`, not as a standalone `export_har` tool. The shipped handler (`HandleExportHAR`) accepts `url`, `method`, `status_min`, `status_max`, and `save_to`; it merges captured network bodies with the network waterfall and derives send/wait/receive timings from waterfall data. The `time_range`, `include_bodies`, `redact_headers` parameters, export-time `[REDACTED]` header/cookie rewriting, `pages`/`pageref` grouping, base64 binary bodies, and the >10MB warning described below remain proposals and are not implemented in the HAR package. Header sanitization happens at capture time, not at export.
 
 ## Purpose
 
@@ -205,6 +207,6 @@ Entries reference their page via `pageref`. This allows HAR viewers to display p
 
 ## File Locations
 
-Server implementation: `cmd/browser-agent/export_har.go` (HAR generation, MCP tool handler).
+Server implementation: `cmd/browser-agent/internal/toolgenerate/artifacts_har_impl.go` (MCP `generate(har)` handler) and `internal/export/har/export.go`, `internal/export/har/conversion.go`, `internal/export/har/filters.go` (HAR assembly, timing conversion, filtering).
 
-Tests: `cmd/browser-agent/export_har_test.go`.
+Tests: `internal/export/har/export_test.go`, `internal/export/har/coverage_test.go`, `cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go`.

@@ -2,7 +2,7 @@
 doc_type: tech_spec
 feature_id: feature-bridge-restart
 status: implemented
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -23,9 +23,9 @@ The bridge already handles certain methods without the daemon ("fast path"): `in
 ```
 LLM calls configure(what="restart")
   → bridge receives tools/call JSON-RPC on stdin
-  → bridgeStdioToHTTPFast() detects configure+restart via handleBridgeRestart()
+  → Runner.StdioToHTTPFast() detects configure+restart via handleBridgeRestart()
   → forceKillOnPort(): SIGCONT any frozen processes on the port
-  → stopServerForUpgrade(): HTTP shutdown → SIGTERM → SIGKILL escalation
+  → lifecycle.StopServerForUpgrade(): HTTP shutdown → SIGTERM → SIGKILL escalation
   → bridge resets daemonState (ready=false, fresh channels)
   → spawnDaemonAsync(): launch fresh daemon process
   → wait on readyCh/failedCh with 6s timeout
@@ -34,39 +34,39 @@ LLM calls configure(what="restart")
 
 ## Key Functions
 
-### `extractToolAction(req JSONRPCRequest) (toolName, action string)`
+### `ExtractToolAction(req mcp.JSONRPCRequest) (toolName, action string)`
 
-Lightweight JSON parse of `req.Params` to extract the tool name and action field from a `tools/call` request. Returns empty strings for non-matching methods or parse failures.
+Defined in `cmd/browser-agent/internal/bridge/bridge_transport.go`; delegates to `internal/bridge` (`ExtractToolAction(method, params)`). Lightweight JSON parse of `req.Params` to extract the tool name and action field from a `tools/call` request. Returns empty strings for non-matching methods or parse failures.
 
-### `forceKillOnPort(port int)`
+### `Runner.forceKillOnPort(port int)`
 
-Sends SIGCONT to all processes bound to the port. This unfreezes SIGSTOP'd processes so that subsequent SIGTERM/SIGKILL from `stopServerForUpgrade` can be delivered. Without this, a frozen daemon would appear "released" to HTTP health checks but still hold the socket.
+Sends SIGCONT (via `processsignal.Resume`; no-op on Windows) to all processes bound to the port. This unfreezes SIGSTOP'd processes so that subsequent SIGTERM/SIGKILL from `StopServerForUpgrade` (`cmd/browser-agent/internal/daemonrecovery/primitives.go`) can be delivered. Without this, a frozen daemon would appear "released" to HTTP health checks but still hold the socket.
 
-### `handleBridgeRestart(req, state, port) bool`
+### `Runner.handleBridgeRestart(req, state, port, framing) bool`
 
-Main orchestrator. Returns true if the request was handled (i.e., it was `configure`+`restart`). Steps:
+Main orchestrator, in `cmd/browser-agent/internal/bridge/bridge_transport.go`. Returns true if the request was handled (i.e., it was `configure`+`restart`). Steps:
 1. Extract tool action — bail if not configure+restart
 2. `forceKillOnPort()` — unfreeze any stopped processes
-3. `stopServerForUpgrade()` — kill daemon (HTTP → PID → lsof)
-4. Reset `daemonState` fields
+3. `r.lifecycle.StopServerForUpgrade()` — kill daemon (HTTP → PID → lsof)
+4. Reset `daemonState` fields (`ready`, `failed`, `err`, fresh signal channels)
 5. `spawnDaemonAsync()` — launch fresh daemon
-6. Wait on ready/failed channels with 6s timeout
+6. Wait on ready/failed channels with 6s timeout (`restartGracePeriod`)
 7. Return MCP tool result via `sendFastResponse()`
 
 ### `handleConfigureRestart(req) JSONRPCResponse`
 
-Daemon-side handler for when the daemon is responsive. Sends self-SIGTERM via `util.SafeGo` after 100ms delay (so the response is sent first). The bridge detects the daemon died and auto-respawns.
+Daemon-side handler in `cmd/browser-agent/internal/toolruntime/tools_configure.go` for when the daemon is responsive. Sends self-SIGTERM via `util.SafeGo` after a 100ms delay (`restartSelfSignalDelay`) (so the response is sent first). The bridge detects the daemon died and auto-respawns.
 
 ## Insertion Point
 
-In `bridgeStdioToHTTPFast()`, the restart intercept sits **between** `handleFastPath()` and `checkDaemonStatus()`:
+In `Runner.StdioToHTTPFast()` (`cmd/browser-agent/internal/bridge/bridge.go`), the restart intercept sits **between** `handleFastPath()` and `checkDaemonStatus()`:
 
 ```go
 // FAST PATH: initialize, tools/list, etc.
-if handleFastPath(req, toolsList) { ... }
+if r.handleFastPath(req, toolsList, framing) { ... }
 
 // RESTART FAST PATH: configure(what="restart")
-if handleBridgeRestart(req, state, port) { ... }
+if r.handleBridgeRestart(req, state, port, framing) { ... }
 
 // SLOW PATH: check daemon, forward to HTTP
 if status := checkDaemonStatus(state, req, port); status != "" { ... }
@@ -78,17 +78,17 @@ This position ensures restart works even when the daemon is completely unrespons
 
 Bridge startup now uses a single-host, lock-file startup leader election to converge concurrent clients quickly:
 
-1. Probe existing daemon (`tryConnectToExisting`).
-2. If absent, attempt startup lock acquisition (`bridge-startup-<port>.lock.json`).
-3. Lock holder becomes leader and spawns daemon immediately.
-4. Followers poll for peer readiness within bounded wait budget.
-5. If lock owner is stale/dead, follower reclaims lock and takes over startup.
+1. Probe existing daemon (`Runner.tryConnectToExisting`).
+2. If absent, attempt startup lock acquisition (`startuplock.Manager.Acquire`, lock file `run/bridge-startup-<port>.lock.json` under the state root) in `Runner.coordinateDaemonStartup`.
+3. Lock holder becomes leader (`startAsStartupLeader`) and spawns daemon immediately.
+4. Followers poll for peer readiness within bounded wait budget (`waitForPeerDaemon`).
+5. If lock owner is stale/dead, follower reclaims lock (`ClearStale`) and takes over startup.
 6. During `starting`, `tools/call` requests are forwarded to converge instead of returning transient startup retry envelopes.
 
 Reference implementation:
 
-- `cmd/browser-agent/bridge_startup_orchestration.go`
-- `cmd/browser-agent/bridge_startup_lock.go`
+- `cmd/browser-agent/internal/bridge/bridge_startup.go`
+- `cmd/browser-agent/internal/bridge/startuplock/lock.go`
 - `cmd/browser-agent/internal/bridge/bridge_startup_state.go`
 - `cmd/browser-agent/internal/bridge/bridge.go`
 

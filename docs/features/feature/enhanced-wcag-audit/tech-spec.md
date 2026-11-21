@@ -3,7 +3,7 @@ feature: enhanced-wcag-audit
 status: proposed
 doc_type: tech-spec
 feature_id: feature-enhanced-wcag-audit
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 ## Architecture Overview
 
-Enhanced WCAG Audit extends `observe({what: "accessibility"})` with additional checks beyond axe-core's built-in ruleset. Runs as post-processing step after axe-core audit completes. Adds manual checks for: color contrast (deeper analysis), keyboard navigation (focus trap detection), ARIA validity (relationship verification), and form accessibility (label associations).
+Enhanced WCAG Audit extends `analyze({what: "accessibility"})` with additional checks beyond axe-core's built-in ruleset. Runs as post-processing step after axe-core audit completes. Adds manual checks for: color contrast (deeper analysis), keyboard navigation (focus trap detection), ARIA validity (relationship verification), and form accessibility (label associations).
 
 ## Key Components
 
@@ -31,7 +31,7 @@ Enhanced WCAG Audit extends `observe({what: "accessibility"})` with additional c
 ## Data Flows
 
 ```
-AI calls observe({what: "accessibility", enhanced: true})
+AI calls analyze({what: "accessibility", enhanced: true})
   |
   v
 Extension runs axe-core audit (existing behavior)
@@ -53,11 +53,13 @@ Return combined audit report
 ## Implementation Strategy
 
 **Extension files**:
-- `extension/lib/enhanced-wcag.js` (new): Post-axe-core checks
-- `extension/inject.js` (modified): Invoke enhanced checks if `enhanced: true`
+Planned (none of this exists yet):
+- A new enhanced-WCAG module next to `src/lib/analysis/dom-queries.ts` (post-axe-core checks), compiled into the extension
+- `src/lib/analysis/dom-queries.ts` (modified): invoke enhanced checks after `runAxeAudit` when `enhanced: true`
 
 **Server files**:
-- `cmd/browser-agent/queries.go`: Pass `enhanced` flag to extension
+- `internal/tools/observe/page/page_state.go` (`RunA11yAudit`, modified): pass `enhanced` flag to extension
+- `internal/schema/analyze.go` (modified): declare the `enhanced` parameter
 
 **Trade-offs**:
 - Opt-in via `enhanced: true` flag (not always-on) to avoid slowing down standard a11y audits
@@ -76,7 +78,7 @@ Return combined audit report
 **Mitigation**: Hard limit of 100 tab stops. Test aborts if exceeded and flags finding.
 
 **Risk**: Enhanced checks double execution time.
-**Mitigation**: Opt-in only. Default `observe({what: "accessibility"})` unchanged (fast path).
+**Mitigation**: Opt-in only. Default `analyze({what: "accessibility"})` unchanged (fast path).
 
 ## Dependencies
 

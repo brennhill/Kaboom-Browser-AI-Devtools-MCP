@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-compressed-diffs
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -211,4 +211,4 @@ Implementation is TBD. Could be a CLI output mode, a browser extension panel, a 
 
 ## File Location
 
-Implementation goes in `cmd/browser-agent/ai_checkpoint.go` with tests in `cmd/browser-agent/ai_checkpoint_test.go`.
+Not yet implemented; there is no `get_changes_since` mode or checkpoint store in the server today. Planned: a new checkpoint/diff module in the Go server with co-located unit tests, exposed as an `observe` mode. The closest shipped mechanism is cursor-based incremental reads on `observe` buffers (`after_cursor`, see the cursor-pagination feature), which return raw new entries rather than a compressed diff.

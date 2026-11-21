@@ -9,7 +9,7 @@ created: 2026-01-28
 updated: 2026-01-28
 doc_type: product-spec
 feature_id: feature-a11y-tree-snapshots
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -177,7 +177,7 @@ role "name" [uid=N] attr=value
 
 ## Dependencies
 
-- **Depends on:** Existing query dispatch infrastructure (`pending-queries` polling, `content.js` message bridge, `inject.js` execution context). Uses the same request/response pattern as `analyze({what: "dom"})` and `a11y` audit.
+- **Depends on:** Existing query dispatch infrastructure (pending-query delivery over `/sync`, `content.js` message bridge, `inject.js` execution context). Uses the same request/response pattern as `analyze({what: "dom"})` and `a11y` audit.
 - **Depends on:** `dom-queries.js` module for shared constants and utilities (element visibility check, text truncation limits).
 - **Depended on by:** AI agents that need to identify interactive elements before issuing `interact` commands. The `uidMap` output is designed to bridge `observe` and `interact` tools.
 
@@ -215,24 +215,26 @@ The a11y tree is estimated to be **8-12x more token-efficient** than equivalent 
 
 ### New Extension Files
 
-- `extension/lib/a11y-tree.js` -- Tree traversal, UID assignment, text formatting (~200 lines)
-- Constants added to `extension/lib/constants.js` (max nodes, max depth, max text length)
+Not yet built (reviewed 2026-11-21: no `a11y_tree` mode exists in the code). Planned:
+
+- A new TypeScript module under the extension's `lib/` sources (e.g. an `a11y-tree` module) -- tree traversal, UID assignment, text formatting (~200 lines)
+- Constants for max nodes, max depth, max text length in the shared extension constants module
 
 ### New Server Handler
 
-- `toolObserveA11yTree()` in `queries.go` -- Creates pending query of type `"a11y_tree"`, waits for result, formats response
-- New query type `"a11y_tree"` dispatched through existing `background.js` polling and `content.js` bridge
+- Planned: a `toolObserveA11yTree()` handler in the observe tool package (today `cmd/browser-agent/internal/toolobserve/`) -- Creates pending query of type `"a11y_tree"`, waits for result, formats response
+- New query type `"a11y_tree"` dispatched through the existing background command registry and content-script bridge
 
 ### Message Flow
 
 ```
 AI calls observe({what:"a11y_tree", scope:"#main"})
   -> Go server: toolObserveA11yTree() creates PendingQuery{Type:"a11y_tree"}
-  -> Extension polls /pending-queries, receives query
+  -> Extension picks up the query via /sync, receives query
   -> background.js dispatches to content.js: {type:"A11Y_TREE_QUERY", params:{scope,max_depth,...}}
   -> content.js forwards to inject.js via postMessage: {type:"KABOOM_A11Y_TREE_QUERY",...}
   -> inject.js: buildA11yTree() traverses DOM, assigns UIDs, formats text
-  -> inject.js -> content.js -> background.js -> POST /a11y-result
+  -> inject.js -> content.js -> background.js -> POST /query-result
   -> Go server returns result to AI
 ```
 
