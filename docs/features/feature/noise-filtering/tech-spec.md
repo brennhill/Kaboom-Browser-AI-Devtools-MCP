@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-noise-filtering
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -34,7 +34,7 @@ There are two layers:
 
 1. **Built-in heuristics** — a fixed set of ~13 rules that ship with the server and are always active. These cover the most common browser noise: chrome-extension:// sources, favicon.ico requests, HMR/Vite/Webpack messages, React DevTools prompts, CORS preflight OPTIONS requests, and analytics domains.
 
-2. **User/agent rules** — rules added by the AI agent during a session (via `configure_noise` or `dismiss_noise`), or rules detected automatically by the `auto_detect` action.
+2. **User/agent rules** — rules added by the AI agent during a session (via `configure({what:"noise_rule", noise_action:"add"})`), or rules detected automatically by the `auto_detect` action.
 
 When any other tool reads from the buffers (like `get_changes_since` or `get_console_logs`), it calls the noise filter's matching functions. Entries that match a noise rule are excluded from the response.
 
@@ -116,10 +116,10 @@ The server tracks how many entries have been filtered in total, broken down by r
 
 ## Tool Interface
 
-### `configure_noise`
+### `configure({what:"noise_rule"})`
 
 **Parameters**:
-- `action` (required): One of "add", "remove", "list", "reset", or "auto_detect"
+- `noise_action`: One of "add", "remove", "list", "reset", or "auto_detect" (default: "list")
 - `rules`: Array of rule objects (for action "add")
 - `rule_id`: ID of rule to remove (for action "remove")
 
@@ -130,16 +130,9 @@ The server tracks how many entries have been filtered in total, broken down by r
 - **reset**: Removes all user/auto rules, reverting to only built-ins. Recompiles.
 - **auto_detect**: Analyzes current buffers and proposes new noise rules based on frequency and source analysis. High-confidence proposals (≥0.9) are automatically applied. Lower-confidence ones are returned as suggestions for the agent to review.
 
-### `dismiss_noise`
+### Single-rule shorthand (replaces the original `dismiss_noise` design)
 
-A convenience shortcut for quickly dismissing a pattern without constructing a full rule object.
-
-**Parameters**:
-- `pattern` (required): Regex pattern to dismiss
-- `category`: Which buffer it applies to (default: "console")
-- `reason`: Why this is noise (for the audit trail)
-
-Creates a rule with classification "dismissed" and applies it immediately.
+There is no separate `dismiss_noise` tool. With `noise_action:"add"`, a single rule can be given as flat params instead of a `rules` array: `classification`, `message_regex`, `source_regex`, `url_regex`, `method`.
 
 ---
 
@@ -237,8 +230,8 @@ These are non-negotiable safety rules:
 15. Auto-detect with 15 identical messages → proposed rule with confidence > 0.7
 16. Auto-detect doesn't duplicate existing rules
 17. High-confidence auto-detected rules are automatically applied
-18. dismiss_noise defaults to console category
-19. dismiss_noise with network category sets URL pattern
+18. Single-rule shorthand (`noise_action:"add"` + `message_regex`) creates one rule
+19. Single-rule shorthand with `url_regex` creates a network rule
 20. Statistics track filtered counts per rule
 21. Invalid regex pattern → rule skipped, no panic
 22. Concurrent read/write → no race conditions
@@ -248,4 +241,4 @@ These are non-negotiable safety rules:
 
 ## File Location
 
-Implementation lives in `internal/noise/*.go` and tool integration is in `cmd/browser-agent/tools_configure_noise_actions.go` with tests in `internal/noise/*_test.go` and `cmd/browser-agent/tools_configure_noise_actions_test.go`.
+Implementation lives in `internal/noise/*.go` and tool integration is in `cmd/browser-agent/internal/toolconfigure/noise_actions.go` (`HandleNoise`) with tests in `internal/noise/*_test.go` and `cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go`.

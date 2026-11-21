@@ -3,7 +3,7 @@ feature: annotated-screenshots
 status: proposed
 doc_type: tech-spec
 feature_id: feature-annotated-screenshots
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -52,13 +52,17 @@ Returns {image: "data:image/png;base64,...", uidMap: {...}}
 
 ## Implementation Strategy
 
-**Extension files**:
-- `extension/background.js` (modified): Add screenshot capture logic
-- `extension/lib/annotated-screenshot.js` (new): Canvas rendering, annotation logic
-- `extension/inject.js` (modified): Coordinate screenshot capture and annotation
+Not yet built (reviewed 2026-11-21): there is no `generate({what: "annotated_screenshot"})` mode and no automatic element-labelling renderer. What ships under this feature today is user-drawn annotation via Draw Mode (see the feature `index.md`): screenshots saved by `cmd/browser-agent/internal/mediaapi/draw_mode.go` and `cmd/browser-agent/internal/mediaapi/screenshots.go`, annotation reports from `cmd/browser-agent/internal/toolgenerate/annotations/`.
 
-**Server files**:
-- `cmd/browser-agent/generate.go`: Add `generateAnnotatedScreenshot()` handler
+Planned changes, mapped onto the current layout:
+
+**Extension (planned)**:
+- Background: add screenshot capture for the new query type next to the existing capture handling (`src/background/message-routing/capture-handler.ts`)
+- A new extension TypeScript module for canvas rendering and annotation logic
+- Inject/content: coordinate element detection and annotation
+
+**Server (planned)**:
+- A `generateAnnotatedScreenshot()` handler registered in the generate dispatcher (`cmd/browser-agent/internal/toolgenerate/dispatcher.go`), plus generate schema registration
 
 **Trade-offs**:
 - Visible viewport only (not full-page scrolling screenshot) to keep simple

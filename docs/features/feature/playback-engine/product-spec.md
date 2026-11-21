@@ -6,7 +6,7 @@ mode: playback, playback_results
 version: 0.7.12
 doc_type: product-spec
 feature_id: feature-playback-engine
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -17,11 +17,11 @@ last_verified_date: 2026-03-05
 
 ### Recorded flows can't actually be replayed in the browser.
 
-`internal/capture/playback.go` is a stub. It defines types and a self-healing selector cascade, but `executeAction` returns `"ok"` without dispatching any real browser commands. This blocks the core value proposition of flow recording: regression testing through replay.
+`internal/recording/playback/actions.go` is a stub. Together with `internal/recording/playback/types.go` it defines types and a self-healing selector cascade, but `executeAction` returns `"ok"` without dispatching any real browser commands. This blocks the core value proposition of flow recording: regression testing through replay.
 
 Today:
 1. **Recording works** — clicks, typing, navigation captured with selectors, coordinates, and timestamps
-2. **Playback is fake** — `ExecutePlayback()` iterates actions but never touches the browser
+2. **Playback is fake** — `playback.Execute()` (`internal/recording/playback/session.go`) iterates actions but never touches the browser
 3. **No regression testing** — without real replay, developers can't verify fixes against recorded flows
 4. **No synthetic flows** — LLMs can't execute ad-hoc action sequences for exploratory testing
 
@@ -483,15 +483,15 @@ These are deliberate scope boundaries, not bugs. Each is documented so the LLM c
 ## Dependencies
 
 ### Internal
-- **PendingQuery system** (`internal/capture/query_dispatcher.go`) — dispatches commands to extension
-- **interact tool** (`cmd/browser-agent/tools_interact.go`) — existing action primitives
-- **configure tool** (`cmd/browser-agent/tools_configure.go`) — playback start entry point
-- **observe tool** (`cmd/browser-agent/tools_observe.go`) — playback results query
+- **PendingQuery system** (`internal/queries/dispatcher.go`) — dispatches commands to extension
+- **interact tool** (`cmd/browser-agent/internal/toolinteract/`) — existing action primitives
+- **configure tool** (`cmd/browser-agent/internal/toolruntime/tools_configure.go`, handled by `cmd/browser-agent/internal/toolrecording/`) — `configure({what:"playback"})` entry point (exists)
+- **observe tool** (`cmd/browser-agent/internal/toolobserve/dispatcher.go`) — `observe({what:"playback_results"})` (exists)
 - **Recording types** (`internal/recording/types.go`) — `RecordingAction` struct
-- **Test boundaries** (`internal/capture/test_boundary.go`) — log correlation
+- **Test boundaries** (`internal/tools/configure/boundaries.go`) — log correlation
 
 ### Existing Stub
-- `internal/capture/playback.go` — types (`PlaybackResult`, `PlaybackSession`, `Coordinates`) and self-healing skeleton already defined; implementation will replace stub logic
+- `internal/recording/playback/` — types (`Result`, `Session`, `Coordinates`) and self-healing skeleton already defined; implementation will replace stub logic
 
 ---
 
@@ -499,4 +499,4 @@ These are deliberate scope boundaries, not bugs. Each is documented so the LLM c
 
 1. **Tech Spec** — architecture for PendingQuery integration, action mapping, session lifecycle
 2. **QA Plan** — test scenarios for each action type, self-healing, timing modes, error cases
-3. **Implementation** — wire executeAction to PendingQuery dispatch, add configure/observe handlers
+3. **Implementation** — wire executeAction to PendingQuery dispatch (the configure `playback` and observe `playback_results` handlers already exist)

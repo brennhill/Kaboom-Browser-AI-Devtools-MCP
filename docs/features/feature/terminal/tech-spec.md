@@ -2,7 +2,7 @@
 doc_type: tech_spec
 feature_id: feature-terminal
 status: shipped
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 owners:
   - Brenn
 last_verified_version: 0.8.1
@@ -13,9 +13,9 @@ last_verified_date: 2026-03-28
 
 ## Primary Components
 
-- `cmd/browser-agent/terminal_server.go`
-- `cmd/browser-agent/terminal_handlers.go`
-- `cmd/browser-agent/terminal_assets/terminal.html`
+- `cmd/browser-agent/internal/terminal/server.go`
+- `cmd/browser-agent/internal/terminal/handlers.go`
+- `cmd/browser-agent/internal/terminal/assets/terminal_assets/terminal.html`
 - `extension/sidepanel.html`
 - `extension/sidepanel.js`
 - `src/background/ui/terminal-workspace.ts`

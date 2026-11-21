@@ -6,7 +6,7 @@ mode: cli
 version: 0.8.1
 doc_type: product-spec
 feature_id: feature-enhanced-cli-config
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -15,7 +15,7 @@ last_verified_date: 2026-03-28
 
 ## Problem Statement
 
-Users installing Kaboom Agentic Browser (via NPM or PyPI) need to:
+Users installing Kaboom Agentic Browser (via NPM) need to:
 1. Configure it across multiple AI assistant clients (Claude Code, Claude Desktop, VS Code, Cursor, Windsurf)
 2. Verify the configuration is correct before committing changes
 3. Diagnose connection/installation issues when things go wrong
@@ -29,7 +29,7 @@ The current implementation (`--config`, `--install`) is functional but incomplet
 - **No verification**: No way to confirm the config is actually working
 - **No environment variables**: Can't inject custom env vars (e.g., API keys, server URLs) into MCP config
 - **Limited error recovery**: Confusing error messages when JSON is malformed or permissions denied
-- **Skill install mismatch**: Bundled skill installation behavior differs across npm, PyPI, and manual source builds
+- **Skill install mismatch**: Bundled skill installation behavior differs across npm and manual source builds
 
 ## Solution
 
@@ -71,7 +71,7 @@ Remove Kaboom from AI assistant configs:
 ### 5. **Bundled Skill Installation Parity**
 Ensure bundled managed skills are installed consistently across all distribution channels:
 - npm install: postinstall installs bundled skills
-- `kaboom-agentic-browser --install` (npm + PyPI): installs MCP config and bundled skills
+- `kaboom-agentic-browser --install` (npm): installs MCP config and bundled skills
 - manual/local source builds: supported via `scripts/setup/install-bundled-skills.sh`
 
 ## Requirements
@@ -84,7 +84,7 @@ Ensure bundled managed skills are installed consistently across all distribution
 6. **Verbose**: `--verbose` flag shows detailed operation logs
 7. **Recovery**: Commands provide next-step suggestions on failure
 8. **Multi-client**: `--install` targets all detected clients by default
-9. **Channel parity**: npm, PyPI, and manual/local install paths provide equivalent bundled-skill behavior
+9. **Channel parity**: npm and manual/local install paths provide equivalent bundled-skill behavior
 
 ## Out of Scope
 
@@ -98,14 +98,14 @@ Ensure bundled managed skills are installed consistently across all distribution
 
 1. ✅ `--dry-run` shows exact changes without writing files
 2. ✅ `--doctor` diagnoses 90%+ of common config issues
-3. ✅ `--install` auto-detects and installs to all 5 supported clients
+3. ✅ `--install` auto-detects and installs to all detected supported clients (10 defined in `npm/kaboom-agentic-browser/lib/config/config.js`)
 4. ✅ `--env KEY=VALUE` properly saves env vars to config
 5. ✅ `--uninstall` cleanly removes Kaboom-managed entries from all configs
 6. ✅ All commands provide actionable error messages with recovery steps
 7. ✅ 100% backward compatibility with v5.2.0 CLI behavior
 8. ✅ All commands covered by automated tests (unit + integration)
 9. ✅ Help text and examples available for each command
-10. ✅ Skill install parity verified for npm, PyPI, and manual/local installer script
+10. ✅ Skill install parity verified for npm and manual/local installer script
 
 ## User Workflows
 
@@ -276,9 +276,8 @@ kaboom-agentic-browser --install
 
 ## Notes
 
-- **Distribution**: Both NPM (`npm/kaboom-agentic-browser/`) and PyPI (`pypi/kaboom-agentic-browser/`) wrappers must be updated with feature parity
-- **NPM Entry Point**: `npm/kaboom-agentic-browser/bin/kaboom-agentic-browser` (Node.js)
-- **PyPI Entry Point**: `pypi/kaboom-agentic-browser/kaboom_agentic_browser/__main__.py` (Python)
-- **Related**: `.claude/docs/architecture.md` (5-tool MCP constraint)
+- **Distribution**: NPM (`npm/kaboom-agentic-browser/`) is the only package-manager channel; the PyPI wrapper was retired (see `docs/core/product/release.md`)
+- **NPM Entry Point**: `npm/kaboom-agentic-browser/bin/kaboom-agentic-browser` (POSIX `sh` exec shim; CLI commands run `lib/cli/cli.js`)
+- **Related**: `docs/core/architecture/server-architecture.md` (5-tool MCP constraint)
 - **Building on**: v5.2.0 CLI foundation (`--config`, `--install`)
 - **Test reference**: `tests/extension/` (use as model for new tests)

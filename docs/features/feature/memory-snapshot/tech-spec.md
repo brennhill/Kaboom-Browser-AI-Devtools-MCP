@@ -3,7 +3,7 @@ feature: memory-snapshot
 status: proposed
 doc_type: tech-spec
 feature_id: feature-memory-snapshot
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.8.6
 last_verified_date: 2026-06-29
 ---

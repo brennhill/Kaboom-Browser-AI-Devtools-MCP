@@ -3,7 +3,7 @@ feature: test-generation
 version: 0.7.12
 doc_type: qa-plan
 feature_id: feature-test-generation
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -24,7 +24,9 @@ last_verified_date: 2026-03-05
 
 ### Test Location
 
-- **Go Server:** `cmd/browser-agent/testgen_test.go`
+- **Go generation/heal/classify logic:** `internal/testgen/generate_test.go`, `internal/testgen/classify_test.go`, `internal/testgen/heal/heal_test.go`
+- **Go MCP handlers:** `cmd/browser-agent/internal/testgenhandler/entrypoints_test.go`, `cmd/browser-agent/internal/testgenhandler/context_test.go`, `cmd/browser-agent/internal/testgenhandler/heal_test.go`, `cmd/browser-agent/internal/testgenhandler/classify_test.go`
+- **Generate dispatch:** `cmd/browser-agent/internal/toolgenerate/toolgenerate_test.go`
 
 ---
 
@@ -34,9 +36,9 @@ last_verified_date: 2026-03-05
 
 | Test ID | Test Case | Expected Result | Priority |
 |---------|-----------|-----------------|----------|
-| TG-UNIT-001 | `generate` tool accepts `format: "test_from_context"` | Request dispatched to GenerateTestFromContext | P0 |
-| TG-UNIT-002 | `generate` tool accepts `format: "test_heal"` | Request dispatched to HealSelector | P0 |
-| TG-UNIT-003 | `generate` tool accepts `format: "test_classify"` | Request dispatched to ClassifyFailure | P0 |
+| TG-UNIT-001 | `generate` tool accepts `format: "test_from_context"` | Request dispatched to HandleGenerateTestFromContext | P0 |
+| TG-UNIT-002 | `generate` tool accepts `format: "test_heal"` | Request dispatched to HandleGenerateTestHeal | P0 |
+| TG-UNIT-003 | `generate` tool accepts `format: "test_classify"` | Request dispatched to HandleGenerateTestClassify | P0 |
 | TG-UNIT-004 | Invalid `type` value rejected | Error: "unknown_mode" | P0 |
 | TG-UNIT-005 | Missing `type` parameter rejected | Error: "missing_param" | P0 |
 
@@ -196,6 +198,7 @@ last_verified_date: 2026-03-05
 
 | Component | Line Coverage | Branch Coverage |
 |-----------|--------------|-----------------|
-| testgen.go | >= 85% | >= 80% |
-| testgen_heal.go | >= 85% | >= 80% |
-| testgen_classify.go | >= 85% | >= 80% |
+| internal/testgen (generate, helpers) | >= 85% | >= 80% |
+| internal/testgen/heal | >= 85% | >= 80% |
+| internal/testgen (classify) | >= 85% | >= 80% |
+| cmd/browser-agent/internal/testgenhandler | >= 85% | >= 80% |

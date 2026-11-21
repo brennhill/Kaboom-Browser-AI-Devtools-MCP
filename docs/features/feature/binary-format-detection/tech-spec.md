@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-binary-format-detection
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -102,9 +102,9 @@ For detected formats, the server performs best-effort decoding without a schema:
 
 Binary format detection integrates with existing tools transparently:
 
-1. **`get_websocket_events`**: Binary messages include a `decoded` field with format name and decoded content
-2. **`get_network_bodies`**: Binary response bodies include `content_format` and `decoded_content` fields
-3. **`get_websocket_status`**: Schema variants include binary format types (e.g., "protobuf UserUpdate 65%, protobuf Heartbeat 30%")
+1. **`observe({what: "websocket_events"})`**: Binary messages include a `decoded` field with format name and decoded content
+2. **`observe({what: "network_bodies"})`**: Binary response bodies include `content_format` and `decoded_content` fields
+3. **`observe({what: "websocket_status"})`**: Schema variants include binary format types (e.g., "protobuf UserUpdate 65%, protobuf Heartbeat 30%")
 
 No new MCP tool is needed — the decoding is automatic.
 
@@ -174,14 +174,16 @@ For WebSocket connections that consistently use the same binary format, the dete
 16. Format cache invalidated on decode failure
 17. Mixed formats on same connection → each detected independently
 18. Compressed protobuf → two-layer detection (gzip then protobuf)
-19. Decoded content appears in `get_websocket_events` response
-20. Decoded content appears in `get_network_bodies` response
-21. Schema variants in `get_websocket_status` include binary format names
+19. Decoded content appears in `observe({what: "websocket_events"})` response
+20. Decoded content appears in `observe({what: "network_bodies"})` response
+21. Schema variants in `observe({what: "websocket_status"})` include binary format names
 
 ---
 
-## File Locations
+## Implementation Status
 
-Server implementation: `cmd/browser-agent/binary_detect.go` (detection logic, decoders, cache).
+Shipped (detection only): `DetectBinaryFormat` in `internal/util/binary.go` classifies payloads as MessagePack, CBOR, Protobuf, or BSON using magic-byte and structural heuristics (no Content-Type signals, no entropy analysis). The telemetry store (`internal/capture/telemetrystore/store.go`, `setBinaryFormat`) runs it eagerly on ingest of network bodies (request body first, then response body) and WebSocket `message` events, recording the result in the server-only `binary_format` and `format_confidence` fields (`internal/types/network.go`), which `observe` responses surface.
 
-Tests: `cmd/browser-agent/binary_detect_test.go`.
+Tests: `internal/util/binary_test.go` and `internal/util/binary_protobuf_bson_test.go`.
+
+Not yet implemented: schemaless decoding (`decoded_content`), Content-Type and gRPC-Web framing signals, FlatBuffers/Avro/gzip/entropy classification, the per-connection format cache, and binary variants in `websocket_status` schemas.

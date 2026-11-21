@@ -1,5 +1,5 @@
 ---
-status: shipped
+status: proposed
 scope: feature/causal-diffing/implementation
 ai-priority: high
 tags: [implementation, architecture]
@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-causal-diffing
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -191,10 +191,13 @@ The AI's natural workflow becomes:
 
 ---
 
-## File Locations
+## Implementation Status
 
-Server implementation: `cmd/browser-agent/performance.go` (resource fingerprinting, diff computation, MCP tool handler).
+The `get_causal_diff` tool, baseline resource fingerprints, moving-average updates, and probable-cause/recommendation generation are not implemented. Planned: a causal-diff MCP mode in the Go server backed by stored per-URL resource fingerprints, plus unit tests.
 
-Extension changes: Minor addition to the performance snapshot — include `renderBlockingStatus` field from resource timing entries. File: `extension/inject.js`.
+Building blocks that already exist in `internal/performance`:
+- `ComputeResourceDiffForNav` (`internal/performance/diff_resource.go`) categorizes added/removed/resized/retimed resources by exact URL (no query-param normalization or path-prefix grouping yet).
+- `ResourceDiff` and a placeholder `CausalDiffResult` response type (`internal/performance/types.go`).
+- `ComputePerfDiff` (`internal/performance/diff.go`) produces timing deltas, currently surfaced as `perf_diff` on interact results.
 
-Tests: `cmd/browser-agent/performance_test.go`.
+Extension side: `parseResourceTiming` in `src/lib/net/network.ts` declares the `renderBlockingStatus` field on resource timing entries but does not yet forward it to the server; planned work is to include it in performance snapshots.

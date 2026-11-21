@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: shipped
 scope: feature/rate-limiting/implementation
 ai-priority: high
 tags: [implementation, architecture]
@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-rate-limiting
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -38,11 +38,11 @@ The threshold applies globally across all ingest endpoints combined — not per-
 
 ### Server-Side: Circuit Breaker
 
-The circuit breaker is a separate mechanism from rate limiting. It monitors overall server health across three dimensions:
+The circuit breaker is a separate mechanism from rate limiting, implemented by `CircuitBreaker` in `internal/circuit/breaker.go`:
 
-1. **Rate**: More than 1000 events/second sustained for 5 consecutive seconds → circuit opens
-2. **Memory**: Total buffer memory exceeds 50MB → circuit opens
-3. **Both clear**: Rate below threshold for 10 seconds AND memory below 30MB → circuit closes
+1. **Rate**: More than 1000 events/second (`RateLimitThreshold`) sustained for 5 consecutive seconds (`CircuitOpenStreakCount`) → circuit opens with reason `rate_exceeded`
+2. **Forced open**: Other subsystems may call `ForceOpen(reason)`; memory pressure is handled by memory enforcement, not by a breaker threshold
+3. **Recovery**: Rate below threshold for 10 seconds (`CircuitCloseSeconds`) → circuit closes
 
 When the circuit is open, ALL ingest endpoints return 429 immediately (no processing). This protects the server from cascading failures where rate-limited requests still consume parsing resources.
 
@@ -52,10 +52,9 @@ The circuit state is exposed in the server's health response so the extension ca
 
 When the extension receives a 429 response (or a network error suggesting the server is down), it enters backoff mode:
 
-1. First failure: wait 100ms before next batch
-2. Second consecutive failure: wait 500ms
-3. Third consecutive failure: wait 2000ms
-4. After 5 consecutive failures: pause sending entirely for 30 seconds (circuit break)
+1. First failure: no delay
+2. From the second consecutive failure: wait `1000ms × 2^(failures−2)` (1s, 2s, 4s, ...), capped at 30s
+3. After 5 consecutive failures: circuit opens and sending pauses for 30 seconds (`createCircuitBreaker` in `src/background/sync/circuit-breaker.ts`)
 
 During backoff, the extension continues capturing data into its local buffers. It does not discard — it buffers up to its memory cap and starts evicting oldest entries if needed.
 
@@ -102,9 +101,9 @@ The background script tracks:
 ### Ingest Endpoints Affected
 
 All three ingest endpoints participate in rate limiting:
-- `POST /v4/websocket-events`
-- `POST /v4/network-bodies`
-- `POST /v4/enhanced-actions`
+- `POST /websocket-events`
+- `POST /network-bodies`
+- `POST /enhanced-actions`
 
 Each POST increments the global event counter by the number of events in the batch (not just "1 per request").
 
@@ -121,19 +120,18 @@ Each POST increments the global event counter by the number of events in the bat
 }
 ```
 
-The `Retry-After` HTTP header is also set (in seconds, rounded up).
+The `Retry-After` HTTP header is also set (fixed at `1` second).
 
 ### Health Endpoint
 
-The existing GET endpoint (or a new `/v4/health`) returns circuit breaker state:
+`GET /health` returns circuit breaker state (`GetHealthStatus`):
 
 ```json
 {
   "circuit_open": true,
   "opened_at": "2026-01-24T10:30:00Z",
   "current_rate": 2400,
-  "memory_bytes": 52428800,
-  "reason": "memory_exceeded"
+  "reason": "rate_exceeded"
 }
 ```
 
@@ -171,7 +169,7 @@ The extension can poll this cheaply to detect circuit state changes without wait
 3. Rate resets after 1 second → requests accepted again
 4. 5 consecutive seconds over threshold → circuit opens
 5. Circuit open → all ingest endpoints return 429 immediately
-6. Rate drops below threshold for 10 seconds + memory below 30MB → circuit closes
+6. Rate drops below threshold for 10 seconds → circuit closes
 7. 429 response contains correct JSON body and Retry-After header
 8. Event count increments by batch size, not request count
 9. Health endpoint returns circuit state accurately
@@ -181,9 +179,9 @@ The extension can poll this cheaply to detect circuit state changes without wait
 
 ### Extension Tests
 
-13. Single 429 → backoff 100ms before next attempt
-14. Second consecutive 429 → backoff 500ms
-15. Third consecutive 429 → backoff 2000ms
+13. Single 429 → no backoff
+14. Second consecutive 429 → backoff 1000ms
+15. Third consecutive 429 → backoff 2000ms (doubling, capped at 30s)
 16. Fifth consecutive failure → circuit opens, 30-second pause
 17. Successful POST after failure → backoff resets to 0
 18. Circuit open → no POSTs for 30 seconds
@@ -197,6 +195,6 @@ The extension can poll this cheaply to detect circuit state changes without wait
 
 ## File Locations
 
-Server implementation: `cmd/browser-agent/rate_limit.go` with tests in `cmd/browser-agent/rate_limit_test.go`.
+Server implementation: `internal/circuit/breaker.go` (owned by `internal/capture/capture.go`, checked in `internal/capture/httpingest/handlers.go`) with tests in `internal/circuit/breaker_test.go`.
 
-Extension implementation: backoff logic in `extension/background.js` with tests in `extension-tests/rate-limit.test.js`.
+Extension implementation: `src/background/sync/circuit-breaker.ts` with tests in `tests/extension/reliability/circuit-breaker.test.js` and `tests/extension/performance/rate-limit.test.js`.

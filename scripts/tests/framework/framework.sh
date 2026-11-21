@@ -614,6 +614,8 @@ stop_event_recording() {
 # 400 (invalid JSON), 403 (bad client header) and 409 (stale generation) with
 # well-formed JSON bodies, so `jq .` succeeds on all of them.
 
+# Payloads go over stdin: a large body passed as one argv entry exceeds
+# Linux MAX_ARG_STRLEN (128KiB) and curl never runs (empty status).
 # POST to an extension-protected endpoint under a chosen client identity.
 # Client classes are defined in internal/extclient:
 #   kaboom-extension — owns the extension session (adopts settings, bumps generation)
@@ -629,7 +631,7 @@ post_as_client() {
         -H "Content-Type: application/json" \
         -H "X-Kaboom-Client: ${client}" \
         "http://localhost:${PORT}${endpoint}" \
-        -d "$payload" 2>/dev/null)
+        --data-binary @- 2>/dev/null <<<"$payload")
     LAST_HTTP_BODY=$(cat "$response_file" 2>/dev/null)
 }
 
@@ -654,11 +656,11 @@ post_raw() {
         LAST_HTTP_STATUS=$(curl -s -o "$response_file" -w "%{http_code}" \
             -X POST -H "Content-Type: application/json" \
             -H "$extra_headers" \
-            "$url" -d "$payload" 2>/dev/null)
+            "$url" --data-binary @- 2>/dev/null <<<"$payload")
     else
         LAST_HTTP_STATUS=$(curl -s -o "$response_file" -w "%{http_code}" \
             -X POST -H "Content-Type: application/json" \
-            "$url" -d "$payload" 2>/dev/null)
+            "$url" --data-binary @- 2>/dev/null <<<"$payload")
     fi
     LAST_HTTP_BODY=$(cat "$response_file" 2>/dev/null)
 }

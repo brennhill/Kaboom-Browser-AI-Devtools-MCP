@@ -1,5 +1,5 @@
 ---
-status: shipped
+status: superseded
 scope: feature/ttl-retention/implementation
 ai-priority: high
 tags: [implementation, architecture]
@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-ttl-retention
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -17,6 +17,8 @@ last_verified_date: 2026-03-05
 > See also: [Product Spec](product-spec.md) and [TTL Retention Review](./index.md).
 
 # Technical Spec: TTL-Based Retention (Feature 16)
+
+> **Status: superseded / removed (reviewed 2026-11-21).** The TTL implementation (`ttl.go` and its tests in the former `cmd/dev-console` tree) was deleted in v5.4.0. The current daemon has no `--ttl` flag, no `configure` TTL action, no TTL section in health output, and no read-time TTL filtering. In-memory capture buffers are bounded by capacity, and on-disk captured artifacts are bounded by the hourly retention sweep (`cmd/browser-agent/internal/retentionsweep/retention.go`, applying file-count/byte/age budgets via `internal/retention/retention.go`). The rest of this document is kept as the historical design.
 
 ## Overview
 
@@ -550,7 +552,7 @@ Common TTL configurations can be applied via presets:
 
 ### Test File Location
 
-Tests go in `cmd/browser-agent/ttl_test.go` (extending existing file).
+Tests lived in the former `ttl_test.go` (deleted with the feature).
 
 ---
 
@@ -603,15 +605,13 @@ New capabilities are additive:
 
 ## File Locations
 
+The original TTL files (`ttl.go`, `ttl_test.go`, plus TTL wiring in the old types, configure, health and main files) no longer exist. The current retention-related code is:
+
 | File | Purpose |
 |------|---------|
-| `cmd/browser-agent/ttl.go` | TTL types, parsing, resolution logic |
-| `cmd/browser-agent/ttl_test.go` | TTL tests |
-| `cmd/browser-agent/types.go` | TTLConfig struct definition |
-| `cmd/browser-agent/tools_core.go` | MCP tool schema update |
-| `cmd/browser-agent/configure.go` | TTL action handler |
-| `cmd/browser-agent/health.go` | Health endpoint TTL section |
-| `cmd/browser-agent/main.go` | CLI flag parsing |
+| `cmd/browser-agent/internal/retentionsweep/retention.go` | Hourly sweep applying disk budgets to captured-artifact directories |
+| `internal/retention/retention.go` | `Budget` type and `Enforce` (file-count, byte and age limits) |
+| `internal/retention/retention_test.go` | Retention budget tests |
 
 ---
 

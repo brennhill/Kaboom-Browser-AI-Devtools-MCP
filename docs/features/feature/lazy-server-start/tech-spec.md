@@ -4,26 +4,27 @@ feature_id: feature-lazy-server-start
 status: proposed
 feature: lazy-server-start
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 links:
   index: ./index.md
   product: ./product-spec.md
   qa: ./qa-plan.md
 code_paths:
-  - cmd/browser-agent/internal/bridge/bridge_startup_orchestration.go
   - cmd/browser-agent/internal/bridge/bridge_startup.go
   - cmd/browser-agent/internal/bridge/bridge_startup_state.go
-  - cmd/browser-agent/internal/bridge/bridge_startup_status.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath.go
-  - cmd/browser-agent/internal/bridge/bridge_forward.go
-  - cmd/browser-agent/internal/daemonlife/lifecycle.go
+  - cmd/browser-agent/internal/bridge/bridge.go
+  - cmd/browser-agent/internal/bridge/startuplock/lock.go
+  - cmd/browser-agent/daemon_governance.go
+  - internal/instancegov/instancegov.go
   - cmd/browser-agent/internal/launchmode/launch_mode.go
   - cmd/browser-agent/internal/toolguard/guards.go
 test_paths:
-  - cmd/browser-agent/internal/bridge/lazy_server_start_test.go
-  - cmd/browser-agent/internal/bridge/bridge_spawn_race_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
-  - cmd/browser-agent/internal/bridge/bridge_startup_contention_test.go
+  - cmd/browser-agent/internal/bridge/bridge_startup_test.go
+  - cmd/browser-agent/internal/bridge/startuplock/lock_test.go
+  - cmd/browser-agent/integration/bridge/faststart_test.go
+  - internal/instancegov/instancegov_test.go
   - cmd/browser-agent/internal/launchmode/launch_mode_test.go
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go
@@ -56,19 +57,19 @@ The critical invariant is that the read loop starts before, or concurrently with
 
 **Fast path (`bridge_fastpath.go`).** `handleFastPath` answers methods that need no daemon: `initialize`, `initialized`, `tools/list`, `resources/list`, `resources/templates/list`, `resources/read`, plus static `ping` and `prompts/list`. For `initialize`, the bridge negotiates the protocol version, stores the client's push capabilities, records the stdio framing, and returns server info from in-process constants. JSON-RPC notifications (requests with no identifier) are dropped without a response.
 
-**Startup coordinator (`bridge_startup_orchestration.go`).** `coordinateDaemonStartup` elects a single startup leader using a port-scoped lock:
-- `tryAcquireBridgeStartupLock` — if acquired, this bridge becomes the leader, spawns the daemon, and holds leadership until the spawn resolves so followers do not stampede.
+**Startup coordinator (`bridge_startup.go` + `startuplock/lock.go`).** `coordinateDaemonStartup` elects a single startup leader using a port-scoped lock managed by `startuplock.Manager`:
+- `Manager.Acquire` — if acquired, this bridge becomes the leader, spawns the daemon, and holds leadership until the spawn resolves so followers do not stampede.
 - If the lock is held by a peer, `waitForPeerDaemon` polls for a compatible daemon within the follower wait budget.
-- If the leader appears stalled, `clearStaleBridgeStartupLock` reclaims a stale or dead lock and the bridge retries acquisition.
+- If the leader appears stalled, `Manager.ClearStale` reclaims a stale or dead lock and the bridge retries acquisition.
 - A final short wait covers the window where the leader finishes just as the lock hands off.
 
-**Daemon state and recovery (`bridge_startup_state.go`, `bridge_startup_status.go`).** `daemonState` tracks `ready`, `failed`, and an error string behind a mutex, with resettable signal channels. `checkDaemonStatus` classifies an incoming request: it returns `"starting"` while the daemon boots inside the grace period and an empty string once ready. `respawnIfNeeded` re-launches a daemon that stopped responding and resets the failure state.
+**Daemon state and recovery (`bridge_startup_state.go`, `bridge_startup.go`).** `daemonState` tracks `ready`, `failed`, and an error string behind a mutex, with resettable signal channels. `checkDaemonStatus` classifies an incoming request: it returns `"starting"` while the daemon boots inside the grace period and an empty string once ready. `respawnIfNeeded` re-launches a daemon that stopped responding and resets the failure state.
 
-**Request forwarding (`bridge_forward.go`).** Forwarded requests proxy to the daemon over HTTP. On a connection error the bridge calls `respawnIfNeeded` and retries. Responses with status code 500 or higher are treated as `retryable`, and the structured error carries that flag back to the client.
+**Request forwarding (`bridge.go`).** `bridgeForwardRequest` proxies to the daemon over HTTP. On a connection error `bridgeSendWithRespawn` calls `respawnIfNeeded` and retries. Responses with status code 500 or higher are treated as `retryable`, and the structured error carries that flag back to the client.
 
-**Daemon singleton lifecycle (`internal/daemonlife/lifecycle.go`).** `daemonlife.EnforceStartupPolicy` reads the daemon lock record and either validates parallel isolation (for `--state-dir`-isolated runs) or performs a default takeover. Takeover is conservative: it requires the lock process identifier to match the port's process-identifier file before terminating anything, reclaims stale mismatched locks only when the port is not serving, and never kills a non-Kaboom service.
+**Daemon singleton admission (`internal/instancegov/instancegov.go`, called from `cmd/browser-agent/daemon_governance.go`).** `instancegov.Admit` runs before the daemon binds anything. A production daemon is elected through a kernel-held lock (`proclock`), which the OS releases even on SIGKILL; there is no PID-file liveness heuristic. A newer build asks the incumbent to stand down over HTTP and waits for the lock to be released (a handoff, not a race). Parallel/test daemons and bridges are admitted against a counted cap that evicts the oldest instead of multiplying. The bridge also registers through `instancegov.Admit` (`bridge_governance.go`).
 
-**Launch-mode classification (`internal/launchmode/launch_mode.go`).** `launchmode.Classify` receives the daemon flag, terminal interactivity, and detected parent process while inspecting supervisor environment markers to label the launch `persistent` or `likely_transient`. `launchmode.Warning` produces the advisory string; `launchmode.EnforcePersistent` upgrades it to a hard error when `KABOOM_REQUIRE_PERSISTENT` is set.
+**Launch-mode classification (`cmd/browser-agent/internal/launchmode/launch_mode.go`).** `launchmode.Classify` receives the daemon flag, terminal interactivity, and detected parent process while inspecting supervisor environment markers to label the launch `persistent` or `likely_transient`. `launchmode.Warning` produces the advisory string; `launchmode.EnforcePersistent` upgrades it to a hard error when `KABOOM_REQUIRE_PERSISTENT` is set.
 
 **Extension readiness guard (`cmd/browser-agent/internal/toolguard/guards.go`).** `RequireExtension` blocks a tool call until the extension reports connectivity, waiting up to `toolguard.DefaultExtensionReadinessTimeout`. This window lets the extension's sync loop reconnect after a cold daemon start before the call fails.
 
@@ -121,14 +122,14 @@ These are package variables so tests can shrink them for deterministic timing.
 
 **Bridge (`cmd/browser-agent/internal/bridge/`):** the fast path, startup coordinator, daemon state, and forwarding live here. Startup leadership uses a port-scoped lock file in the state directory; daemon state uses channels rather than sleeps so waiters wake on the exact transition.
 
-**Daemon process (`cmd/browser-agent/`):** `internal/daemonlife/lifecycle.go` enforces the singleton via the lock record; `internal/launchmode/launch_mode.go` classifies the launch; `internal/toolguard/guards.go` gates tool calls on extension readiness.
+**Daemon process (`cmd/browser-agent/`):** `daemon_governance.go` admits the daemon through `instancegov.Admit` (kernel-held singleton lock); `cmd/browser-agent/internal/launchmode/launch_mode.go` classifies the launch; `cmd/browser-agent/internal/toolguard/guards.go` gates tool calls on extension readiness.
 
 **Extension (`src/popup/`):** `tab-tracking.ts` keeps tracking state in `chrome.storage.local`; `status-display.ts` renders the connected/offline state. The sync client polls every second with no backoff so reconnection is prompt.
 
 **Trade-offs:**
 - Asynchronous spawn versus synchronous bind: asynchronous spawn keeps the handshake fast but requires careful leader election to avoid duplicate daemons.
 - Fixed grace period versus unbounded wait: a bounded grace period guarantees `tools/call` returns a result or a retryable error rather than hanging forever.
-- Conservative takeover versus aggressive reclaim: refusing to kill mismatched or non-Kaboom processes trades a rare manual cleanup for never killing the wrong process.
+- Kernel lock versus PID records: a kernel-held lock cannot go stale on crash and cannot be fooled by PID reuse, at the cost of upgrades needing an explicit HTTP handoff.
 
 ## Edge Cases and Assumptions
 
@@ -140,24 +141,24 @@ These are package variables so tests can shrink them for deterministic timing.
 - **Port held by a non-Kaboom service:** the state is marked failed with the occupying service name; the bridge never kills it.
 - **Concurrent bridges:** the startup lock elects one leader; followers poll and only reclaim a stale lock if the leader stalls.
 - **Daemon crash mid-session:** the next forwarded request triggers `respawnIfNeeded` and retries; `tools/call` waits rather than failing instantly.
-- **Extension offline at tool time:** `requireExtension` waits up to the readiness timeout, then returns a structured retryable error.
+- **Extension offline at tool time:** `RequireExtension` waits up to the readiness timeout, then returns a structured retryable error.
 
 ### Assumptions
 
 - A1: the daemon is always local (`127.0.0.1`); no remote transport is involved.
 - A2: the MCP client relaunches the bridge per session, so cold start is the common path.
-- A3: the state directory is writable for the lock and process-identifier files.
+- A3: the state directory is writable for the startup-lock and instance-registry files.
 - A4: the extension's one-second sync loop is the canonical reconnection mechanism.
 
 ## Risks and Mitigations
 
 ### Risk 1: Duplicate daemons from a spawn race
 - Description: two bridges spawn daemons simultaneously and fight over the port.
-- Mitigation: port-scoped startup lock elects one leader; the leader holds leadership until its spawn resolves; followers wait and reclaim only on stall. Covered by `bridge_spawn_race_test.go` and `bridge_startup_contention_test.go`.
+- Mitigation: port-scoped startup lock elects one leader; the leader holds leadership until its spawn resolves; followers wait and reclaim only on stall. Covered by `startuplock/lock_test.go` and `TestBridgeStartupLock_SingleLeaderElection` in `bridge_startup_test.go`.
 
 ### Risk 2: Cold start blocks the handshake
 - Description: a slow daemon boot delays `initialize` or `tools/list`.
-- Mitigation: those methods are answered from the fast path with no daemon dependency; spawning runs on a background goroutine. Covered by `lazy_server_start_test.go`.
+- Mitigation: those methods are answered from the fast path with no daemon dependency; spawning runs on a background goroutine. Covered by `TestFastPath_InitializeDoesNotRequireDaemon` / `TestFastPath_ToolsListDoesNotRequireDaemon` in `bridge_startup_test.go` and `integration/bridge/faststart_test.go`.
 
 ### Risk 3: A crashed daemon ends the session
 - Description: a daemon dies and every subsequent call fails.
@@ -165,7 +166,7 @@ These are package variables so tests can shrink them for deterministic timing.
 
 ### Risk 4: Takeover kills the wrong process
 - Description: an aggressive reclaim terminates an unrelated process on the port.
-- Mitigation: takeover requires lock-to-process-identifier-file agreement, reclaims stale mismatches only when the port is not serving, and never terminates a non-Kaboom service.
+- Mitigation: admission uses a kernel-held lock rather than PID files, upgrades ask the incumbent to shut down over HTTP instead of signalling a PID, and the bridge never kills a port held by a non-Kaboom service.
 
 ## Performance
 

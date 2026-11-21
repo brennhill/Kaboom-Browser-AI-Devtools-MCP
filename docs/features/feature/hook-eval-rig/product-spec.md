@@ -3,7 +3,7 @@ doc_type: product-spec
 feature_id: feature-hook-eval-rig
 status: proposed
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 links:
   index: ./index.md
   tech: ./tech-spec.md
@@ -15,7 +15,7 @@ links:
 
 - Problem: We build hooks that claim to save tokens and prevent mistakes, but we have no way to prove it. Without measurement, we can't tell if a hook helps, hurts, or does nothing.
 - User value: Confidence that each hook delivers measurable improvement. Data-driven decisions about which hooks to enable. Regression detection when hook logic changes.
-- Binary: `kaboom-hooks eval` (subcommand) + `scripts/eval/` (orchestration)
+- Implementation (reviewed 2026-11-21): Tier 1 shipped as a Go eval library and test runner — `internal/hook/eval/eval.go` loads JSON fixtures from `internal/hook/eval/testdata/` and `internal/hook/eval/eval_test.go` runs them (`go test ./internal/hook/eval/`). A `kaboom-hooks eval` subcommand and a separate orchestration scripts directory are still planned; `cmd/hooks/main.go` does not register an `eval` subcommand yet. Tiers 2 and 3 below remain proposals.
 
 ## Requirements
 

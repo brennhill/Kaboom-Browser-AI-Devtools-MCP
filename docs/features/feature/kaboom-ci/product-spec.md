@@ -9,7 +9,7 @@ created: 2026-01-28
 updated: 2026-01-28
 doc_type: product-spec
 feature_id: feature-kaboom-ci
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -292,13 +292,13 @@ A single self-contained JavaScript file (`kaboom-ci.js`) that runs in any browse
 
 ### Component 2: CI Server Endpoints
 
-Three HTTP endpoints registered on the existing Kaboom server (already implemented in `ci.go`):
+Three HTTP endpoints registered on the existing Kaboom server (already implemented in `cmd/browser-agent/internal/ciapi/handlers.go`, registered in `cmd/browser-agent/server.go` behind the `httpguard.ExtensionOnly` `X-Kaboom-Client` header guard):
 
 - `GET /snapshot` -- Aggregates all server and capture buffers into a single JSON response. Supports `since` (timestamp filter) and `test_id` (labeling) query parameters.
 - `POST /clear` (also `DELETE /clear`) -- Atomically resets all buffers (logs, network bodies, WebSocket events, enhanced actions, test ID).
 - `POST /test-boundary` -- Sets or clears the current test ID for correlation. Accepts `{ test_id, action: "start"|"end" }`.
 
-These endpoints are already implemented and tested (`cmd/browser-agent/ci.go`, `cmd/browser-agent/ci_test.go`).
+These endpoints are already implemented and tested (`cmd/browser-agent/internal/ciapi/handlers.go`, `cmd/browser-agent/internal/ciapi/compute_test.go`, `cmd/browser-agent/internal/ciapi/handlers_integration_test.go`).
 
 ### Component 3: Playwright Fixture (`@anthropic/kaboom-playwright`)
 
