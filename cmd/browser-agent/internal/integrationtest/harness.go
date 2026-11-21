@@ -279,6 +279,13 @@ func parsePort(args []string) int {
 
 func stopServer(t *testing.T, binary string, port int, stateDirectory, registry string) {
 	t.Helper()
+	// Record the owners before asking the daemon to stop: once it releases the
+	// port it can still be flushing logs into the state directory, and
+	// t.TempDir removal fails ("directory not empty") if it outlives cleanup.
+	owners, err := procctl.FindProcessOnPort(port)
+	if err != nil {
+		t.Logf("test daemon owner lookup on port %d: %v", port, err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	command := exec.CommandContext(ctx, binary, "--stop", "--port", strconv.Itoa(port)) // #nosec G204 -- test-owned binary
@@ -287,15 +294,36 @@ func stopServer(t *testing.T, binary string, port int, stateDirectory, registry 
 	if err := command.Run(); err != nil && ctx.Err() == nil {
 		t.Logf("graceful test daemon cleanup on port %d: %v", port, err)
 	}
-	owners, err := procctl.FindProcessOnPort(port)
-	if err != nil {
+	if remaining, err := procctl.FindProcessOnPort(port); err != nil {
 		t.Logf("test daemon owner lookup on port %d: %v", port, err)
 	} else {
-		for _, pid := range owners {
-			if err := procctl.KillProcessByPID(pid); err != nil {
-				t.Logf("force test daemon cleanup pid %d: %v", pid, err)
-			}
+		owners = append(owners, remaining...)
+	}
+	for _, pid := range owners {
+		if !procctl.IsProcessAlive(pid) {
+			continue
+		}
+		if err := procctl.KillProcessByPID(pid); err != nil {
+			t.Logf("force test daemon cleanup pid %d: %v", pid, err)
 		}
 	}
+	waitForExit(t, owners, 3*time.Second)
 	procctl.RemovePIDFile(port)
+}
+
+// waitForExit polls until every pid has exited or the deadline passes, so a
+// daemon cannot keep writing into a test's state directory after cleanup.
+func waitForExit(t *testing.T, pids []int, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for _, pid := range pids {
+		for procctl.IsProcessAlive(pid) {
+			if time.Now().After(deadline) {
+				t.Errorf("test daemon pid %d still alive %s after cleanup", pid, timeout)
+				return
+			}
+			timer := time.NewTimer(20 * time.Millisecond)
+			<-timer.C
+		}
+	}
 }
