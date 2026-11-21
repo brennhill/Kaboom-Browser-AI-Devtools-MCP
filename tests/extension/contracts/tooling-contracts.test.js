@@ -127,6 +127,12 @@ describe('Tooling contracts', () => {
       'coverage must discard nested subprocess profiles before each run instead of accumulating gigabytes'
     )
     assert.doesNotMatch(workflow, /70% minimum|COVERAGE < 70|coverprofile=coverage\.out/)
+    // node_modules/flatted ships a Go package without its own go.mod, so ./...
+    // pulls npm-install-dependent code into the denominator (~0.5% swing).
+    assert.doesNotMatch(coverageRunner, /-coverpkg=\.\/\.\.\./, 'coverage must not measure ./... (includes node_modules Go code)')
+    assert.match(coverageRunner, /go-coverage-packages\.sh/)
+    assert.doesNotMatch(readFileSync('scripts/build/run-go-integration.sh', 'utf8'), /-coverpkg=\.\/\.\.\./)
+    assert.match(readFileSync('scripts/build/go-coverage-packages.sh', 'utf8'), /grep -v '\/node_modules\/'/)
   })
 
   test('security CI scans all Go code and enforces bounded dependency policy', () => {
