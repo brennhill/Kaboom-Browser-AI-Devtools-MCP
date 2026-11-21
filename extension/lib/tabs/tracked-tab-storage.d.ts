@@ -14,9 +14,22 @@ export declare const TRACKED_TAB_STORAGE_KEYS: ("trackedTabId" | "trackedTabUrl"
 /** Read the complete tracked-tab identity as one consistent snapshot. */
 export declare function readTrackedTab(): Promise<TrackedTabState>;
 /**
- * Persist tracked tab state.
+ * Persist tracked tab state (selection: popup, context menu, switch_tab, auto-track).
  */
 export declare function setTrackedTab(tab: Pick<chrome.tabs.Tab, 'id' | 'url' | 'title'>): Promise<void>;
+/**
+ * Record navigation details for `tabId` only if it is still the tracked tab when the
+ * write runs. Returns whether the details were written.
+ */
+export declare function updateTrackedTabDetails(tabId: number, details: {
+    url: string;
+    title?: string;
+}): Promise<boolean>;
+/**
+ * Clear tracked tab state only if `tabId` is still the tracked tab (Chrome close
+ * lifecycle). Returns whether tracking was cleared.
+ */
+export declare function clearTrackedTabIfCurrent(tabId: number): Promise<boolean>;
 /**
  * Clear tracked tab state (all keys, including title).
  */

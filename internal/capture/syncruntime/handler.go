@@ -545,32 +545,11 @@ func (r *Runtime) adoptExtSession(req SyncRequest, now time.Time) string {
 }
 
 func (r *Runtime) applySyncSettingsLocked(settings *SyncSettings, now time.Time) {
-	trackingChanged := r.trackingChangedLocked(settings)
 	r.state.pilotEnabled = settings.PilotEnabled
 	r.state.pilotStatusKnown = true
 	r.state.pilotUpdatedAt = now
 	r.state.pilotSource = PilotSourceExtensionSync
-	r.state.trackingEnabled = settings.TrackingEnabled
-	r.state.trackedTabID = settings.TrackedTabID
-	r.state.trackedTabURL = settings.TrackedTabURL
-	r.state.trackedTabTitle = settings.TrackedTabTitle
-	r.state.trackingUpdated = now
-	r.state.tabStatus = normalizedTabStatus(settings.TabStatus)
-	r.state.trackedTabActive = settings.TrackedTabActive
-	r.state.cspRestricted = settings.CspRestricted
-	r.state.cspLevel = settings.CspLevel
-	if trackingChanged {
-		r.signalTrackingChangeLocked()
-	}
-}
-
-func (r *Runtime) trackingChangedLocked(settings *SyncSettings) bool {
-	return r.state.trackingEnabled != settings.TrackingEnabled ||
-		r.state.trackedTabID != settings.TrackedTabID ||
-		r.state.trackedTabURL != settings.TrackedTabURL ||
-		r.state.trackedTabTitle != settings.TrackedTabTitle ||
-		r.state.tabStatus != normalizedTabStatus(settings.TabStatus) ||
-		!optionalBoolEqual(r.state.trackedTabActive, settings.TrackedTabActive)
+	r.observeTrackingLocked(heartbeatTrackingObservation(settings), now)
 }
 
 func normalizedTabStatus(status string) string {

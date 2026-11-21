@@ -50,22 +50,64 @@ function reportTrackedTabRecovery(kind, detail) {
         fix: 'Choose a tab from the extension popup to save a fresh tracking state.'
     });
 }
+// Ordering rule (rule 18, single writer): every tracked-tab write in this context runs
+// through one serialized queue, and writes scoped to a tab (navigation details, close)
+// re-read the tracked id inside that queue. A late update for tab A therefore can never
+// land on tab B after a switch: either it runs before the switch (and is overwritten by
+// it) or after (and is dropped because the tracked id no longer matches).
+let writeQueue = Promise.resolve();
+function serialized(write) {
+    const next = writeQueue.then(write, write);
+    writeQueue = next.catch(() => {
+        // EXPECTED_ABSENCE: the failure is surfaced to this write's own caller via `next`;
+        // the queue only needs to keep running for later writes.
+    });
+    return next;
+}
 /**
- * Persist tracked tab state.
+ * Persist tracked tab state (selection: popup, context menu, switch_tab, auto-track).
  */
-export async function setTrackedTab(tab) {
-    if (!tab.id)
-        return;
-    await setLocals({
-        [StorageKey.TRACKED_TAB_ID]: tab.id,
+export function setTrackedTab(tab) {
+    const id = tab.id;
+    if (!id)
+        return Promise.resolve();
+    return serialized(() => setLocals({
+        [StorageKey.TRACKED_TAB_ID]: id,
         [StorageKey.TRACKED_TAB_URL]: tab.url ?? '',
         [StorageKey.TRACKED_TAB_TITLE]: tab.title ?? ''
+    }));
+}
+/**
+ * Record navigation details for `tabId` only if it is still the tracked tab when the
+ * write runs. Returns whether the details were written.
+ */
+export function updateTrackedTabDetails(tabId, details) {
+    return serialized(async () => {
+        if ((await readTrackedTab()).id !== tabId)
+            return false;
+        const updates = { [StorageKey.TRACKED_TAB_URL]: details.url };
+        if (details.title)
+            updates[StorageKey.TRACKED_TAB_TITLE] = details.title;
+        await setLocals(updates);
+        return true;
+    });
+}
+/**
+ * Clear tracked tab state only if `tabId` is still the tracked tab (Chrome close
+ * lifecycle). Returns whether tracking was cleared.
+ */
+export function clearTrackedTabIfCurrent(tabId) {
+    return serialized(async () => {
+        if ((await readTrackedTab()).id !== tabId)
+            return false;
+        await removeLocals(TRACKED_TAB_STORAGE_KEYS);
+        return true;
     });
 }
 /**
  * Clear tracked tab state (all keys, including title).
  */
-export async function clearTrackedTab() {
-    await removeLocals(TRACKED_TAB_STORAGE_KEYS);
+export function clearTrackedTab() {
+    return serialized(() => removeLocals(TRACKED_TAB_STORAGE_KEYS));
 }
 //# sourceMappingURL=tracked-tab-storage.js.map

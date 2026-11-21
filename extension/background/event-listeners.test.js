@@ -105,7 +105,8 @@ const mockChrome = {
 globalThis.chrome = mockChrome
 
 // Import after chrome is set up
-import { handleTrackedTabUrlChange } from './event-listeners.js'
+import { handleTrackedTabUrlChange, handleTrackedTabClosed } from './event-listeners.js'
+import { setTrackedTab } from '../lib/tabs/tracked-tab-storage.js'
 import { getTrackedTabInfo } from './ui/tracked-tab-state.js'
 
 describe('handleTrackedTabUrlChange — cross-origin continuity and title freshness', () => {
@@ -189,5 +190,33 @@ describe('handleTrackedTabUrlChange — cross-origin continuity and title freshn
       'https://news.example.com/article',
       'URL for tracked tab should not change when a different tab navigates'
     )
+  })
+})
+
+describe('tracked-tab ordering — a late tab-A update cannot overwrite tab B', () => {
+  beforeEach(() => {
+    storageData = { trackedTabId: 1, trackedTabUrl: 'https://a.test/', trackedTabTitle: 'A' }
+  })
+
+  test('late navigation details for A are dropped after a switch to B', async () => {
+    let resolveTab
+    mockChrome.tabs.get = mock.fn(() => new Promise((resolve) => (resolveTab = resolve)))
+    const pending = handleTrackedTabUrlChange(1, 'https://a.test/late')
+    // Let the handler read the tracked id (A) and park on chrome.tabs.get.
+    while (!resolveTab) await Promise.resolve()
+    await setTrackedTab({ id: 2, url: 'https://b.test/', title: 'B' })
+    resolveTab({ id: 1, url: 'https://a.test/late', title: 'A late' })
+    await pending
+
+    assert.deepStrictEqual(
+      { id: storageData.trackedTabId, url: storageData.trackedTabUrl, title: storageData.trackedTabTitle },
+      { id: 2, url: 'https://b.test/', title: 'B' }
+    )
+  })
+
+  test('closing A after a switch to B does not clear B', async () => {
+    await setTrackedTab({ id: 2, url: 'https://b.test/', title: 'B' })
+    await handleTrackedTabClosed(1)
+    assert.strictEqual(storageData.trackedTabId, 2)
   })
 })

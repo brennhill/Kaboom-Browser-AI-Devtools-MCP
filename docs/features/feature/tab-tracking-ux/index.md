@@ -4,7 +4,7 @@ feature_id: feature-tab-tracking-ux
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - docs/architecture/diagrams/ui/flame-flicker-visual.md
   - src/lib/brand.ts
@@ -56,7 +56,13 @@ code_paths:
   - src/background/push-handler.ts
   - src/background/recording/capture.ts
   - src/background/commands/observe.ts
+  - internal/capture/syncruntime/tracking_projection.go
+  - internal/capture/syncruntime/runtime.go
+  - internal/capture/syncruntime/handler.go
+  - cmd/browser-agent/internal/toolinteract/interact_browser.go
 test_paths:
+  - internal/capture/syncruntime/tracking_projection_test.go
+  - tests/extension/tab-state/tab-state.test.js
   - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/tab-state/tab-state.test.js
   - tests/extension/branding/brand-metadata.test.js
@@ -162,6 +168,30 @@ last_verified_date: 2026-04-03
   exact correlation ID. Stale acknowledgements cannot release newer
   navigations; final failures remain visible in System Doctor without exposing
   page data.
+
+## Tracked-tab ownership and update ordering
+
+Chrome tracking code owns tab selection. Every write to the tracked-tab keys goes
+through `src/lib/tabs/tracked-tab-storage.ts`, which serializes writes in the
+service worker. Selection (`setTrackedTab`: popup, context menu, `switch_tab`,
+auto-track via `persistTrackedTab`) replaces the record. Chrome lifecycle adapters
+in `src/background/event-listeners.ts` use writes scoped to a tab:
+`updateTrackedTabDetails` on navigation and `clearTrackedTabIfCurrent` on close.
+Each re-reads the tracked id inside the queue, so a late update for tab A is
+dropped after a switch to tab B. Continuity (`tracking-continuity.ts`) is driven
+by the storage-change listener for selection, and by the navigate, close and
+readiness adapters.
+
+The daemon applies one ordering rule, `observeTrackingLocked` in
+`internal/capture/syncruntime/tracking_projection.go`, to both kinds of
+observation. A synchronous `switch_tab` result (`UpdateTrackedTab`) applies at
+once and opens a hold on the confirmed tab. A `/sync` heartbeat that names the
+held tab closes the hold. A heartbeat that names another tab is stale: its
+tab-scoped fields (identity, status, active, CSP) are dropped, up to
+`staleHeartbeatAllowance` (2) times. After that the extension's view wins,
+because the extension owns selection. Pilot state in a dropped heartbeat still
+applies. Background `switch_tab` converges through heartbeats alone, under the
+same rule. The wire shape is unchanged.
 
 ## Specs
 
