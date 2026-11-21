@@ -46,7 +46,7 @@ func newGateFixture() *gateFixture {
 	})
 	fixture.browser = toolinteract.NewBrowserActions(runtime, nil, toolinteract.BrowserDeps{
 		RequirePilot: guards.RequirePilot, RequireExtension: guards.RequireExtension, RequireTabTracking: guards.RequireTabTracking,
-		Capture: func() *capture.Capture { return fixture.capture }, InjectCSPBlockedActions: func(response mcp.JSONRPCResponse) mcp.JSONRPCResponse { return response },
+		Tab: fixture.capture.Extension(), Perf: fixture.capture.Performance(), InjectCSPBlockedActions: func(response mcp.JSONRPCResponse) mcp.JSONRPCResponse { return response },
 	})
 	return fixture
 }

@@ -739,7 +739,7 @@
     },
     "cmd/browser-agent/internal/toolgenerate/artifacts_sarif_impl.go": {
       "mutable_globals": 0,
-      "exports": 1
+      "exports": 3
     },
     "cmd/browser-agent/internal/toolgenerate/artifacts_security_impl.go": {
       "mutable_globals": 0,
@@ -767,7 +767,7 @@
     },
     "cmd/browser-agent/internal/toolinteract/action_owners.go": {
       "mutable_globals": 0,
-      "exports": 23
+      "exports": 26
     },
     "cmd/browser-agent/internal/toolinteract/action_runtime.go": {
       "mutable_globals": 1,
@@ -2067,7 +2067,7 @@
     },
     "internal/tools/observe/page/page_state.go": {
       "mutable_globals": 0,
-      "exports": 4
+      "exports": 5
     },
     "internal/tools/observe/session/session.go": {
       "mutable_globals": 0,

@@ -6,38 +6,48 @@
 package toolruntime
 
 import (
+	"encoding/json"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactbatch"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/a11yaudit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
+	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
 )
 
 func initializeInteractActionOwners(h *ToolHandler) {
 	if h.Guards == nil {
 		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())
 	}
-	captureStore := func() *capture.Capture { return h.capture }
-	var interactCommands toolinteract.Commands
-	var waitCommand func(string, time.Duration) (*queries.CommandResult, bool)
-	trackingEnabled := func() bool { return false }
+	var (
+		interactCommands toolinteract.Commands
+		waitCommand      func(string, time.Duration) (*queries.CommandResult, bool)
+		pageTab          toolinteract.TrackedTab
+		browserTab       toolinteract.BrowserTab
+		perfBaseline     toolinteract.PerfBaseline
+	)
+	trackingStatus := func() (bool, int, string) { return false, 0, "" }
+	vitals := func() []performance.PerformanceSnapshot { return nil }
 	if h.capture != nil {
 		interactCommands = h.capture.Commands()
 		waitCommand = h.capture.Commands().WaitCommand
-		trackingEnabled = func() bool {
-			enabled, _, _ := h.capture.Extension().GetTrackingStatus()
-			return enabled
-		}
+		pageTab, browserTab = h.capture.Extension(), h.capture.Extension()
+		perfBaseline = h.capture.Performance()
+		trackingStatus = h.capture.Extension().GetTrackingStatus
+		vitals = h.capture.Performance().Entries
 	}
 	h.interactRuntime = toolinteract.NewActionRuntime(toolinteract.RuntimeDeps{
 		RequireCSPClear:     h.Guards.RequireCSPClear,
 		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery, MaybeWaitForCommand: h.asyncCommands.MaybeWaitForCommand,
 		RecordAIAction: h.actionRecorder.Record,
 		DefaultEvidenceCapture: func(clientID string) toolinteract.EvidenceShot {
-			return toolinteract.CaptureEvidence(interactCommands, trackingEnabled, clientID)
+			return toolinteract.CaptureEvidence(interactCommands, trackingEnabled(h), clientID)
 		},
 	})
 	h.domActions = toolinteract.NewDOMActions(h.interactRuntime, toolinteract.DOMDeps{
@@ -50,7 +60,7 @@ func initializeInteractActionOwners(h *ToolHandler) {
 	})
 	h.pageActions = toolinteract.NewPageActions(h.interactRuntime, h.domActions, h.storageActions, toolinteract.PageDeps{
 		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
-		RequireTabTracking: h.Guards.RequireTabTracking, Capture: captureStore, Commands: interactCommands,
+		RequireTabTracking: h.Guards.RequireTabTracking, Tab: pageTab, Vitals: vitals, Commands: interactCommands,
 		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery, RecordAIAction: h.actionRecorder.Record,
 		MarkDrawStarted: func() {
 			if h.annotationStore != nil {
@@ -63,7 +73,7 @@ func initializeInteractActionOwners(h *ToolHandler) {
 	})
 	h.browserActions = toolinteract.NewBrowserActions(h.interactRuntime, h.pageActions, toolinteract.BrowserDeps{
 		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
-		RequireTabTracking: h.Guards.RequireTabTracking, Capture: captureStore, Commands: interactCommands,
+		RequireTabTracking: h.Guards.RequireTabTracking, Tab: browserTab, Perf: perfBaseline, Commands: interactCommands,
 		InjectCSPBlockedActions: h.Guards.InjectCSPBlockedActions,
 		GetListenPort: func() int {
 			if h.state.ListenPort != nil {
@@ -75,10 +85,19 @@ func initializeInteractActionOwners(h *ToolHandler) {
 	h.workflowActions = toolinteract.NewWorkflowActions(
 		h.interactRuntime, h.domActions, h.browserActions, h.pageActions,
 		toolinteract.WorkflowDeps{
-			Capture: captureStore, ToolAnalyze: h.analyzeDispatcher.Handle,
-			ToolExportSARIF: h.generateDispatcher.ExportSARIF, Now: time.Now,
+			TrackingStatus: trackingStatus,
+			AuditA11y: func(scope string) (a11yaudit.Result, error) {
+				return newA11yService(h).Audit(a11yaudit.Options{Scope: scope})
+			},
+			A11yFailure: func(req mcp.JSONRPCRequest, err error) mcp.JSONRPCResponse {
+				return observepage.A11yFailure(req, err, h.Guards.DiagnosticHintString())
+			},
+			ExportSARIF: func(a11yResult json.RawMessage, scope, saveTo string) (map[string]any, error) {
+				return toolgenerate.BuildSARIF(h.state.Version, a11yResult, scope, saveTo, false)
+			},
+			Now: time.Now,
 			WaitForTrackedURLChange: func(beforeURL string, timeout time.Duration) (string, bool) {
-				return captureStore().Extension().WaitForTrackedURLChange(h.shutdownCtx, beforeURL, timeout)
+				return h.capture.Extension().WaitForTrackedURLChange(h.shutdownCtx, beforeURL, timeout)
 			},
 		},
 	)

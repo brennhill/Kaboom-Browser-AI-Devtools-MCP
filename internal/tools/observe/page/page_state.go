@@ -186,19 +186,24 @@ func RunA11yAudit(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) 
 		ForceRefresh: params.ForceRefresh, Summary: params.Summary,
 	})
 	if err != nil {
-		var failure *a11yaudit.Failure
-		if errors.As(err, &failure) && failure.Kind == a11yaudit.KindNotTracking {
-			return mcp.Fail(req, mcp.ErrNoData, "No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab' on the page you want to monitor. Check observe with what='pilot' for extension status.", "", mcp.WithHint(deps.DiagnosticHintString()))
-		}
-		detail := err.Error()
-		if failure != nil {
-			detail = failure.Detail
-		}
-		return mcp.Fail(req, mcp.ErrInvalidJSON, "Failed to parse a11y result: "+detail, "Check extension logs for errors")
+		return A11yFailure(req, err, deps.DiagnosticHintString())
 	}
 	if result.PartialError != "" {
 		// Issue #276: partial results with an error field instead of a hard failure.
 		return mcp.Succeed(req, "A11y audit (partial — "+result.PartialError+")", result.Data)
 	}
 	return mcp.Succeed(req, "A11y audit", result.Data)
+}
+
+// A11yFailure maps an a11yaudit failure to its canonical MCP error.
+func A11yFailure(req mcp.JSONRPCRequest, err error, hint string) mcp.JSONRPCResponse {
+	var failure *a11yaudit.Failure
+	if errors.As(err, &failure) && failure.Kind == a11yaudit.KindNotTracking {
+		return mcp.Fail(req, mcp.ErrNoData, "No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab' on the page you want to monitor. Check observe with what='pilot' for extension status.", "", mcp.WithHint(hint))
+	}
+	detail := err.Error()
+	if failure != nil {
+		detail = failure.Detail
+	}
+	return mcp.Fail(req, mcp.ErrInvalidJSON, "Failed to parse a11y result: "+detail, "Check extension logs for errors")
 }

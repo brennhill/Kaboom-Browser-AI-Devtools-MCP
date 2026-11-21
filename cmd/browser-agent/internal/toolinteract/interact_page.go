@@ -71,10 +71,9 @@ func (h *PageActions) enrichNavigateResponse(
 	if json.Unmarshal(resp.Result, &result) != nil || result.IsError {
 		return resp
 	}
-	captureStore := h.deps.Capture()
-	_, _, tabURL := captureStore.Extension().GetTrackingStatus()
-	tabTitle := captureStore.Extension().GetTrackedTabTitle()
-	vitals := captureStore.Performance().Entries()
+	_, _, tabURL := h.deps.Tab.GetTrackingStatus()
+	tabTitle := h.deps.Tab.GetTrackedTabTitle()
+	vitals := h.deps.Vitals()
 	correlationID := toolresp.NewCorrelationID("nav_content")
 	query := queries.PendingQuery{
 		Type: "page_summary",

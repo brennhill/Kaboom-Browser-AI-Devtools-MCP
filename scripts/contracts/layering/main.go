@@ -18,9 +18,11 @@
 //	command-owner        no production X.Queries() call, and no import of
 //	                     internal/browsercommand/internal/dispatch outside
 //	                     internal/browsercommand/** (command_owner.go)
-//	internal/tools/observe/** ↛ internal/capture (observe modes take their read
-//	                     owners — syncruntime, telemetrystore, perfstore, logstore —
-//	                     never the whole Capture; testsupport is exempt)
+//	internal/tools/observe/**, cmd/browser-agent/internal/toolinteract/**
+//	                     ↛ internal/capture (observe modes and interact actions take
+//	                     their owners — syncruntime, telemetrystore, perfstore,
+//	                     logstore, browsercommand — never the whole Capture;
+//	                     observe/testsupport is exempt)
 //	capture.NewCapture   only from cmd/browser-agent (ports are wired by the
 //	                     composition root; detection resolves import ALIASES
 //	                     and package-level var initializers, not the literal
@@ -325,6 +327,15 @@ func scanTree(root string) (*treeScan, error) {
 	return scan, nil
 }
 
+// narrowedFromCapture reports packages that must not import the whole Capture.
+func narrowedFromCapture(pkg string) bool {
+	if pkg == modulePrefix+"internal/tools/observe/testsupport" {
+		return false
+	}
+	return isPkgOrSub(pkg, modulePrefix+"internal/tools/observe") ||
+		isPkgOrSub(pkg, modulePrefix+"cmd/browser-agent/internal/toolinteract")
+}
+
 func isCompositionRootPkg(pkgPath string) bool {
 	return pkgPath == modulePrefix+"cmd/browser-agent"
 }
@@ -415,8 +426,7 @@ func evaluateMatrix(scan *treeScan) []string {
 				violations = append(violations, fmt.Sprintf("internal->cmd: %s imports %s", file, imp))
 			case isPkgOrSub(srcPkg, modulePrefix+"internal/mcp") && (isPkgOrSub(internal, "internal/tools") || isPkgOrSub(internal, "internal/capture")):
 				violations = append(violations, fmt.Sprintf("mcp->domain: %s imports %s", file, imp))
-			case isPkgOrSub(srcPkg, modulePrefix+"internal/tools/observe") && internal == "internal/capture" &&
-				srcPkg != modulePrefix+"internal/tools/observe/testsupport":
+			case narrowedFromCapture(srcPkg) && internal == "internal/capture":
 				violations = append(violations, fmt.Sprintf("observe->capture: %s imports %s; depend on the read owners", file, imp))
 			case isPkgOrSub(srcPkg, modulePrefix+"internal/schema") && isPkgOrSub(internal, "internal/tools"):
 				violations = append(violations, fmt.Sprintf("schema->tools: %s imports %s", file, imp))

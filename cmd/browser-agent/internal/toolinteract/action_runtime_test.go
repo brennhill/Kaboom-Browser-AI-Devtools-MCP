@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/a11yaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pageinfo"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
@@ -257,8 +258,8 @@ type fakeState struct {
 	waitTrackedURLFn func(beforeURL string, timeout time.Duration) (string, bool)
 	screenshot       func(screenshot.Options) (screenshot.Result, error)
 	pageInfo         func() pageinfo.Info
-	analyzeFn        func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
-	sarifFn          func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
+	auditFn          func(scope string) (a11yaudit.Result, error)
+	sarifFn          func(a11yResult json.RawMessage, scope, saveTo string) (map[string]any, error)
 	listenPort       int
 	evidenceFn       func(clientID string) EvidenceShot
 }
@@ -268,13 +269,11 @@ type fakeCapabilities struct {
 	RequireCSPClear                                    func(mcp.JSONRPCRequest, string) (mcp.JSONRPCResponse, bool)
 	EnqueuePendingQuery                                func(mcp.JSONRPCRequest, queries.PendingQuery, time.Duration) (mcp.JSONRPCResponse, bool)
 	MaybeWaitForCommand                                func(mcp.JSONRPCRequest, string, json.RawMessage, string) mcp.JSONRPCResponse
-	Capture                                            func() *capture.Capture
 	Commands                                           Commands
 	Diagnostics                                        statediag.Reporter
 	RecordAIAction                                     func(string, string, map[string]any)
 	RecordAIEnhancedAction                             func(types.EnhancedAction)
 	RecordDOMPrimitiveAction                           func(string, string, string, string)
-	ToolAnalyze, ToolExportSARIF                       func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
 	InjectCSPBlockedActions                            func(mcp.JSONRPCResponse) mcp.JSONRPCResponse
 	CaptureScreenshot                                  func(context.Context, screenshot.Options) (screenshot.Result, error)
 	PageInfo                                           func() pageinfo.Info
@@ -376,26 +375,12 @@ func (fs *fakeState) deps() *fakeCapabilities {
 			})
 		},
 
-		Capture:     func() *capture.Capture { return fs.cap },
 		Commands:    fs.cap.Commands(),
 		Diagnostics: &fs.diagnostics,
 
 		RecordAIAction:           func(action, url string, extra map[string]any) { fs.record(action) },
 		RecordAIEnhancedAction:   func(action types.EnhancedAction) { fs.record("enhanced") },
 		RecordDOMPrimitiveAction: func(action, selector, text, value string) { fs.record("dom:" + action) },
-
-		ToolAnalyze: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			if fs.analyzeFn != nil {
-				return fs.analyzeFn(req, args)
-			}
-			return mcp.Succeed(req, "analyze", map[string]any{"issues": []any{}})
-		},
-		ToolExportSARIF: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			if fs.sarifFn != nil {
-				return fs.sarifFn(req, args)
-			}
-			return mcp.Succeed(req, "sarif", map[string]any{"status": "exported"})
-		},
 
 		InjectCSPBlockedActions: func(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse { return resp },
 
@@ -458,17 +443,32 @@ func newFakeActionOwners(t *testing.T) (*fakeActionOwners, *fakeState) {
 	dom := NewDOMActions(runtime, DOMDeps{deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.RecordDOMPrimitiveAction})
 	storage := NewStorageActions(runtime, StorageDeps{deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking})
 	page := NewPageActions(runtime, dom, storage, PageDeps{
-		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.Capture, deps.Commands,
+		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, fs.cap.Extension(), fs.cap.Performance().Entries, deps.Commands,
 		deps.EnqueuePendingQuery, deps.RecordAIAction, deps.MarkDrawStarted, deps.CaptureScreenshot, deps.PageInfo,
 		deps.Diagnostics,
 	})
 	browser := NewBrowserActions(runtime, page, BrowserDeps{
-		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.Capture, deps.Commands,
+		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, fs.cap.Extension(), fs.cap.Performance(), deps.Commands,
 		deps.InjectCSPBlockedActions, deps.GetListenPort,
 	})
 	workflow := NewWorkflowActions(runtime, dom, browser, page, WorkflowDeps{
-		Capture: deps.Capture, ToolAnalyze: deps.ToolAnalyze,
-		ToolExportSARIF: deps.ToolExportSARIF, Now: time.Now,
+		TrackingStatus: fs.cap.Extension().GetTrackingStatus,
+		AuditA11y: func(scope string) (a11yaudit.Result, error) {
+			if fs.auditFn != nil {
+				return fs.auditFn(scope)
+			}
+			return a11yaudit.Result{Data: map[string]any{"issues": []any{}}}, nil
+		},
+		A11yFailure: func(req mcp.JSONRPCRequest, err error) mcp.JSONRPCResponse {
+			return mcp.Fail(req, mcp.ErrExtError, err.Error(), "retry")
+		},
+		ExportSARIF: func(a11yResult json.RawMessage, scope, saveTo string) (map[string]any, error) {
+			if fs.sarifFn != nil {
+				return fs.sarifFn(a11yResult, scope, saveTo)
+			}
+			return map[string]any{"status": "exported"}, nil
+		},
+		Now: time.Now,
 		WaitForTrackedURLChange: func(beforeURL string, timeout time.Duration) (string, bool) {
 			if fs.waitTrackedURLFn != nil {
 				return fs.waitTrackedURLFn(beforeURL, timeout)

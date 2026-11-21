@@ -370,17 +370,23 @@ func TestObserveModesDependOnReadOwnersNotCapture(t *testing.T) {
 	root := t.TempDir()
 	c := modulePrefix + "internal/capture"
 	writeTree(t, root, map[string]string{
-		"internal/tools/observe/logs/l.go":        "package logs\n\nimport _ \"" + c + "\"\n",
-		"internal/tools/observe/core/d.go":        "package core\n\nimport _ \"" + c + "/telemetrystore\"\n",
-		"internal/tools/observe/testsupport/h.go": "package testsupport\n\nimport _ \"" + c + "\"\n",
-		"internal/tools/observe/logs/l_test.go":   "package logs\n\nimport _ \"" + c + "\"\n",
+		"cmd/browser-agent/internal/toolinteract/a.go": "package toolinteract\n\nimport _ \"" + c + "\"\n",
+		"internal/tools/observe/logs/l.go":             "package logs\n\nimport _ \"" + c + "\"\n",
+		"internal/tools/observe/core/d.go":             "package core\n\nimport _ \"" + c + "/telemetrystore\"\n",
+		"internal/tools/observe/testsupport/h.go":      "package testsupport\n\nimport _ \"" + c + "\"\n",
+		"internal/tools/observe/logs/l_test.go":        "package logs\n\nimport _ \"" + c + "\"\n",
 	})
 	scan, err := scanTree(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	violations := evaluateMatrix(scan)
-	if len(violations) != 1 || !contains(violations[0], "observe->capture") {
-		t.Fatalf("violations = %v, want one observe->capture breach", violations)
+	if len(violations) != 2 {
+		t.Fatalf("violations = %v, want two observe->capture breaches", violations)
+	}
+	for _, v := range violations {
+		if !contains(v, "observe->capture") {
+			t.Errorf("unexpected violation kind: %s", v)
+		}
 	}
 }

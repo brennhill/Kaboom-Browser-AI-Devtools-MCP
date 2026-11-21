@@ -502,7 +502,7 @@ func filterNavigateAndDocumentClickArgs(args json.RawMessage) json.RawMessage {
 }
 
 func (h *WorkflowActions) currentTrackedURL(req mcp.JSONRPCRequest) string {
-	_, _, trackedURL := h.deps.Capture().Extension().GetTrackingStatus()
+	_, _, trackedURL := h.deps.TrackingStatus()
 	if trackedURL != "" {
 		return trackedURL
 	}
@@ -522,7 +522,7 @@ func (h *WorkflowActions) validateNavigateAndDocumentTab(req mcp.JSONRPCRequest,
 		return mcp.JSONRPCResponse{}, false
 	}
 
-	enabled, trackedTabID, _ := h.deps.Capture().Extension().GetTrackingStatus()
+	enabled, trackedTabID, _ := h.deps.TrackingStatus()
 	if !enabled || trackedTabID <= 0 {
 		return mcp.Fail(req, mcp.ErrInvalidParam,
 			fmt.Sprintf("navigate_and_document with tab_id=%d requires an actively tracked tab", tabID),
@@ -578,33 +578,18 @@ func (h *WorkflowActions) HandleRunA11yAndExportSARIF(req mcp.JSONRPCRequest, ar
 	workflowStart := time.Now()
 
 	// Step 1: Run accessibility audit.
-	a11yArgs := marshalQueryParams(map[string]any{
-		"what":   "accessibility",
-		"scope":  params.Scope,
-		"tab_id": params.TabID,
-	})
 	stepStart := time.Now()
-	a11yResp := h.deps.ToolAnalyze(req, a11yArgs)
-	trace = append(trace, act.WorkflowStep{
-		Action:   "analyze_accessibility",
-		Status:   act.ResponseStatus(a11yResp),
-		TimingMs: time.Since(stepStart).Milliseconds(),
-	})
-	if act.IsErrorResponse(a11yResp) {
-		return act.WorkflowResult(req, "run_a11y_and_export_sarif", trace, a11yResp, workflowStart)
+	audit, err := h.deps.AuditA11y(params.Scope)
+	if err != nil {
+		failure := h.deps.A11yFailure(req, err)
+		trace = append(trace, act.WorkflowStep{Action: "analyze_accessibility", Status: act.ResponseStatus(failure), TimingMs: time.Since(stepStart).Milliseconds()})
+		return act.WorkflowResult(req, "run_a11y_and_export_sarif", trace, failure, workflowStart)
 	}
+	trace = append(trace, act.WorkflowStep{Action: "analyze_accessibility", Status: "success", TimingMs: time.Since(stepStart).Milliseconds()})
 
-	// Step 2: Export as SARIF, reusing successful a11y payload to avoid a second blocking query.
-	sarifParams := map[string]any{
-		"scope":   params.Scope,
-		"save_to": params.SaveTo,
-	}
-	if a11yResult := extractMCPResponseJSONPayload(a11yResp); len(a11yResult) > 0 {
-		sarifParams["a11y_result"] = a11yResult
-	}
-	sarifArgs, _ := json.Marshal(sarifParams)
+	// Step 2: Export as SARIF, reusing the audit payload to avoid a second blocking query.
 	stepStart = time.Now()
-	sarifResp := h.deps.ToolExportSARIF(req, sarifArgs)
+	sarifResp := h.exportSARIF(req, audit.Data, params.Scope, params.SaveTo)
 	trace = append(trace, act.WorkflowStep{
 		Action:   "generate_sarif",
 		Status:   act.ResponseStatus(sarifResp),
@@ -614,21 +599,15 @@ func (h *WorkflowActions) HandleRunA11yAndExportSARIF(req mcp.JSONRPCRequest, ar
 	return act.WorkflowResult(req, "run_a11y_and_export_sarif", trace, sarifResp, workflowStart)
 }
 
-// extractMCPResponseJSONPayload extracts JSON payload from first text block in MCP response.
-func extractMCPResponseJSONPayload(resp mcp.JSONRPCResponse) json.RawMessage {
-	var result mcp.MCPToolResult
-	if err := json.Unmarshal(resp.Result, &result); err != nil || len(result.Content) == 0 {
-		return nil
+// exportSARIF converts the audit payload and wraps the SARIF document as the workflow result.
+func (h *WorkflowActions) exportSARIF(req mcp.JSONRPCRequest, auditData map[string]any, scope, saveTo string) mcp.JSONRPCResponse {
+	payload, err := json.Marshal(auditData)
+	if err != nil {
+		return mcp.Fail(req, mcp.ErrNoData, "SARIF export failed: "+err.Error(), "Check a11y audit results and try again.")
 	}
-
-	text := strings.TrimSpace(result.Content[0].Text)
-	jsonStart := strings.IndexAny(text, "{[")
-	if jsonStart < 0 {
-		return nil
+	document, err := h.deps.ExportSARIF(payload, scope, saveTo)
+	if err != nil {
+		return mcp.Fail(req, mcp.ErrNoData, err.Error(), "Check a11y audit results and try again.")
 	}
-	payload := strings.TrimSpace(text[jsonStart:])
-	if !json.Valid([]byte(payload)) {
-		return nil
-	}
-	return json.RawMessage(payload)
+	return mcp.Succeed(req, "SARIF export complete", document)
 }

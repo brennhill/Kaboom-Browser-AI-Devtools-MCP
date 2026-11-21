@@ -3,11 +3,13 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/a11yaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pageinfo"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -292,64 +294,45 @@ func TestHandleRunA11yAndExportSARIF_Success(t *testing.T) {
 	assertOK(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{"scope":"page"}`)))
 }
 
-func TestHandleRunA11yAndExportSARIFReusesSingleAnalyzePayload(t *testing.T) {
+func TestHandleRunA11yAndExportSARIFReusesSingleAuditPayload(t *testing.T) {
 	h, state := newFakeWorkflowActions(t)
-	analyzeCalls := 0
-	state.analyzeFn = func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		analyzeCalls++
-		var input map[string]any
-		if err := json.Unmarshal(args, &input); err != nil {
-			t.Fatalf("decode analyze args: %v", err)
+	auditCalls := 0
+	state.auditFn = func(scope string) (a11yaudit.Result, error) {
+		auditCalls++
+		if scope != "body" {
+			t.Fatalf("audit scope = %q", scope)
 		}
-		if input["what"] != "accessibility" || input["scope"] != "body" || input["tab_id"] != float64(42) {
-			t.Fatalf("analyze args = %#v", input)
-		}
-		return mcp.Succeed(req, "audit", map[string]any{"violations": []any{map[string]any{"id": "color-contrast"}}})
+		return a11yaudit.Result{Data: map[string]any{"violations": []any{map[string]any{"id": "color-contrast"}}}}, nil
 	}
-	state.sarifFn = func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		var input struct {
-			Scope      string          `json:"scope"`
-			SaveTo     string          `json:"save_to"`
-			A11yResult json.RawMessage `json:"a11y_result"`
+	state.sarifFn = func(a11yResult json.RawMessage, scope, saveTo string) (map[string]any, error) {
+		if scope != "body" || saveTo != "/tmp/audit.sarif" || !strings.Contains(string(a11yResult), "color-contrast") {
+			t.Fatalf("SARIF input = %s scope=%q saveTo=%q", a11yResult, scope, saveTo)
 		}
-		if err := json.Unmarshal(args, &input); err != nil {
-			t.Fatalf("decode SARIF args: %v", err)
-		}
-		if input.Scope != "body" || input.SaveTo != "/tmp/audit.sarif" || !strings.Contains(string(input.A11yResult), "color-contrast") {
-			t.Fatalf("SARIF args = %#v", input)
-		}
-		return mcp.Succeed(req, "sarif", map[string]any{"status": "exported"})
+		return map[string]any{"status": "exported"}, nil
 	}
 	assertOK(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{"scope":"body","save_to":"/tmp/audit.sarif","tab_id":42}`)))
-	if analyzeCalls != 1 {
-		t.Fatalf("analyze calls = %d, want 1", analyzeCalls)
+	if auditCalls != 1 {
+		t.Fatalf("audit calls = %d, want 1", auditCalls)
 	}
 }
 
 func TestHandleRunA11yAndExportSARIF_A11yError(t *testing.T) {
 	h, fs := newFakeWorkflowActions(t)
-	fs.analyzeFn = func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return mcp.Fail(req, mcp.ErrExtError, "audit failed", "retry")
-	}
+	fs.auditFn = func(string) (a11yaudit.Result, error) { return a11yaudit.Result{}, errors.New("audit failed") }
 	assertErr(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{}`)), mcp.ErrExtError)
+}
+
+func TestHandleRunA11yAndExportSARIF_SARIFError(t *testing.T) {
+	h, fs := newFakeWorkflowActions(t)
+	fs.sarifFn = func(json.RawMessage, string, string) (map[string]any, error) {
+		return nil, errors.New("SARIF export failed: bad")
+	}
+	assertErr(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{}`)), mcp.ErrNoData)
 }
 
 func TestHandleRunA11yAndExportSARIF_InvalidJSON(t *testing.T) {
 	h, _ := newFakeWorkflowActions(t)
 	assertErr(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
-}
-
-func TestExtractMCPResponseJSONPayload(t *testing.T) {
-	resp := mcp.Succeed(testReq(), "summary", map[string]any{"k": "v"})
-	payload := extractMCPResponseJSONPayload(resp)
-	if payload == nil || !contains(string(payload), "\"k\":\"v\"") {
-		t.Fatalf("expected extracted payload, got %s", payload)
-	}
-	// Non-JSON content returns nil.
-	plain := mcp.JSONRPCResponse{Result: json.RawMessage(`{"content":[{"type":"text","text":"no json here"}]}`)}
-	if extractMCPResponseJSONPayload(plain) != nil {
-		t.Fatal("expected nil for text without JSON")
-	}
 }
 
 func TestWorkflowFieldLabel(t *testing.T) {
