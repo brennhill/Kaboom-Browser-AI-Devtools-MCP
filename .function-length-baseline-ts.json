@@ -6,7 +6,7 @@
     "packages/kaboom-ci/kaboom-ci.js:installNetworkCapture:262": 81,
     "packages/kaboom-ci/kaboom-ci.js:installWebSocketCapture:345": 86,
     "scripts/docs/features/normalize-docs.js:normalize:227": 140,
-    "scripts/release/install-upgrade-regression.mjs:main:658": 106,
+    "scripts/release/install-upgrade-regression.mjs:main:679": 106,
     "scripts/smoke-tests/framework/build-framework-fixtures.mjs:pageTemplate:21": 167,
     "scripts/smoke-tests/framework/build-framework-fixtures.mjs:writeHtmlFixtures:280": 131,
     "scripts/smoke-tests/framework/framework-fixtures/vue-entry.js:(anonymous):67": 158,

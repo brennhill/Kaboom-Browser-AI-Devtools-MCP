@@ -29,13 +29,34 @@ let daemonLogSeq = 0
 const daemonLogsByPort = new Map()
 
 process.once('SIGINT', () => {
-  cleanupHost()
+  runCleanupReportingErrors()
   process.exit(130)
 })
 process.once('SIGTERM', () => {
-  cleanupHost()
+  runCleanupReportingErrors()
   process.exit(143)
 })
+
+// removeTmpRoot deletes the sandbox. On Windows an executable stays locked for a
+// moment after its process exits, so rmSync gets EPERM on kaboom-old.exe right
+// after stopDaemon; Node's built-in retry backoff covers that window. A lock that
+// outlives the retries means a sandbox process is genuinely still running.
+function removeTmpRoot(tmpRoot) {
+  fs.rmSync(tmpRoot, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 })
+}
+
+// runCleanupReportingErrors runs cleanup on a path that is already failing or
+// exiting: a cleanup error is logged loudly but must never replace the error
+// that caused the exit (it used to, hiding the real stage failure behind EPERM).
+function runCleanupReportingErrors() {
+  try {
+    cleanupHost()
+  } catch (cleanupErr) {
+    process.stderr.write(
+      `[upgrade-regression] ERROR: sandbox cleanup failed (a sandbox process may still be running): ${cleanupErr && cleanupErr.message ? cleanupErr.message : cleanupErr}\n`
+    )
+  }
+}
 
 function info(message) {
   process.stdout.write(`[upgrade-regression] ${message}\n`)
@@ -675,7 +696,7 @@ async function main() {
   // The JS fs.realpathSync only follows symlinks and leaves 8.3 names intact, so
   // the test HOME would differ from what Go's EvalSymlinks reports for it.
   const tmpRoot = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-upgrade-regression-')))
-  cleanupHost = () => fs.rmSync(tmpRoot, { recursive: true, force: true })
+  cleanupHost = () => removeTmpRoot(tmpRoot)
   const { homeDir, stateDir, binDir, identityPath, preferencesPath, continuityBefore } = prepareHostState(tmpRoot)
 
   const envBase = {
@@ -709,7 +730,7 @@ async function main() {
   cleanupHost = () => {
     stopDaemon(packed.wrapper, port, envWithShims)
     stopDaemon(oldBinary, port, envWithShims)
-    fs.rmSync(tmpRoot, { recursive: true, force: true })
+    removeTmpRoot(tmpRoot)
   }
   info(`using port ${port}`)
 
@@ -770,7 +791,7 @@ main().catch((err) => {
     }
     persistEvidence()
   }
-  cleanupHost()
+  runCleanupReportingErrors()
   console.error(String(err && err.stack ? err.stack : err))
   process.exit(1)
 })

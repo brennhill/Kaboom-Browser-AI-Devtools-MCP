@@ -286,7 +286,8 @@ describe('Tooling contracts', () => {
   test('validate-architecture follows canonical post-refactor owners', () => {
     const script = readFileSync('scripts/quality/verification/validate-architecture.sh', 'utf8')
     for (const currentOwner of [
-      'internal/queries/dispatcher_results.go',
+      'internal/browsercommand/owner.go',
+      'internal/browsercommand/internal/dispatch/dispatcher_results.go',
       'internal/capture/syncruntime/handler.go',
       'internal/toolobserve/dispatcher.go',
       'internal/toolinteract/interact_browser.go',
@@ -297,6 +298,7 @@ describe('Tooling contracts', () => {
     for (const deletedSurface of [
       'internal/capture/query_dispatcher.go',
       'internal/capture/types.go',
+      'internal/queries/dispatcher',
       'tools_observe.go',
       'bridge_adapter.go',
       'toolObserveCommandResult'
