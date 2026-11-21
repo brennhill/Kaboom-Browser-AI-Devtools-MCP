@@ -5,6 +5,7 @@ package syncruntime
 
 import (
 	"context"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"testing"
 	"time"
 
@@ -148,12 +149,12 @@ func TestCaptureTestHelpersAndTTL(t *testing.T) {
 		t.Fatalf("tracking state = (%v,%d,%q), want (true,77,https://tracked.test)", enabled, tabID, tabURL)
 	}
 
-	if pending := c.Queries().GetPendingQueries(); len(pending) != 0 {
+	if pending := c.Commands().Pending(); len(pending) != 0 {
 		t.Fatalf("GetPendingQueries() = %+v, want none before adding pending query", pending)
 	}
-	c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "query_dom", Params: []byte(`{"selector":".x"}`)})
-	c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "accessibility", Params: []byte(`{"scope":"page"}`)})
-	pending := c.Queries().GetPendingQueries()
+	commandtest.Enqueue(c.Commands(), queries.PendingQuery{Type: "query_dom", Params: []byte(`{"selector":".x"}`)})
+	commandtest.Enqueue(c.Commands(), queries.PendingQuery{Type: "accessibility", Params: []byte(`{"scope":"page"}`)})
+	pending := c.Commands().Pending()
 	if len(pending) != 2 || pending[len(pending)-1].Type != "accessibility" {
 		t.Fatalf("pending queries = %+v, want accessibility query last", pending)
 	}

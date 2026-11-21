@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/ports"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
@@ -15,15 +16,9 @@ import (
 
 const maxPostBodySize = 10 << 20
 
-// ResultSink accepts extension results uploaded over the media endpoints.
-// internal/browsercommand.Owner satisfies it.
-type ResultSink interface {
-	SubmitResult(result browsercommand.Result) browsercommand.Outcome
-}
-
 // Handler owns media ingest dependencies and per-client screenshot throttling.
 type Handler struct {
-	results      ResultSink
+	results      ports.ResultSink
 	annotations  *annotation.Store
 	pushRouter   *push.Router
 	rateMu       sync.Mutex
@@ -32,7 +27,7 @@ type Handler struct {
 
 // New constructs the complete media ingest boundary.
 // A nil results sink disables query/command completion (degraded composition).
-func New(results ResultSink, annotations *annotation.Store, pushRouter *push.Router) *Handler {
+func New(results ports.ResultSink, annotations *annotation.Store, pushRouter *push.Router) *Handler {
 	return &Handler{
 		results:      results,
 		annotations:  annotations,

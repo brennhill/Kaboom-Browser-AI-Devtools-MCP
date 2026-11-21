@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/ports"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -177,18 +178,12 @@ func stableVideoCleanupError(closeErr, cleanupErr error) error {
 	return cleanupErr
 }
 
-// ResultSink accepts the saved-recording result for the query that requested
-// it. internal/browsercommand.Owner satisfies it.
-type ResultSink interface {
-	SubmitResult(result browsercommand.Result) browsercommand.Outcome
-}
-
 // HandleSave handles POST /recordings/save from the extension.
 // Accepts multipart form with "video" (binary) and "metadata" (JSON string) fields.
 func HandleSave(
 	w http.ResponseWriter,
 	r *http.Request,
-	results ResultSink,
+	results ports.ResultSink,
 	diagnostics statediag.Reporter,
 ) {
 	handleSaveWithOperations(w, r, results, diagnostics, defaultVideoDiskOperations())
@@ -197,7 +192,7 @@ func HandleSave(
 func handleSaveWithOperations(
 	w http.ResponseWriter,
 	r *http.Request,
-	results ResultSink,
+	results ports.ResultSink,
 	diagnostics statediag.Reporter,
 	ops videoDiskOperations,
 ) {

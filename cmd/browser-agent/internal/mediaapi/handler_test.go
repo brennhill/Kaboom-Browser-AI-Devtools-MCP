@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -64,7 +65,7 @@ func TestHandleScreenshotValidatesPersistsResolvesAndThrottles(t *testing.T) {
 	if _, err := os.Stat(response["path"]); err != nil || !strings.Contains(response["filename"], "example.test") {
 		t.Fatalf("persisted response = %#v, stat error=%v", response, err)
 	}
-	if result, ok := captured.Queries().TakeQueryResult("query-1"); !ok || !bytes.Contains(result, []byte(dataURL)) {
+	if result, ok := commandtest.Take(captured.Commands(), "query-1"); !ok || !bytes.Contains(result, []byte(dataURL)) {
 		t.Fatalf("query result = %s, %t", result, ok)
 	}
 

@@ -22,14 +22,12 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 )
 
 type testState struct {
 	runtime        *Runtime
-	queries        *queries.QueryDispatcher
 	commands       *browsercommand.Owner
 	clock          func() time.Time // nil uses time.Now
 	lifecycle      *lifecycle.Observer
@@ -46,9 +44,8 @@ func newTestState() *testState {
 	runtime := New()
 	lifecycleObserver := lifecycle.NewObserver()
 	redactor := redaction.NewRedactionEngine("")
-	dispatcher := queries.NewQueryDispatcher()
 	return &testState{
-		runtime: runtime, queries: dispatcher, commands: browsercommand.NewOwner(dispatcher), lifecycle: lifecycleObserver,
+		runtime: runtime, commands: browsercommand.NewOwner(), lifecycle: lifecycleObserver,
 		featureUsage: featureusage.New(), extensionLogs: logstore.NewExtension(redactor.Redact),
 		diagnosticLogs: logstore.NewDiagnostic(redactor.Redact),
 		telemetry:      telemetrystore.New(telemetrystore.Dependencies{ActiveTestIDs: runtime.GetActiveTestIDs}),
@@ -57,9 +54,9 @@ func newTestState() *testState {
 	}
 }
 
-func (s *testState) Close()                             { s.queries.Close() }
+func (s *testState) Close()                             { s.commands.Close() }
 func (s *testState) Extension() *Runtime                { return s.runtime }
-func (s *testState) Queries() *queries.QueryDispatcher  { return s.queries }
+func (s *testState) Commands() *browsercommand.Owner    { return s.commands }
 func (s *testState) ExtensionLogs() *logstore.Extension { return s.extensionLogs }
 func (s *testState) Telemetry() *telemetrystore.Store   { return s.telemetry }
 
@@ -109,7 +106,7 @@ func decodeSyncResponse(t *testing.T, w *httptest.ResponseRecorder) SyncResponse
 
 func assertCommandResult(t *testing.T, cap *testState, corrID, wantStatus, wantError string) {
 	t.Helper()
-	cmd, found := cap.Queries().GetCommandResult(corrID)
+	cmd, found := cap.Commands().Command(corrID)
 	if !found {
 		t.Fatal("expected command result to be present for correlation_id")
 	}

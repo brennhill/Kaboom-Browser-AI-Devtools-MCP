@@ -4,6 +4,7 @@ package idbquery
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"runtime"
 	"strings"
 	"testing"
@@ -19,9 +20,9 @@ func respondToNextQuery(t *testing.T, cap *capture.Capture, result json.RawMessa
 		defer close(done)
 		deadline := time.Now().Add(time.Second)
 		for time.Now().Before(deadline) {
-			pending := cap.Queries().GetPendingQueries()
+			pending := cap.Commands().Pending()
 			if len(pending) > 0 {
-				cap.Queries().SetQueryResult(pending[0].ID, result)
+				commandtest.Deliver(cap.Commands(), pending[0].ID, result)
 				return
 			}
 			runtime.Gosched()

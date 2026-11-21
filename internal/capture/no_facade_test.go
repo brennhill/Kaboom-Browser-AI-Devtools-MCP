@@ -165,6 +165,7 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"func (c *Capture) GetPerformanceSnapshotByURL(",
 		"func (c *Capture) StoreBeforeSnapshot(",
 		"func (c *Capture) GetAndDeleteBeforeSnapshot(",
+		"func (c *Capture) Queries(",
 		"func (c *Capture) CreatePendingQuery(",
 		"func (c *Capture) CreatePendingQueryWithClient(",
 		"func (c *Capture) CreatePendingQueryWithTimeout(",

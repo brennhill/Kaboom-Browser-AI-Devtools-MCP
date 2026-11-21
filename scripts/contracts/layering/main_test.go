@@ -338,20 +338,17 @@ func TestCommandModuleHasNoTransportDependencies(t *testing.T) {
 
 func TestCommandOwnerIsTheOnlyDispatcherPath(t *testing.T) {
 	root := t.TempDir()
-	q := modulePrefix + "internal/queries"
+	d := modulePrefix + "internal/browsercommand/internal/dispatch"
 	writeTree(t, root, map[string]string{
-		// Breach: production code reaching the dispatcher through Capture.Queries().
+		// Breach: production code calling a dispatcher accessor.
 		"cmd/browser-agent/internal/toolx/x.go": "package toolx\n\nfunc f(c interface{ Queries() any }) { _ = c.Queries() }\n",
-		// Breach: naming the dispatcher type outside the owner packages (aliased import).
-		"internal/tools/observe/page/p.go": "package page\n\nimport qq \"" + q + "\"\n\nvar _ *qq.QueryDispatcher\n",
-		// Breach: constructing a second dispatcher.
-		"internal/capture/other/o.go": "package other\n\nimport \"" + q + "\"\n\nvar d = queries.NewQueryDispatcher()\n",
-		// Clean: the owner, the dispatcher package, and the capture composition file.
-		"internal/browsercommand/owner.go": "package browsercommand\n\nimport \"" + q + "\"\n\ntype Owner struct{ queue *queries.QueryDispatcher }\n",
-		"internal/queries/dispatcher.go":   "package queries\n\ntype QueryDispatcher struct{}\n\nfunc NewQueryDispatcher() *QueryDispatcher { return nil }\n",
-		"internal/capture/capture.go":      "package capture\n\nimport \"" + q + "\"\n\ntype Capture struct{ d *queries.QueryDispatcher }\n\nfunc (c *Capture) Queries() *queries.QueryDispatcher { return c.d }\n",
-		// Clean: other queries symbols and test fixtures.
-		"internal/app/screenshot/s.go":               "package screenshot\n\nimport \"" + q + "\"\n\nvar _ queries.QueryRunner\n",
+		// Breach: the capture composition file no longer gets an exception.
+		"internal/capture/capture.go": "package capture\n\nimport _ \"" + d + "\"\n",
+		// Breach: aliased import elsewhere.
+		"internal/tools/observe/page/p.go": "package page\n\nimport qq \"" + d + "\"\n\nvar _ = qq.X\n",
+		// Clean: the owner itself and test fixtures.
+		"internal/browsercommand/owner.go":           "package browsercommand\n\nimport _ \"" + d + "\"\n",
+		"internal/app/screenshot/s.go":               "package screenshot\n\nimport \"" + modulePrefix + "internal/queries\"\n\nvar _ queries.QueryRunner\n",
 		"cmd/browser-agent/internal/toolx/x_test.go": "package toolx\n\nfunc g(c interface{ Queries() any }) { _ = c.Queries() }\n",
 	})
 	scan, err := scanTree(root)

@@ -6,6 +6,7 @@ package annotationanalysis
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"strings"
 	"testing"
 	"time"
@@ -479,7 +480,7 @@ func TestToolGetAnnotations_Flush_UsesExplicitURLFilterWhenWaiterMissing(t *test
 	})
 
 	corrID := "ann_flush_filter_fallback"
-	h.capture.Queries().RegisterCommand(corrID, "", 10*time.Minute)
+	commandtest.Register(h.capture.Commands(), corrID, 10*time.Minute)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","operation":"flush","correlation_id":"`+corrID+`","url":"http://localhost:3000/*"}`))

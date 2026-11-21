@@ -14,9 +14,9 @@ import (
 
 func newTestOwner(t *testing.T) *Owner {
 	t.Helper()
-	dispatcher := queries.NewQueryDispatcher()
-	t.Cleanup(dispatcher.Close)
-	return NewOwner(dispatcher)
+	owner := NewOwner()
+	t.Cleanup(owner.Close)
+	return owner
 }
 
 func enqueueCommand(t *testing.T, owner *Owner, correlationID string) string {

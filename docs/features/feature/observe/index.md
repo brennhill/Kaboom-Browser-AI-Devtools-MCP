@@ -14,7 +14,7 @@ code_paths:
   - src/background/ui/tracked-tab-state.ts
   - cmd/browser-agent/internal/mediaapi/screenshots.go
   - internal/capture/healthreader/reader.go
-  - internal/queries/dispatcher_queries.go
+  - internal/browsercommand/internal/dispatch/dispatcher_queries.go
   - internal/capture/syncruntime/handler.go
   - internal/capture/telemetrystore/store.go
   - internal/capture/waterfallstore/store.go

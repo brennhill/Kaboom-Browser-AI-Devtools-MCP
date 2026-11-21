@@ -5,15 +5,11 @@
 package queries
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 )
-
-func cloneJSON(value json.RawMessage) json.RawMessage {
-	return bytes.Clone(value)
-}
 
 // ============================================
 // Query Types
@@ -117,4 +113,21 @@ const (
 type QueryRunner interface {
 	Enqueue(query PendingQuery, timeout time.Duration, clientID string) (string, error)
 	WaitQueryResult(ctx context.Context, queryID string, timeout time.Duration) (json.RawMessage, error)
+}
+
+// ErrQueueFull reports that the delivery queue is at MaxPendingQueries.
+var ErrQueueFull = errors.New("queue_full")
+
+const (
+	QueryResultTTL    = 5 * time.Minute // How long to keep query results before cleanup
+	MaxPendingQueries = 15              // Max pending queries in queue
+)
+
+// QuerySnapshot contains a point-in-time view of query state for health reporting.
+type QuerySnapshot struct {
+	PendingQueryCount int
+	QueryResultCount  int
+	PendingCapacity   int
+	OldestPendingAge  time.Duration
+	QueryTimeout      time.Duration
 }

@@ -993,6 +993,10 @@
       "mutable_globals": 0,
       "exports": 6
     },
+    "internal/app/ports/ports.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
     "internal/app/screenshot/screenshot.go": {
       "mutable_globals": 0,
       "exports": 20
@@ -1029,13 +1033,37 @@
       "mutable_globals": 0,
       "exports": 5
     },
+    "internal/browsercommand/commandtest/commandtest.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
     "internal/browsercommand/exchange.go": {
       "mutable_globals": 0,
       "exports": 9
     },
-    "internal/browsercommand/owner.go": {
+    "internal/browsercommand/internal/dispatch/dispatcher.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
+    "internal/browsercommand/internal/dispatch/dispatcher_commands.go": {
+      "mutable_globals": 0,
+      "exports": 8
+    },
+    "internal/browsercommand/internal/dispatch/dispatcher_queries.go": {
+      "mutable_globals": 1,
+      "exports": 8
+    },
+    "internal/browsercommand/internal/dispatch/dispatcher_results.go": {
       "mutable_globals": 0,
       "exports": 12
+    },
+    "internal/browsercommand/internal/dispatch/dispatcher_trace.go": {
+      "mutable_globals": 0,
+      "exports": 1
+    },
+    "internal/browsercommand/owner.go": {
+      "mutable_globals": 0,
+      "exports": 13
     },
     "internal/browsercommand/result.go": {
       "mutable_globals": 0,
@@ -1493,29 +1521,9 @@
       "mutable_globals": 2,
       "exports": 10
     },
-    "internal/queries/dispatcher.go": {
-      "mutable_globals": 0,
-      "exports": 7
-    },
-    "internal/queries/dispatcher_commands.go": {
-      "mutable_globals": 0,
-      "exports": 8
-    },
-    "internal/queries/dispatcher_queries.go": {
-      "mutable_globals": 1,
-      "exports": 11
-    },
-    "internal/queries/dispatcher_results.go": {
-      "mutable_globals": 0,
-      "exports": 12
-    },
-    "internal/queries/dispatcher_trace.go": {
-      "mutable_globals": 0,
-      "exports": 1
-    },
     "internal/queries/types.go": {
       "mutable_globals": 0,
-      "exports": 8
+      "exports": 12
     },
     "internal/reaper/census.go": {
       "mutable_globals": 0,

@@ -5,6 +5,7 @@ package asynccommand
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"strings"
 	"testing"
 	"time"
@@ -152,7 +153,7 @@ func TestFormatCommandResultExpiredIncludesDoctorHint(t *testing.T) {
 func saturateQueue(t *testing.T, captured *capture.Capture) {
 	t.Helper()
 	for index := 0; index < queries.MaxPendingQueries; index++ {
-		if _, err := captured.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+		if _, err := captured.Commands().Enqueue(queries.PendingQuery{
 			Type: "pressure", Params: json.RawMessage(`{}`), CorrelationID: fmt.Sprintf("pressure-%d", index),
 		}, time.Hour, ""); err != nil {
 			t.Fatalf("saturate queue at %d: %v", index, err)
@@ -174,16 +175,16 @@ func TestEnqueuePendingQueryFailsLoudWithoutDiscardingAcceptedCommands(t *testin
 	)
 	result := decodeToolResult(t, response)
 	if !blocked || !result.IsError || !strings.Contains(result.Content[0].Text, mcp.ErrQueueFull) ||
-		!strings.Contains(result.Content[0].Text, "recovery_playbook") || captured.Queries().QueueDepth() != queries.MaxPendingQueries {
-		t.Fatalf("queue-full response = blocked:%t result:%#v depth:%d", blocked, result, captured.Queries().QueueDepth())
+		!strings.Contains(result.Content[0].Text, "recovery_playbook") || captured.Commands().QueueDepth() != queries.MaxPendingQueries {
+		t.Fatalf("queue-full response = blocked:%t result:%#v depth:%d", blocked, result, captured.Commands().QueueDepth())
 	}
 
-	captured.Queries().ExpireAllPendingQueries("pressure released")
+	captured.Commands().ExpireAll("pressure released")
 	if response, blocked = handler.EnqueuePendingQuery(
 		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 2},
 		queries.PendingQuery{Type: "browser_action", CorrelationID: "accepted"}, time.Second,
-	); blocked || response.Error != nil || captured.Queries().QueueDepth() != 1 {
-		t.Fatalf("recovery enqueue = blocked:%t response:%#v depth:%d", blocked, response, captured.Queries().QueueDepth())
+	); blocked || response.Error != nil || captured.Commands().QueueDepth() != 1 {
+		t.Fatalf("recovery enqueue = blocked:%t response:%#v depth:%d", blocked, response, captured.Commands().QueueDepth())
 	}
 }
 
@@ -197,8 +198,8 @@ func TestEnqueuePendingQueryRejectsConnectedCommandContractSkew(t *testing.T) {
 		queries.PendingQuery{Type: "performance_trace", CorrelationID: "skewed"}, time.Second,
 	)
 	result := decodeToolResult(t, response)
-	if !blocked || !result.IsError || !strings.Contains(result.Content[0].Text, "command_contract_mismatch") || captured.Queries().QueueDepth() != 0 {
-		t.Fatalf("contract-skew response = blocked:%t result:%#v depth:%d", blocked, result, captured.Queries().QueueDepth())
+	if !blocked || !result.IsError || !strings.Contains(result.Content[0].Text, "command_contract_mismatch") || captured.Commands().QueueDepth() != 0 {
+		t.Fatalf("contract-skew response = blocked:%t result:%#v depth:%d", blocked, result, captured.Commands().QueueDepth())
 	}
 }
 
@@ -380,7 +381,7 @@ func TestMaybeWaitForCommandClampsAndPartitionsTimeoutBudget(t *testing.T) {
 			defer captured.Close()
 			capturefixture.Connect(captured)
 			correlationID := "budget-" + testCase.name
-			captured.Queries().RegisterCommand(correlationID, "query-budget", time.Hour)
+			commandtest.Register(captured.Commands(), correlationID, time.Hour)
 			handler := New(Deps{Capture: captured})
 			fixedNow := time.Unix(200, 0)
 			handler.Wait.Now = func() time.Time { return fixedNow }
@@ -388,7 +389,7 @@ func TestMaybeWaitForCommandClampsAndPartitionsTimeoutBudget(t *testing.T) {
 			var observed time.Duration
 			handler.Wait.Command = func(id string, timeout time.Duration) (*queries.CommandResult, bool) {
 				observed = timeout
-				command, found := captured.Queries().GetCommandResult(id)
+				command, found := captured.Commands().Command(id)
 				if found {
 					command.Status = "complete"
 					command.Result = json.RawMessage(`{"success":true}`)
@@ -412,7 +413,7 @@ func TestMaybeWaitForCommandUsesCurrentConnectionAndResultEvents(t *testing.T) {
 		captured := capture.NewCapture()
 		defer captured.Close()
 		correlationID := "disconnected"
-		captured.Queries().RegisterCommand(correlationID, "query-disconnected", time.Hour)
+		commandtest.Register(captured.Commands(), correlationID, time.Hour)
 		response := New(Deps{Capture: captured}).MaybeWaitForCommand(
 			mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, correlationID, json.RawMessage(`{}`), "queued",
 		)
@@ -427,14 +428,14 @@ func TestMaybeWaitForCommandUsesCurrentConnectionAndResultEvents(t *testing.T) {
 		defer captured.Close()
 		capturefixture.Connect(captured)
 		correlationID := "connected"
-		captured.Queries().RegisterCommand(correlationID, "query-connected", time.Hour)
+		commandtest.Register(captured.Commands(), correlationID, time.Hour)
 		responses := make(chan mcp.JSONRPCResponse, 1)
 		go func() {
 			responses <- New(Deps{Capture: captured}).MaybeWaitForCommand(
 				mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, correlationID, json.RawMessage(`{}`), "queued",
 			)
 		}()
-		captured.Queries().ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true}`), "")
+		commandtest.Complete(captured.Commands(), correlationID, "complete", json.RawMessage(`{"success":true}`), "")
 		result := decodeToolResult(t, <-responses)
 		if result.IsError || decodeResponseData(t, result)["status"] != "complete" {
 			t.Fatalf("connected result = %#v", result)
@@ -446,7 +447,7 @@ func TestMaybeWaitForCommandUsesCurrentConnectionAndResultEvents(t *testing.T) {
 		defer captured.Close()
 		capturefixture.Connect(captured)
 		correlationID := "disconnect-during-wait"
-		captured.Queries().RegisterCommand(correlationID, "query-disconnect", time.Hour)
+		commandtest.Register(captured.Commands(), correlationID, time.Hour)
 		waiting := make(chan struct{})
 		release := make(chan struct{})
 		handler := New(Deps{Capture: captured})
@@ -456,7 +457,7 @@ func TestMaybeWaitForCommandUsesCurrentConnectionAndResultEvents(t *testing.T) {
 			}
 			close(waiting)
 			<-release
-			return captured.Queries().GetCommandResult(id)
+			return captured.Commands().Command(id)
 		}
 		responses := make(chan mcp.JSONRPCResponse, 1)
 		go func() {

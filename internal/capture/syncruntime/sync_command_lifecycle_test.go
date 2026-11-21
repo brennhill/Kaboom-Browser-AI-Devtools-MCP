@@ -6,6 +6,7 @@ package syncruntime
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,7 +25,7 @@ func TestHandleSync_AdaptivePoll_FastWhenPendingCommands(t *testing.T) {
 	cap := newTestState()
 
 	// Create a pending query so there are commands waiting
-	cap.Queries().CreatePendingQuery(queries.PendingQuery{
+	commandtest.Enqueue(cap.Commands(), queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{"selector":"body"}`),
 	})
@@ -51,7 +52,7 @@ func TestHandleSync_CommandsIncludeTabID(t *testing.T) {
 	t.Parallel()
 	cap := newTestState()
 
-	cap.Queries().CreatePendingQuery(queries.PendingQuery{
+	commandtest.Enqueue(cap.Commands(), queries.PendingQuery{
 		Type:          "dom_action",
 		Params:        json.RawMessage(`{"action":"click","selector":"#submit"}`),
 		TabID:         42,
@@ -108,7 +109,7 @@ func TestHandleSync_AdaptivePoll_RevertsAfterResultDelivered(t *testing.T) {
 	cap := newTestState()
 
 	// Create a pending query
-	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
+	queryID, _ := commandtest.Enqueue(cap.Commands(), queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{"selector":"body"}`),
 	})
@@ -143,7 +144,7 @@ func TestHandleSync_CommandResultPropagatesErrorStatus(t *testing.T) {
 	cap := newTestState()
 
 	corrID := "sync-corr-error-001"
-	cap.Queries().RegisterCommand(corrID, "q-sync-error-001", queries.AsyncCommandTimeout)
+	commandtest.Register(cap.Commands(), corrID, queries.AsyncCommandTimeout)
 
 	req := SyncRequest{
 		ExtSessionID: "test_session",
@@ -169,7 +170,7 @@ func TestHandleSync_CommandResultWithIDAndCorrelationPreservesErrorStatus(t *tes
 	cap := newTestState()
 
 	corrID := "sync-corr-with-id-error-001"
-	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, _ := cap.Commands().Enqueue(queries.PendingQuery{
 		Type:          "dom_action",
 		Params:        json.RawMessage(`{"action":"click","selector":"#publish"}`),
 		CorrelationID: corrID,
@@ -269,7 +270,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 
 			queryID := ""
 			if tc.hasID {
-				queryID, _ = cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+				queryID, _ = cap.Commands().Enqueue(queries.PendingQuery{
 					Type:          "dom_action",
 					Params:        json.RawMessage(`{"action":"click","selector":"#publish"}`),
 					CorrelationID: corrID,
@@ -278,7 +279,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 					t.Fatal("expected queryID to be created")
 				}
 			} else if tc.hasCorrelation {
-				cap.Queries().RegisterCommand(corrID, "q-"+corrID, queries.AsyncCommandTimeout)
+				commandtest.Register(cap.Commands(), corrID, queries.AsyncCommandTimeout)
 			}
 
 			result := SyncCommandResult{
@@ -303,7 +304,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 			}
 
 			if tc.hasCorrelation {
-				cmd, found := cap.Queries().GetCommandResult(corrID)
+				cmd, found := cap.Commands().Command(corrID)
 				if !found {
 					t.Fatal("expected command result to be present for correlation_id")
 				}
@@ -317,7 +318,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 			}
 
 			if tc.hasID {
-				if _, found := cap.Queries().TakeQueryResult(queryID); !found {
+				if _, found := commandtest.Take(cap.Commands(), queryID); !found {
 					t.Fatal("expected query result to be stored for id-only command result")
 				}
 			}
@@ -329,7 +330,7 @@ func TestHandleSync_LastCommandAckPreventsRedelivery(t *testing.T) {
 	t.Parallel()
 	cap := newTestState()
 
-	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
+	queryID, _ := commandtest.Enqueue(cap.Commands(), queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{"selector":"body"}`),
 	})

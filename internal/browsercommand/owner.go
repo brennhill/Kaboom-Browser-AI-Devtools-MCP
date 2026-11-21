@@ -1,7 +1,7 @@
 // owner.go — Transport-independent owner of the browser-command lifecycle.
 // Why: /sync, /query-result and MCP waits previously each sequenced queue, ack,
 // result, expiry and disconnect transitions themselves; this owner is the one
-// place those transitions happen, built around QueryDispatcher state.
+// place those transitions happen, built around the internal dispatcher state.
 // Docs: docs/features/feature/query-service/index.md
 
 // Package browsercommand owns the lifecycle of commands the daemon sends to the
@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/internal/dispatch"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -32,17 +33,21 @@ import (
 //     ApplySyncExchange, so each result source is validated by exactly one
 //     policy (see ResultSource).
 type Owner struct {
-	queue *queries.QueryDispatcher
+	queue *dispatch.QueryDispatcher
 
 	mu           sync.Mutex
 	missingSince map[string]time.Time // first heartbeat that omitted a started command
 }
 
-// NewOwner binds the lifecycle owner to the dispatcher that stores queue and
-// command state.
-func NewOwner(queue *queries.QueryDispatcher) *Owner {
-	return &Owner{queue: queue, missingSince: make(map[string]time.Time)}
+// NewOwner creates the lifecycle owner together with the dispatcher that
+// stores queue and command state. The dispatcher lives in an internal package,
+// so no other package can mutate command state around the owner.
+func NewOwner() *Owner {
+	return &Owner{queue: dispatch.NewQueryDispatcher(), missingSince: make(map[string]time.Time)}
 }
+
+// Close stops the dispatcher's background cleanup. It is idempotent.
+func (o *Owner) Close() { o.queue.Close() }
 
 // Enqueue queues one command for extension delivery and returns its query ID.
 // A non-empty CorrelationID registers an async command record.

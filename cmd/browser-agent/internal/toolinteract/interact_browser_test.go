@@ -5,6 +5,7 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"strings"
@@ -147,12 +148,12 @@ func TestHandleSwitchTabTrackingPolicy(t *testing.T) {
 				if testCase.status == "pending" {
 					return mcp.Succeed(req, summary, map[string]any{"status": "queued", "correlation_id": correlationID})
 				}
-				state.cap.Queries().RegisterCommand(correlationID, correlationID, time.Minute)
+				commandtest.Register(state.cap.Commands(), correlationID, time.Minute)
 				commandError := ""
 				if testCase.status == "error" {
 					commandError = "tab_not_found"
 				}
-				state.cap.Queries().ApplyCommandResult(correlationID, testCase.status, json.RawMessage(testCase.result), commandError)
+				commandtest.Complete(state.cap.Commands(), correlationID, testCase.status, json.RawMessage(testCase.result), commandError)
 				if testCase.status == "error" {
 					return mcp.Fail(req, mcp.ErrExtError, "tab_not_found", "choose another tab")
 				}

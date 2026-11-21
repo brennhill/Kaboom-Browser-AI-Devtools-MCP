@@ -9,6 +9,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pageinfo"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -354,8 +355,8 @@ func (fs *fakeState) deps() *fakeCapabilities {
 				return mcp.Fail(req, mcp.ErrQueueFull, "Queue full", "retry later"), true
 			}
 			if query.Type == "page_summary" {
-				_, _ = fs.cap.Queries().CreatePendingQueryWithTimeout(query, timeout, req.ClientID)
-				fs.cap.Queries().ApplyCommandResult(
+				_, _ = fs.cap.Commands().Enqueue(query, timeout, req.ClientID)
+				commandtest.Complete(fs.cap.Commands(),
 					query.CorrelationID,
 					"complete",
 					json.RawMessage(`{"main_content_preview":"Example content"}`),
@@ -430,7 +431,7 @@ func (fs *fakeState) deps() *fakeCapabilities {
 		DiagnosticHint: func() func(*mcp.StructuredError) { return mcp.WithHint("diagnostic hint") },
 		Redact:         func(data map[string]any) map[string]any { return data },
 		GetCommandResult: func(correlationID string) (*queries.CommandResult, bool) {
-			return fs.cap.Queries().GetCommandResult(correlationID)
+			return fs.cap.Commands().Command(correlationID)
 		},
 	}
 }
@@ -720,9 +721,9 @@ func TestCaptureEvidenceResultContracts(t *testing.T) {
 			store.Extension().UpdateTrackedTab(7, "https://example.test", "Example")
 			done := make(chan EvidenceShot, 1)
 			go func() { done <- CaptureEvidence(store.Commands(), trackingOf(store), "client") }()
-			store.Queries().WaitForPendingQueries(time.Second)
+			store.Commands().AwaitPending(time.Second)
 			queryID := ""
-			for _, query := range store.Queries().GetPendingQueries() {
+			for _, query := range store.Commands().Pending() {
 				if query.Type == "screenshot" {
 					queryID = query.ID
 					break
@@ -731,7 +732,7 @@ func TestCaptureEvidenceResultContracts(t *testing.T) {
 			if queryID == "" {
 				t.Fatal("screenshot query was not queued")
 			}
-			store.Queries().SetQueryResult(queryID, json.RawMessage(tc.payload))
+			commandtest.Deliver(store.Commands(), queryID, json.RawMessage(tc.payload))
 			select {
 			case got := <-done:
 				if tc.name == "invalid JSON" {

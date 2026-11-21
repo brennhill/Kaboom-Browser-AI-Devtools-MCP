@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -171,8 +172,8 @@ func TestHealthResponseIncludesCommandExecution(t *testing.T) {
 	hm := health.NewMetrics()
 	captured := capture.NewCapture()
 	t.Cleanup(captured.Close)
-	captured.Queries().RegisterCommand("warn-timeout", "query-warn-timeout", time.Minute)
-	captured.Queries().ApplyCommandResult("warn-timeout", "timeout", nil, "synthetic-timeout")
+	commandtest.Register(captured.Commands(), "warn-timeout", time.Minute)
+	commandtest.Complete(captured.Commands(), "warn-timeout", "timeout", nil, "synthetic-timeout")
 
 	response := getHealthResponse(hm, captured, ServerState{}, nil, nil, "test")
 	if response.CommandExecution.Status != "warn" || response.CommandExecution.Ready {

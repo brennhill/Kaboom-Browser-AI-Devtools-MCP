@@ -15,9 +15,9 @@
 //	internal/app/**      ↛ net/http/**, internal/mcp, internal/capture/**, internal/tools/**
 //	                     (application use cases take narrow ports, never MCP
 //	                     request/response types or the whole *capture.Capture)
-//	command-owner        no production X.Queries() call or queries.QueryDispatcher
-//	                     reference outside internal/queries, internal/browsercommand
-//	                     and internal/capture/capture.go (command_owner.go)
+//	command-owner        no production X.Queries() call, and no import of
+//	                     internal/browsercommand/internal/dispatch outside
+//	                     internal/browsercommand/** (command_owner.go)
 //	capture.NewCapture   only from cmd/browser-agent (ports are wired by the
 //	                     composition root; detection resolves import ALIASES
 //	                     and package-level var initializers, not the literal
@@ -233,7 +233,7 @@ func scanTree(root string) (*treeScan, error) {
 			}
 		}
 		scan.pkgOf[fileKey] = pkgPath
-		scan.commandOwnerBreaches = append(scan.commandOwnerBreaches, commandOwnerBreaches(parsed, fileKey, pkgPath, scan.alias[fileKey])...)
+		scan.commandOwnerBreaches = append(scan.commandOwnerBreaches, commandOwnerBreaches(parsed, fileKey, pkgPath)...)
 
 		for _, declaration := range parsed.Decls {
 			gd, ok := declaration.(*ast.GenDecl)

@@ -29,6 +29,7 @@ package responsegate
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"os"
 	"path/filepath"
 	"sort"
@@ -211,9 +212,9 @@ const (
 // is empty, so a fixture with only a completed command would declare nothing
 // about a pending or failed entry — the two a caller most needs to recognise.
 func (h *harness) seedCommandLifecycle() {
-	commands := h.captured.Queries()
-	commands.RegisterCommand(seededCorrelationID, "query_fixture", time.Minute)
-	commands.ApplyCommandResult(
+	commands := h.captured.Commands()
+	commandtest.Register(commands, seededCorrelationID, time.Minute)
+	commandtest.Complete(commands,
 		seededCorrelationID, "complete", json.RawMessage(`{"elements":[{"tag":"div"}],"count":1}`), "")
 
 	// Created through the production enqueue path so the command carries the
@@ -225,7 +226,7 @@ func (h *harness) seedCommandLifecycle() {
 		{pendingCorrelationID, ""},
 		{failedCorrelationID, "error"},
 	} {
-		if _, err := commands.CreatePendingQueryWithTimeout(queries.PendingQuery{
+		if _, err := commands.Enqueue(queries.PendingQuery{
 			Type:          "dom",
 			Params:        json.RawMessage(`{"selector":"#fixture"}`),
 			CorrelationID: planted.correlationID,
@@ -233,7 +234,7 @@ func (h *harness) seedCommandLifecycle() {
 			panic("seed a " + planted.correlationID + " command: " + err.Error())
 		}
 		if planted.status != "" {
-			commands.ApplyCommandResult(planted.correlationID, planted.status, nil, "fixture failure")
+			commandtest.Complete(commands, planted.correlationID, planted.status, nil, "fixture failure")
 		}
 	}
 }

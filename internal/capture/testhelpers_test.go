@@ -61,7 +61,7 @@ func runQueryResultRequest(t *testing.T, capture *Capture, payload string) *http
 
 func assertCommandResult(t *testing.T, capture *Capture, corrID, wantStatus, wantError string) {
 	t.Helper()
-	command, found := capture.Queries().GetCommandResult(corrID)
+	command, found := capture.Commands().Command(corrID)
 	if !found {
 		t.Fatal("expected command result")
 	}

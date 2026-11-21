@@ -2,47 +2,45 @@
 //
 // Rule (hard-fail, production files only):
 //
-//	command-owner — outside internal/queries, internal/browsercommand and
-//	internal/capture/capture.go (which constructs the dispatcher and binds the
-//	owner), no file may call X.Queries() or name queries.QueryDispatcher /
-//	queries.NewQueryDispatcher. Workflows take the owner (or a small consumer
-//	interface it satisfies, e.g. queries.QueryRunner) from the composition root.
+//	command-owner — the query dispatcher lives in
+//	internal/browsercommand/internal/dispatch (the Go compiler already keeps
+//	other trees out). Outside internal/browsercommand/** no production file may
+//	import that package, and no production file anywhere may call X.Queries()
+//	(a dispatcher accessor that bypasses the owner). Workflows take the owner
+//	(or a small consumer interface it satisfies, e.g. queries.QueryRunner)
+//	from the composition root; tests use internal/browsercommand/commandtest.
 package main
 
 import (
 	"fmt"
 	"go/ast"
+	"strings"
 )
 
-const captureCompositionFile = "internal/capture/capture.go"
+const dispatchPackage = modulePrefix + "internal/browsercommand/internal/dispatch"
 
-// commandOwnerExempt reports whether a production file may touch the dispatcher.
-func commandOwnerExempt(fileKey, pkgPath string) bool {
-	return pkgPath == modulePrefix+"internal/queries" ||
-		pkgPath == modulePrefix+"internal/browsercommand" ||
-		fileKey == captureCompositionFile
+// commandOwnerExempt reports whether a production package may import the dispatcher.
+func commandOwnerExempt(pkgPath string) bool {
+	return isPkgOrSub(pkgPath, modulePrefix+"internal/browsercommand")
 }
 
 // commandOwnerBreaches lists dispatcher references in one production file.
-func commandOwnerBreaches(file *ast.File, fileKey, pkgPath string, aliases map[string]string) []string {
-	if commandOwnerExempt(fileKey, pkgPath) {
-		return nil
-	}
+func commandOwnerBreaches(file *ast.File, fileKey, pkgPath string) []string {
 	var breaches []string
+	if !commandOwnerExempt(pkgPath) {
+		for _, imp := range file.Imports {
+			if strings.Trim(imp.Path.Value, `"`) == dispatchPackage {
+				breaches = append(breaches, fmt.Sprintf("command-owner: %s imports the internal dispatcher; use the browsercommand.Owner", fileKey))
+			}
+		}
+	}
 	ast.Inspect(file, func(n ast.Node) bool {
-		switch node := n.(type) {
-		case *ast.CallExpr:
-			if sel, ok := node.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Queries" && len(node.Args) == 0 {
-				breaches = append(breaches, fmt.Sprintf("command-owner: %s calls .Queries(); use the browsercommand.Owner (capture.Commands())", fileKey))
-			}
-		case *ast.SelectorExpr:
-			ident, ok := node.X.(*ast.Ident)
-			if !ok || aliases[ident.Name] != modulePrefix+"internal/queries" {
-				return true
-			}
-			if node.Sel.Name == "QueryDispatcher" || node.Sel.Name == "NewQueryDispatcher" {
-				breaches = append(breaches, fmt.Sprintf("command-owner: %s references queries.%s; only the browser-command owner may hold the dispatcher", fileKey, node.Sel.Name))
-			}
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		if sel, ok := call.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Queries" && len(call.Args) == 0 {
+			breaches = append(breaches, fmt.Sprintf("command-owner: %s calls .Queries(); use the browsercommand.Owner (capture.Commands())", fileKey))
 		}
 		return true
 	})

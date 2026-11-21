@@ -6,6 +6,7 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/ports"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/warningqueue"
 	"net/http"
 	"os"
@@ -229,7 +230,7 @@ func (s *Server) Close() {
 var openapiJSON []byte
 
 func setupHTTPRoutes(server *Server, captured *capture.Capture) (*http.ServeMux, *toolruntime.ToolHandler) {
-	var mediaResults mediaapi.ResultSink
+	var mediaResults ports.ResultSink
 	if captured != nil {
 		mediaResults = captured.Commands()
 	}

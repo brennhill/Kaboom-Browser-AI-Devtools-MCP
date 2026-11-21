@@ -6,6 +6,7 @@ package syncruntime
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -35,7 +36,7 @@ func TestHandleSync_LongPolling(t *testing.T) {
 		handler.HandleSync(w, req)
 	}()
 	<-waiting
-	if _, err := cap.Queries().CreatePendingQuery(queries.PendingQuery{
+	if _, err := commandtest.Enqueue(cap.Commands(), queries.PendingQuery{
 		Type:   "test_cmd",
 		Params: json.RawMessage(`{"foo":"bar"}`),
 	}); err != nil {

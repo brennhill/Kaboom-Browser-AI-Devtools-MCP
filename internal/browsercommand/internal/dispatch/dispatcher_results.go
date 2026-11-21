@@ -5,12 +5,14 @@
 //
 // Sections: configuration accessors, result store, blocking wait, TTL cleanup.
 
-package queries
+package dispatch
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -97,7 +99,7 @@ func (qd *QueryDispatcher) setQueryResultWithClient(id string, result json.RawMe
 
 		// Store result.
 		qd.queryResults[id] = QueryResultEntry{
-			Result:    cloneJSON(result),
+			Result:    bytes.Clone(result),
 			ClientID:  clientID,
 			CreatedAt: time.Now(),
 		}
@@ -277,13 +279,13 @@ func (qd *QueryDispatcher) cleanExpiredResults() {
 		defer qd.mu.Unlock()
 
 		for id, entry := range qd.queryResults {
-			if now.Sub(entry.CreatedAt) > QueryResultTTL {
+			if now.Sub(entry.CreatedAt) > queries.QueryResultTTL {
 				delete(qd.queryResults, id)
 			}
 		}
 
 		var orphaned []string
-		gracePeriod := AsyncCommandTimeout + 10*time.Second
+		gracePeriod := queries.AsyncCommandTimeout + 10*time.Second
 		remaining := qd.pendingQueries[:0]
 		for _, pq := range qd.pendingQueries {
 			if now.Sub(pq.Expires) > gracePeriod {
@@ -309,7 +311,7 @@ func (qd *QueryDispatcher) cleanExpiredResults() {
 		qd.resultsMu.Lock()
 		defer qd.resultsMu.Unlock()
 		for id, cmd := range qd.activeCommands {
-			if now.Sub(cmd.CreatedAt) > QueryResultTTL {
+			if now.Sub(cmd.CreatedAt) > queries.QueryResultTTL {
 				delete(qd.activeCommands, id)
 			}
 		}

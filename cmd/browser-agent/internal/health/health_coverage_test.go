@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"net"
 	"net/http/httptest"
 	"os"
@@ -105,8 +106,8 @@ func TestBuildCommandExecutionInfoAt_Empty(t *testing.T) {
 
 func TestBuildCommandExecutionInfoAt_SuccessCounted(t *testing.T) {
 	c := newTestCapture(t)
-	c.Queries().RegisterCommand("ok-1", "q", time.Minute)
-	c.Queries().ApplyCommandResult("ok-1", "complete", json.RawMessage(`{"done":true}`), "")
+	commandtest.Register(c.Commands(), "ok-1", time.Minute)
+	commandtest.Complete(c.Commands(), "ok-1", "complete", json.RawMessage(`{"done":true}`), "")
 
 	info := BuildCommandExecutionInfoAt(c, time.Now())
 	if info.RecentSuccessCount != 1 {
@@ -122,8 +123,8 @@ func TestBuildCommandExecutionInfoAt_SuccessCounted(t *testing.T) {
 
 func TestBuildCommandExecutionInfoAt_WarnOnSingleFailure(t *testing.T) {
 	c := newTestCapture(t)
-	c.Queries().RegisterCommand("f-1", "q", time.Minute)
-	c.Queries().ExpireCommand("f-1")
+	commandtest.Register(c.Commands(), "f-1", time.Minute)
+	commandtest.Expire(c.Commands(), "f-1")
 
 	info := BuildCommandExecutionInfoAt(c, time.Now())
 	if info.Status != "warn" {
@@ -142,16 +143,16 @@ func TestBuildCommandExecutionInfoAt_WarnOnSingleFailure(t *testing.T) {
 
 func TestBuildCommandExecutionInfoAt_FailOnManyFailures(t *testing.T) {
 	c := newTestCapture(t)
-	c.Queries().RegisterCommand("ok-1", "q", time.Minute)
-	c.Queries().ApplyCommandResult("ok-1", "complete", json.RawMessage(`{}`), "")
-	c.Queries().RegisterCommand("f-exp", "q", time.Minute)
-	c.Queries().ExpireCommand("f-exp")
-	c.Queries().RegisterCommand("f-to", "q", time.Minute)
-	c.Queries().ApplyCommandResult("f-to", "timeout", nil, "timed out")
-	c.Queries().RegisterCommand("f-err", "q", time.Minute)
-	c.Queries().ApplyCommandResult("f-err", "error", nil, "boom")
-	c.Queries().RegisterCommand("f-cxl", "q", time.Minute)
-	c.Queries().ApplyCommandResult("f-cxl", "cancelled", nil, "user cancelled")
+	commandtest.Register(c.Commands(), "ok-1", time.Minute)
+	commandtest.Complete(c.Commands(), "ok-1", "complete", json.RawMessage(`{}`), "")
+	commandtest.Register(c.Commands(), "f-exp", time.Minute)
+	commandtest.Expire(c.Commands(), "f-exp")
+	commandtest.Register(c.Commands(), "f-to", time.Minute)
+	commandtest.Complete(c.Commands(), "f-to", "timeout", nil, "timed out")
+	commandtest.Register(c.Commands(), "f-err", time.Minute)
+	commandtest.Complete(c.Commands(), "f-err", "error", nil, "boom")
+	commandtest.Register(c.Commands(), "f-cxl", time.Minute)
+	commandtest.Complete(c.Commands(), "f-cxl", "cancelled", nil, "user cancelled")
 
 	info := BuildCommandExecutionInfoAt(c, time.Now())
 	if info.Status != "fail" {
@@ -173,7 +174,7 @@ func TestBuildCommandExecutionInfoAt_FailOnManyFailures(t *testing.T) {
 
 func TestBuildCommandExecutionInfoAt_PendingStallFail(t *testing.T) {
 	c := newTestCapture(t)
-	c.Queries().RegisterCommand("p-1", "q", 10*time.Minute) // long timeout so it stays pending
+	commandtest.Register(c.Commands(), "p-1", 10*time.Minute) // long timeout so it stays pending
 
 	now := time.Now().Add(3 * time.Minute)
 	info := BuildCommandExecutionInfoAt(c, now)
@@ -193,7 +194,7 @@ func TestBuildCommandExecutionInfoAt_PendingStallFail(t *testing.T) {
 
 func TestBuildCommandExecutionInfoAt_PendingStallWarn(t *testing.T) {
 	c := newTestCapture(t)
-	c.Queries().RegisterCommand("p-1", "q", 10*time.Minute)
+	commandtest.Register(c.Commands(), "p-1", 10*time.Minute)
 
 	now := time.Now().Add(1 * time.Minute) // between 45s warn and 2m fail
 	info := BuildCommandExecutionInfoAt(c, now)
@@ -207,9 +208,9 @@ func TestBuildCommandExecutionInfoAt_PendingStallWarn(t *testing.T) {
 
 func TestBuildCommandExecutionInfoAt_NegativeAgesClamped(t *testing.T) {
 	c := newTestCapture(t)
-	c.Queries().RegisterCommand("ok-1", "q", time.Minute)
-	c.Queries().ApplyCommandResult("ok-1", "complete", json.RawMessage(`{}`), "")
-	c.Queries().RegisterCommand("p-1", "q", 10*time.Minute)
+	commandtest.Register(c.Commands(), "ok-1", time.Minute)
+	commandtest.Complete(c.Commands(), "ok-1", "complete", json.RawMessage(`{}`), "")
+	commandtest.Register(c.Commands(), "p-1", 10*time.Minute)
 
 	// now in the past relative to command creation -> ages clamp to 0 / are skipped.
 	past := time.Now().Add(-1 * time.Minute)
@@ -541,7 +542,7 @@ func TestRunDoctorChecks_PilotExplicitlyDisabled(t *testing.T) {
 func TestRunDoctorChecks_CommandQueuePendingPass(t *testing.T) {
 	c := newTestCapture(t)
 	for i := 0; i < 2; i++ {
-		if _, err := c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "dom", Params: json.RawMessage("{}")}); err != nil {
+		if _, err := commandtest.Enqueue(c.Commands(), queries.PendingQuery{Type: "dom", Params: json.RawMessage("{}")}); err != nil {
 			t.Fatalf("CreatePendingQuery: %v", err)
 		}
 	}
@@ -557,7 +558,7 @@ func TestRunDoctorChecks_CommandQueuePendingPass(t *testing.T) {
 func TestRunDoctorChecks_CommandQueueWarn(t *testing.T) {
 	c := newTestCapture(t)
 	for i := 0; i < 6; i++ {
-		if _, err := c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "dom", Params: json.RawMessage("{}")}); err != nil {
+		if _, err := commandtest.Enqueue(c.Commands(), queries.PendingQuery{Type: "dom", Params: json.RawMessage("{}")}); err != nil {
 			t.Fatalf("CreatePendingQuery: %v", err)
 		}
 	}
@@ -573,8 +574,8 @@ func TestRunDoctorChecks_CommandQueueWarn(t *testing.T) {
 func TestRunDoctorChecks_CommandExecutionFailSetsFix(t *testing.T) {
 	c := newTestCapture(t)
 	for _, id := range []string{"a", "b", "c"} {
-		c.Queries().RegisterCommand(id, "q", time.Minute)
-		c.Queries().ApplyCommandResult(id, "error", nil, "boom")
+		commandtest.Register(c.Commands(), id, time.Minute)
+		commandtest.Complete(c.Commands(), id, "error", nil, "boom")
 	}
 	ce := findCheck(t, RunDoctorChecks(c), "command_execution")
 	if ce.Status == "pass" {

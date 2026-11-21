@@ -1,10 +1,14 @@
 // Purpose: Core QueryDispatcher struct: manages pending queries, results, expiration, and queue capacity.
 // Docs: docs/features/feature/query-service/index.md
 
-package queries
+// Package dispatch stores queued browser commands, query results and async
+// command records. It is internal to internal/browsercommand: Owner is the only
+// caller, so every state transition goes through the owner's policies.
+package dispatch
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"sync"
 	"time"
 )
@@ -16,7 +20,7 @@ import (
 // - Expires is an absolute deadline; once passed, queue cleanup treats the entry as non-deliverable.
 // - ClientID is empty for single-client mode, non-empty for multi-client isolation.
 type PendingQueryEntry struct {
-	Query     PendingQueryResponse
+	Query     queries.PendingQueryResponse
 	CreatedAt time.Time
 	Expires   time.Time
 	ClientID  string // owning client for multi-client isolation
@@ -42,13 +46,13 @@ type QueryResultEntry struct {
 // Lock ordering: mu released BEFORE resultsMu acquired (never reverse).
 //
 // Invariants:
-// - pendingQueries is FIFO and bounded by MaxPendingQueries.
+// - pendingQueries is FIFO and bounded by queries.MaxPendingQueries.
 // - commandNotify is always non-nil; writers close-and-rotate it under resultsMu to signal waiters.
 // - queryNotify is always non-nil; enqueuers close-and-rotate it under mu so ALL waiters wake.
 // - terminalHistory is a five-entry ring shared by successful and failed terminal commands.
 //
 // Failure semantics:
-// - Queue saturation rejects new work with ErrQueueFull instead of dropping existing entries.
+// - Queue saturation rejects new work with queries.ErrQueueFull instead of dropping existing entries.
 // - Terminal command states are monotonic; once non-pending, updates are ignored.
 // - Cleanup can expire orphaned commands/results, favoring bounded memory over indefinite retention.
 type QueryDispatcher struct {
@@ -61,8 +65,8 @@ type QueryDispatcher struct {
 	queryTimeout   time.Duration
 
 	resultsMu       sync.RWMutex
-	activeCommands  map[string]*CommandResult
-	terminalHistory []*CommandResult
+	activeCommands  map[string]*queries.CommandResult
+	terminalHistory []*queries.CommandResult
 	commandNotify   chan struct{} // closed on a terminal ApplyCommandResult, then recreated
 	queryNotify     chan struct{} // closed when pending queries are enqueued, then recreated (protected by mu)
 
@@ -81,9 +85,9 @@ func NewQueryDispatcher() *QueryDispatcher {
 		pendingQueries:  make([]PendingQueryEntry, 0),
 		queryResults:    make(map[string]QueryResultEntry),
 		queryIDPrefix:   newQueryIDPrefix(),
-		queryTimeout:    DefaultQueryTimeout,
-		activeCommands:  make(map[string]*CommandResult),
-		terminalHistory: make([]*CommandResult, 0, terminalCommandHistoryLimit),
+		queryTimeout:    queries.DefaultQueryTimeout,
+		activeCommands:  make(map[string]*queries.CommandResult),
+		terminalHistory: make([]*queries.CommandResult, 0, terminalCommandHistoryLimit),
 		commandNotify:   make(chan struct{}),
 		queryNotify:     make(chan struct{}),
 		cleanupStop:     make(chan struct{}),
@@ -107,23 +111,14 @@ func (qd *QueryDispatcher) Close() {
 	<-qd.cleanupDone
 }
 
-// QuerySnapshot contains a point-in-time view of query state for health reporting.
-type QuerySnapshot struct {
-	PendingQueryCount int
-	QueryResultCount  int
-	PendingCapacity   int
-	OldestPendingAge  time.Duration
-	QueryTimeout      time.Duration
-}
-
 // GetSnapshot returns a thread-safe snapshot of query state.
-func (qd *QueryDispatcher) GetSnapshot() QuerySnapshot {
+func (qd *QueryDispatcher) GetSnapshot() queries.QuerySnapshot {
 	qd.mu.Lock()
 	defer qd.mu.Unlock()
-	snapshot := QuerySnapshot{
+	snapshot := queries.QuerySnapshot{
 		PendingQueryCount: len(qd.pendingQueries),
 		QueryResultCount:  len(qd.queryResults),
-		PendingCapacity:   MaxPendingQueries,
+		PendingCapacity:   queries.MaxPendingQueries,
 		QueryTimeout:      qd.queryTimeout,
 	}
 	if len(qd.pendingQueries) > 0 && !qd.pendingQueries[0].CreatedAt.IsZero() {

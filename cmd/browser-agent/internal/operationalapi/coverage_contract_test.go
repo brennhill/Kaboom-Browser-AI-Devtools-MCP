@@ -4,6 +4,7 @@ package operationalapi
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -25,15 +26,15 @@ func TestOperationalDiagnosticsRedactsHTTPAndIncludesCommandTrace(t *testing.T) 
 		Timestamp: time.Now(), Endpoint: "/mcp", Method: http.MethodPost,
 		RequestBody: `{"auth":"` + rawSecret + `"}`, ResponseBody: `{"ok":true}`, DurationMs: 5,
 	})
-	queryID, err := handler.options.Capture.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, err := handler.options.Capture.Commands().Enqueue(queries.PendingQuery{
 		Type: "browser_action", CorrelationID: "diag-trace-corr",
 	}, 30*time.Second, "test-client")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = handler.options.Capture.Queries().GetPendingQueries()
-	handler.options.Capture.Queries().AcknowledgePendingQuery(queryID)
-	handler.options.Capture.Queries().ApplyCommandResult("diag-trace-corr", "complete", json.RawMessage(`{"ok":true}`), "")
+	_ = handler.options.Capture.Commands().Pending()
+	commandtest.Acknowledge(handler.options.Capture.Commands(), queryID)
+	commandtest.Complete(handler.options.Capture.Commands(), "diag-trace-corr", "complete", json.RawMessage(`{"ok":true}`), "")
 
 	recorder := httptest.NewRecorder()
 	handler.ServeDiagnostics(recorder, httptest.NewRequest(http.MethodGet, "/diagnostics", nil))

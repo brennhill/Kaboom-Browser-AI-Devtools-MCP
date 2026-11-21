@@ -5,6 +5,7 @@ package health
 import (
 	"encoding/json"
 	"errors"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -528,7 +529,7 @@ func TestBuildResourcePressureChecksDistinguishesDisposableDropsFromActiveSatura
 	}
 
 	for i := 0; i < queries.MaxPendingQueries; i++ {
-		if _, err := cap.Queries().CreatePendingQuery(queries.PendingQuery{Type: "pressure"}); err != nil {
+		if _, err := commandtest.Enqueue(cap.Commands(), queries.PendingQuery{Type: "pressure"}); err != nil {
 			t.Fatal(err)
 		}
 	}

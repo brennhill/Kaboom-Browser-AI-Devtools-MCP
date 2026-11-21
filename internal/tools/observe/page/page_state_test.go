@@ -6,6 +6,7 @@ package page
 import (
 	"encoding/json"
 	"errors"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
 	"os"
 	"path/filepath"
@@ -25,13 +26,13 @@ import (
 
 func completeNextPageStateQuery(t *testing.T, cap *capture.Capture, result json.RawMessage) {
 	t.Helper()
-	cap.Queries().WaitForPendingQueries(time.Second)
-	pending := cap.Queries().GetPendingQueries()
+	cap.Commands().AwaitPending(time.Second)
+	pending := cap.Commands().Pending()
 	if len(pending) == 0 {
 		t.Error("page-state query was not enqueued")
 		return
 	}
-	cap.Queries().SetQueryResultWithClient(pending[0].ID, result, "")
+	commandtest.DeliverForClient(cap.Commands(), pending[0].ID, result, "")
 }
 
 func TestGetStorageReportsCaptureFailuresAndQueuePressure(t *testing.T) {
@@ -64,7 +65,7 @@ func TestGetStorageReportsCaptureFailuresAndQueuePressure(t *testing.T) {
 		defer cap.Close()
 		capturefixture.Track(cap, 1, "https://example.test")
 		for i := 0; i < queries.MaxPendingQueries; i++ {
-			if _, err := cap.Queries().CreatePendingQuery(queries.PendingQuery{Type: "occupied"}); err != nil {
+			if _, err := commandtest.Enqueue(cap.Commands(), queries.PendingQuery{Type: "occupied"}); err != nil {
 				t.Fatalf("fill queue: %v", err)
 			}
 		}

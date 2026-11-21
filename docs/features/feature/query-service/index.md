@@ -10,16 +10,18 @@ code_paths:
   - internal/mcp/response_content.go
   - internal/mcp/response_clamp.go
   - internal/mcp/errors.go
-  - internal/queries/dispatcher.go
-  - internal/queries/dispatcher_commands.go
-  - internal/queries/dispatcher_queries.go
-  - internal/queries/dispatcher_results.go
-  - internal/queries/dispatcher_trace.go
+  - internal/browsercommand/internal/dispatch/dispatcher.go
+  - internal/browsercommand/internal/dispatch/dispatcher_commands.go
+  - internal/browsercommand/internal/dispatch/dispatcher_queries.go
+  - internal/browsercommand/internal/dispatch/dispatcher_results.go
+  - internal/browsercommand/internal/dispatch/dispatcher_trace.go
   - internal/queries/types.go
   - internal/browsercommand/owner.go
   - internal/browsercommand/result.go
   - internal/browsercommand/exchange.go
   - internal/browsercommand/views.go
+  - internal/browsercommand/commandtest/commandtest.go
+  - internal/app/ports/ports.go
   - scripts/contracts/layering/main.go
   - scripts/contracts/layering/command_owner.go
   - cmd/browser-agent/internal/mediaapi/handler.go
@@ -52,10 +54,10 @@ code_paths:
 test_paths:
   - internal/mcp/response_test.go
   - internal/mcp/errors_test.go
-  - internal/queries/dispatcher_test.go
-  - internal/queries/commands_test.go
-  - internal/queries/command_trace_test.go
-  - internal/queries/expire_signal_test.go
+  - internal/browsercommand/internal/dispatch/dispatcher_test.go
+  - internal/browsercommand/internal/dispatch/commands_test.go
+  - internal/browsercommand/internal/dispatch/command_trace_test.go
+  - internal/browsercommand/internal/dispatch/expire_signal_test.go
   - internal/browsercommand/owner_test.go
   - internal/browsercommand/local_test.go
   - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command_test.go
@@ -157,15 +159,22 @@ accepted unresolved command to make room for disposable history.
   interact (`toolinteract.Commands`, batch `WaitCommand`), observe
   (`observecore.Deps.Commands`, storage/IndexedDB/waterfall), analyze annotation
   waits (`annotationanalysis.Commands`), media/recording uploads
-  (`mediaapi.ResultSink`, `screenrec.ResultSink`, as `query_result`), QA fixtures,
+  (`ports.ResultSink` in `internal/app/ports`, as `query_result`), QA fixtures,
   health/doctor/operational traces (`Snapshot`, `PendingCommands`,
   `CompletedCommands`, `FailedCommands`, `RecentTraces`) — goes through
   `browsercommand.Owner` or a consumer interface it satisfies. `queries.QueryRunner`
   is the shared "enqueue, then wait" port. The layering `command-owner` rule
   (`scripts/contracts/layering/command_owner.go`) fails any production
-  `X.Queries()` call or `queries.QueryDispatcher` reference outside
-  `internal/queries`, `internal/browsercommand` and `internal/capture/capture.go`.
-  `Capture.Queries()` remains only as a test-fixture accessor.
+  `X.Queries()` call and any import of the dispatcher outside
+  `internal/browsercommand/**`. The dispatcher itself lives in
+  `internal/browsercommand/internal/dispatch`, so the Go compiler keeps every
+  other package off it; `browsercommand.NewOwner()` constructs it and
+  `Owner.Close()` stops its cleanup. `Capture.Queries()` was deleted. Tests drive
+  the extension side through `internal/browsercommand/commandtest`, which uses only
+  the owner's public result-source API (`query_result` submissions and a gated
+  `ApplySyncExchange` acknowledgment). `ports.ResultSink` lives in
+  `internal/app/ports` because the ownership rule rejects a producer-owned
+  interface in `browsercommand` and `queries` cannot import `browsercommand`.
 - Command lifecycle updates accept only `pending`, `complete`, `error`, `timeout`, `expired`, or `cancelled`; noncanonical status text is treated as protocol drift and recorded as an error.
 - Synchronous result consumers may bind waits to a caller context; cancellation
   and deadlines wake the canonical query condition through event-driven
@@ -184,12 +193,12 @@ accepted unresolved command to make room for disposable history.
 - Query IDs include a per-dispatcher process/time/sequence prefix, so a restarted
   daemon cannot reuse an ID that an attached extension still remembers for
   duplicate-delivery protection.
-- Queue capacity and concurrent admission are tested inside `internal/queries`
+- Queue capacity and concurrent admission are tested inside `internal/browsercommand/internal/dispatch`
   with an explicit start barrier and exact accepted/rejected counts. The former
   Capture-level polling/jitter simulation and duplicate wall-clock expiration
   loop were deleted; Capture retains only end-to-end composition coverage.
 - Query and command state is accessed through the canonical
-  `Capture.Queries()` owner. The former Capture forwarding layer and test-only
+  `Capture.Commands()` owner (`browsercommand.Owner`). The former Capture forwarding layer and test-only
   pending-query facade have been deleted; disconnect-aware queue reconciliation
   is owned by `capture.SyncHandler` because it composes extension liveness with
   query expiry. `Capture` retains no sync forwarding methods.
@@ -204,4 +213,4 @@ accepted unresolved command to make room for disposable history.
   interfaces.
 - Tests:
   - `internal/mcp/response_test.go`
-  - `internal/queries/dispatcher_test.go` and `internal/capture/no_facade_test.go` prevent compatibility-only command lifecycle APIs from returning.
+  - `internal/browsercommand/internal/dispatch/dispatcher_test.go` and `internal/capture/no_facade_test.go` prevent compatibility-only command lifecycle APIs from returning.

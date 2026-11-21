@@ -8,6 +8,7 @@ package capture
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -201,7 +202,7 @@ func TestHandleQueryResult_WithCorrelationID(t *testing.T) {
 
 	// Register a pending command with a known correlation ID
 	corrID := "test-corr-id-001"
-	c.Queries().RegisterCommand(corrID, "", 30*time.Second)
+	commandtest.Register(c.Commands(), corrID, 30*time.Second)
 
 	payload := `{"correlation_id":"` + corrID + `","status":"complete","result":{"value":2}}`
 	rr := httptest.NewRecorder()
@@ -239,7 +240,7 @@ func TestHandleQueryResult_WithCorrelationID_ErrorStatus(t *testing.T) {
 	defer c.Close()
 
 	corrID := "test-corr-id-error-001"
-	c.Queries().RegisterCommand(corrID, "", 30*time.Second)
+	commandtest.Register(c.Commands(), corrID, 30*time.Second)
 
 	payload := `{"correlation_id":"` + corrID + `","status":"error","error":"boom"}`
 	rr := runQueryResultRequest(t, c, payload)
@@ -257,7 +258,7 @@ func TestHandleQueryResult_WithIDAndCorrelationID_PreservesErrorStatus(t *testin
 	defer c.Close()
 
 	corrID := "test-corr-id-error-with-id-001"
-	queryID, _ := c.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, _ := c.Commands().Enqueue(queries.PendingQuery{
 		Type:          "dom_action",
 		Params:        json.RawMessage(`{"action":"click","selector":"#publish"}`),
 		CorrelationID: corrID,

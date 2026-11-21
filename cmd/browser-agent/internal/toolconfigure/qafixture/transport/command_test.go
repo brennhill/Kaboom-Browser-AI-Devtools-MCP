@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ func TestExecuteRejectsCancellationDisconnectionAndPressure(t *testing.T) {
 	t.Cleanup(connected.Close)
 	capturefixture.Connect(connected)
 	for index := 0; index < queries.MaxPendingQueries; index++ {
-		if _, err := connected.Queries().CreatePendingQuery(queries.PendingQuery{Type: "occupied"}); err != nil {
+		if _, err := commandtest.Enqueue(connected.Commands(), queries.PendingQuery{Type: "occupied"}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -47,10 +48,10 @@ func TestExecuteReturnsCorrelatedExtensionResult(t *testing.T) {
 	completed := make(chan struct{})
 	go func() {
 		defer close(completed)
-		captureStore.Queries().WaitForPendingQueries(time.Second)
-		pending := captureStore.Queries().GetPendingQueries()
+		captureStore.Commands().AwaitPending(time.Second)
+		pending := captureStore.Commands().Pending()
 		if len(pending) > 0 {
-			captureStore.Queries().SetQueryResultWithClient(pending[0].ID, json.RawMessage(`{"restored":true}`), "")
+			commandtest.DeliverForClient(captureStore.Commands(), pending[0].ID, json.RawMessage(`{"restored":true}`), "")
 		}
 	}()
 	result, err := Execute(context.Background(), captureStore.Commands(), captureStore.Extension().IsExtensionConnected, "qa_restore", json.RawMessage(`{"fixture":"corrupt"}`), time.Second)

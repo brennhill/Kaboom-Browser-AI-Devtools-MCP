@@ -1,16 +1,17 @@
 // Purpose: Tests for query command tracing and correlation.
 // Docs: docs/features/feature/query-service/index.md
 
-package queries
+package dispatch
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"strings"
 	"testing"
 	"time"
 )
 
-func traceStages(events []CommandTraceEvent) []string {
+func traceStages(events []queries.CommandTraceEvent) []string {
 	stages := make([]string, 0, len(events))
 	for _, evt := range events {
 		stages = append(stages, evt.Stage)
@@ -18,7 +19,7 @@ func traceStages(events []CommandTraceEvent) []string {
 	return stages
 }
 
-func requireStage(t *testing.T, events []CommandTraceEvent, want string) {
+func requireStage(t *testing.T, events []queries.CommandTraceEvent, want string) {
 	t.Helper()
 	for _, evt := range events {
 		if evt.Stage == want {
@@ -28,7 +29,7 @@ func requireStage(t *testing.T, events []CommandTraceEvent, want string) {
 	t.Fatalf("trace missing stage %q; got=%v", want, traceStages(events))
 }
 
-func indexOfStage(events []CommandTraceEvent, stage string) int {
+func indexOfStage(events []queries.CommandTraceEvent, stage string) int {
 	for i, evt := range events {
 		if evt.Stage == stage {
 			return i
@@ -43,7 +44,7 @@ func TestCommandTraceLifecycle_CompleteFlow(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	queryID, _ := qd.CreatePendingQueryWithTimeout(PendingQuery{
+	queryID, _ := qd.CreatePendingQueryWithTimeout(queries.PendingQuery{
 		Type:          "browser_action",
 		CorrelationID: "corr-trace-flow",
 	}, 30*time.Second, "test-client")
@@ -163,7 +164,7 @@ func TestCommandTraceHelpersPreserveIdentityAndIgnoreNoise(t *testing.T) {
 		deriveTraceID("", "", "query") != "trace_query" || deriveTraceID("", "", "") != "" {
 		t.Fatal("deriveTraceID priority changed")
 	}
-	if buildTraceTimeline(nil) != "" || buildTraceTimeline([]CommandTraceEvent{{}, {Stage: "queued"}, {Stage: "sent"}}) != "queued -> sent" {
+	if buildTraceTimeline(nil) != "" || buildTraceTimeline([]queries.CommandTraceEvent{{}, {Stage: "queued"}, {Stage: "sent"}}) != "queued -> sent" {
 		t.Fatal("trace timeline did not skip empty stages")
 	}
 	for status, stage := range map[string]string{
@@ -179,7 +180,7 @@ func TestCommandTraceHelpersPreserveIdentityAndIgnoreNoise(t *testing.T) {
 	defer qd.Close()
 	now := time.Now()
 	qd.ensureTraceContextLocked(nil, "corr", "query", "trace", now)
-	cmd := &CommandResult{CorrelationID: "kept", TraceID: "kept-trace", QueryID: "kept-query", UpdatedAt: now}
+	cmd := &queries.CommandResult{CorrelationID: "kept", TraceID: "kept-trace", QueryID: "kept-query", UpdatedAt: now}
 	qd.ensureTraceContextLocked(cmd, "new", "new-query", "new-trace", now.Add(time.Second))
 	if cmd.CorrelationID != "kept" || cmd.TraceID != "kept-trace" || cmd.QueryID != "kept-query" || !cmd.UpdatedAt.Equal(now) {
 		t.Fatalf("existing trace identity was overwritten: %#v", cmd)
@@ -202,10 +203,10 @@ func TestRecentCommandTracesDeduplicateAndUseCreatedAtFallback(t *testing.T) {
 	t.Parallel()
 	qd := NewQueryDispatcher()
 	defer qd.Close()
-	older := &CommandResult{CorrelationID: "same", CreatedAt: time.Now().Add(-time.Minute)}
-	newer := &CommandResult{CorrelationID: "same", CreatedAt: time.Now()}
-	traceOnly := &CommandResult{TraceID: "trace-only", CreatedAt: time.Now().Add(time.Minute)}
-	qd.terminalHistory = []*CommandResult{older, traceOnly}
+	older := &queries.CommandResult{CorrelationID: "same", CreatedAt: time.Now().Add(-time.Minute)}
+	newer := &queries.CommandResult{CorrelationID: "same", CreatedAt: time.Now()}
+	traceOnly := &queries.CommandResult{TraceID: "trace-only", CreatedAt: time.Now().Add(time.Minute)}
+	qd.terminalHistory = []*queries.CommandResult{older, traceOnly}
 	qd.activeCommands["same"] = newer
 	qd.activeCommands["nil"] = nil
 	traces := qd.GetRecentCommandTraces(0)

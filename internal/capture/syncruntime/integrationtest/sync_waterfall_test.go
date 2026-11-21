@@ -5,6 +5,7 @@ package integrationtest
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	. "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"net/http"
 	"testing"
@@ -24,7 +25,7 @@ func TestHandleSync_WaterfallQueryDelivery(t *testing.T) {
 	cap := NewCapture()
 
 	// Create a waterfall query (simulating MCP requesting fresh data)
-	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
+	queryID, _ := commandtest.Enqueue(cap.Commands(), queries.PendingQuery{
 		Type:   "waterfall",
 		Params: json.RawMessage(`{}`),
 	})
@@ -67,7 +68,7 @@ func TestHandleSync_WaterfallResultDelivery(t *testing.T) {
 	cap := NewCapture()
 
 	// Create a waterfall query
-	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
+	queryID, _ := commandtest.Enqueue(cap.Commands(), queries.PendingQuery{
 		Type:   "waterfall",
 		Params: json.RawMessage(`{}`),
 	})
@@ -99,7 +100,7 @@ func TestHandleSync_WaterfallResultDelivery(t *testing.T) {
 	}
 
 	// Verify result was stored
-	result, found := cap.Queries().TakeQueryResult(queryID)
+	result, found := commandtest.Take(cap.Commands(), queryID)
 	if !found {
 		t.Fatal("Expected query result to be stored")
 	}

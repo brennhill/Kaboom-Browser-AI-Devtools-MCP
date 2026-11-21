@@ -29,7 +29,7 @@ code_paths:
   - internal/capture/featureusage/observer.go
   - internal/capture/httpingest/handlers.go
   - internal/util/media.go
-  - internal/queries/dispatcher_queries.go
+  - internal/browsercommand/internal/dispatch/dispatcher_queries.go
   - internal/browsercommand/owner.go
   - internal/browsercommand/result.go
   - internal/browsercommand/exchange.go
