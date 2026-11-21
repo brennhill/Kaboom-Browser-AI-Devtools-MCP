@@ -5,11 +5,11 @@
 package binarywatch
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/semver"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/semver"
 	"os"
 	"os/exec"
 	"path/filepath"

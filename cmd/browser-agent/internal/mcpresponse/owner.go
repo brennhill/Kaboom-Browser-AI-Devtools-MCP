@@ -3,9 +3,9 @@
 package mcpresponse
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/semver"
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/semver"
 	"sort"
 	"time"
 
