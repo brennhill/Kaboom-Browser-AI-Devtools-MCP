@@ -17,6 +17,7 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/action_runtime.go
+  - cmd/browser-agent/internal/toolruntime/interact_wiring.go
   - internal/app/screenshot/screenshot.go
   - cmd/browser-agent/internal/toolinteract/interact_dom.go
   - cmd/browser-agent/internal/toolinteract/interact_browser.go
@@ -218,7 +219,9 @@ Pilot navigation lifecycle tests model tab readiness explicitly and use
 controlled completion signals, so consecutive operations prove exactly-once
 settlement without wall-clock sleeps or load-sensitive timeout behavior.
 `include_screenshot` remains a composable response enrichment after a real
-interact action. Tests acknowledge the action query exactly as the extension
+interact action. A failed enrichment capture never fails the action, but it
+reports the redacted `interact_include_screenshot` Doctor diagnostic (resolved by
+the next successful capture) instead of being silently swallowed. Tests acknowledge the action query exactly as the extension
 does, then await the screenshot query through the canonical pending-query
 notification barrier; no polling sleeps or undelivered-query shortcuts remain.
 Browser-action completion helpers use that same dispatcher notification rather

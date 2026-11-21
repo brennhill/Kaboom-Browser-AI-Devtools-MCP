@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"os"
 	"strconv"
 	"strings"
@@ -60,6 +61,9 @@ type PageDeps struct {
 	MarkDrawStarted                                    func()
 	CaptureScreenshot                                  func(context.Context, screenshot.Options) (screenshot.Result, error)
 	GetPageInfo                                        func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+	// Diagnostics receives redacted Doctor diagnostics for best-effort
+	// enrichment failures (include_screenshot); nil disables reporting.
+	Diagnostics statediag.Reporter
 }
 
 type WorkflowDeps struct {

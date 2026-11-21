@@ -61,6 +61,7 @@ func initializeInteractActionOwners(h *ToolHandler) {
 			}
 		},
 		CaptureScreenshot: newScreenshotService(h).Capture,
+		Diagnostics:       h.stateRecovery,
 		GetPageInfo: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return observepage.GetPageInfo(buildObserveReadDeps(h), req, args)
 		},

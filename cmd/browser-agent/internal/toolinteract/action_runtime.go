@@ -17,6 +17,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -433,15 +434,27 @@ func isResponseQueued(resp mcp.JSONRPCResponse) bool {
 	return false
 }
 
+// includeScreenshotDiagnostic names the Doctor diagnostic for failed
+// include_screenshot enrichment; it resolves on the next successful capture.
+const includeScreenshotDiagnostic = "interact_include_screenshot"
+
 // AppendScreenshotToResponse captures a screenshot and appends it as an inline image block.
 // The action already succeeded, so a failed capture leaves resp unchanged: the
 // screenshot is optional enrichment (include_screenshot), not the action result.
+// The failure is still surfaced as a redacted Doctor diagnostic (rule 27).
 func (h *PageActions) AppendScreenshotToResponse(resp mcp.JSONRPCResponse, _ mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 	result, err := h.deps.CaptureScreenshot(context.Background(), screenshot.Options{})
 	if err != nil {
-		// EXPECTED_ABSENCE: enrichment is best effort; the caller can observe(what='screenshot') for the error.
+		if h.deps.Diagnostics != nil {
+			h.deps.Diagnostics.Report(statediag.Diagnostic{
+				Name:   includeScreenshotDiagnostic,
+				Detail: "include_screenshot capture failed after a successful action: " + err.Error(),
+				Fix:    "Call observe({what:'screenshot'}) to see the capture error, then confirm the tab is tracked and visible.",
+			})
+		}
 		return resp
 	}
+	statediag.Resolve(h.deps.Diagnostics, includeScreenshotDiagnostic)
 	base64Data, mimeType := result.Image()
 	return mcp.AppendImageToResponse(resp, base64Data, mimeType)
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"os"
 	"path/filepath"
@@ -233,6 +234,9 @@ type fakeState struct {
 
 	cap *capture.Capture
 
+	// diagnostics records Doctor diagnostics reported by page actions.
+	diagnostics diagnosticRecorder
+
 	// Guard toggles — when true, the corresponding guard blocks the command.
 	blockPilot   bool
 	blockExt     bool
@@ -264,6 +268,7 @@ type fakeCapabilities struct {
 	MaybeWaitForCommand                                func(mcp.JSONRPCRequest, string, json.RawMessage, string) mcp.JSONRPCResponse
 	Capture                                            func() *capture.Capture
 	Commands                                           Commands
+	Diagnostics                                        statediag.Reporter
 	RecordAIAction                                     func(string, string, map[string]any)
 	RecordAIEnhancedAction                             func(types.EnhancedAction)
 	RecordDOMPrimitiveAction                           func(string, string, string, string)
@@ -369,8 +374,9 @@ func (fs *fakeState) deps() *fakeCapabilities {
 			})
 		},
 
-		Capture:  func() *capture.Capture { return fs.cap },
-		Commands: fs.cap.Commands(),
+		Capture:     func() *capture.Capture { return fs.cap },
+		Commands:    fs.cap.Commands(),
+		Diagnostics: &fs.diagnostics,
 
 		RecordAIAction:           func(action, url string, extra map[string]any) { fs.record(action) },
 		RecordAIEnhancedAction:   func(action types.EnhancedAction) { fs.record("enhanced") },
@@ -454,6 +460,7 @@ func newFakeActionOwners(t *testing.T) (*fakeActionOwners, *fakeState) {
 	page := NewPageActions(runtime, dom, storage, PageDeps{
 		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.Capture, deps.Commands,
 		deps.EnqueuePendingQuery, deps.RecordAIAction, deps.MarkDrawStarted, deps.CaptureScreenshot, deps.GetPageInfo,
+		deps.Diagnostics,
 	})
 	browser := NewBrowserActions(runtime, page, BrowserDeps{
 		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.Capture, deps.Commands,
@@ -779,5 +786,48 @@ func trackingOf(store *capture.Capture) func() bool {
 	return func() bool {
 		enabled, _, _ := store.Extension().GetTrackingStatus()
 		return enabled
+	}
+}
+
+// diagnosticRecorder is a statediag.Reporter/Resolver fake.
+type diagnosticRecorder struct {
+	mu       sync.Mutex
+	reported []statediag.Diagnostic
+	resolved []string
+}
+
+func (r *diagnosticRecorder) Report(d statediag.Diagnostic) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.reported = append(r.reported, d)
+}
+
+func (r *diagnosticRecorder) Resolve(name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.resolved = append(r.resolved, name)
+}
+
+func TestAppendScreenshotFailureReportsDiagnosticAndKeepsAction(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	base := mcp.SucceedText(testReq(), "clicked")
+	fs.screenshot = func(screenshot.Options) (screenshot.Result, error) {
+		return screenshot.Result{}, &screenshot.Failure{Kind: screenshot.KindTimeout, Detail: "slow"}
+	}
+	if got := h.AppendScreenshotToResponse(base, testReq()); string(got.Result) != string(base.Result) {
+		t.Fatalf("failed screenshot changed the successful action response: %s", got.Result)
+	}
+	if len(fs.diagnostics.reported) != 1 {
+		t.Fatalf("reported diagnostics = %+v, want one", fs.diagnostics.reported)
+	}
+	reported := fs.diagnostics.reported[0]
+	if reported.Name != includeScreenshotDiagnostic || !strings.Contains(reported.Detail, "timeout") || reported.Fix == "" {
+		t.Fatalf("diagnostic = %+v", reported)
+	}
+
+	fs.screenshot = nil
+	h.AppendScreenshotToResponse(base, testReq())
+	if len(fs.diagnostics.resolved) != 1 || fs.diagnostics.resolved[0] != includeScreenshotDiagnostic {
+		t.Fatalf("resolved = %v, want the diagnostic resolved after a successful capture", fs.diagnostics.resolved)
 	}
 }
