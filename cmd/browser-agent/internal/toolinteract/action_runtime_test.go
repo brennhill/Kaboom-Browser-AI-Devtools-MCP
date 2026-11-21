@@ -263,6 +263,7 @@ type fakeCapabilities struct {
 	EnqueuePendingQuery                                func(mcp.JSONRPCRequest, queries.PendingQuery, time.Duration) (mcp.JSONRPCResponse, bool)
 	MaybeWaitForCommand                                func(mcp.JSONRPCRequest, string, json.RawMessage, string) mcp.JSONRPCResponse
 	Capture                                            func() *capture.Capture
+	Commands                                           Commands
 	RecordAIAction                                     func(string, string, map[string]any)
 	RecordAIEnhancedAction                             func(types.EnhancedAction)
 	RecordDOMPrimitiveAction                           func(string, string, string, string)
@@ -368,7 +369,8 @@ func (fs *fakeState) deps() *fakeCapabilities {
 			})
 		},
 
-		Capture: func() *capture.Capture { return fs.cap },
+		Capture:  func() *capture.Capture { return fs.cap },
+		Commands: fs.cap.Commands(),
 
 		RecordAIAction:           func(action, url string, extra map[string]any) { fs.record(action) },
 		RecordAIEnhancedAction:   func(action types.EnhancedAction) { fs.record("enhanced") },
@@ -450,11 +452,11 @@ func newFakeActionOwners(t *testing.T) (*fakeActionOwners, *fakeState) {
 	dom := NewDOMActions(runtime, DOMDeps{deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.RecordDOMPrimitiveAction})
 	storage := NewStorageActions(runtime, StorageDeps{deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking})
 	page := NewPageActions(runtime, dom, storage, PageDeps{
-		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.Capture,
+		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.Capture, deps.Commands,
 		deps.EnqueuePendingQuery, deps.RecordAIAction, deps.MarkDrawStarted, deps.CaptureScreenshot, deps.GetPageInfo,
 	})
 	browser := NewBrowserActions(runtime, page, BrowserDeps{
-		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.Capture,
+		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.Capture, deps.Commands,
 		deps.InjectCSPBlockedActions, deps.GetListenPort,
 	})
 	workflow := NewWorkflowActions(runtime, dom, browser, page, WorkflowDeps{
@@ -684,11 +686,11 @@ func TestEvidencePartialPayloadPreservesSuccessfulBeforeCapture(t *testing.T) {
 }
 
 func TestCaptureEvidencePreconditions(t *testing.T) {
-	if got := CaptureEvidence(nil, "client"); got.Error != "capture_not_initialized" {
+	if got := CaptureEvidence(nil, nil, "client"); got.Error != "capture_not_initialized" {
 		t.Fatalf("nil capture = %+v", got)
 	}
 	store := capture.NewCapture()
-	if got := CaptureEvidence(store, "client"); got.Error != "no_tracked_tab" {
+	if got := CaptureEvidence(store.Commands(), trackingOf(store), "client"); got.Error != "no_tracked_tab" {
 		t.Fatalf("untracked capture = %+v", got)
 	}
 }
@@ -711,7 +713,7 @@ func TestCaptureEvidenceResultContracts(t *testing.T) {
 			t.Cleanup(store.Close)
 			store.Extension().UpdateTrackedTab(7, "https://example.test", "Example")
 			done := make(chan EvidenceShot, 1)
-			go func() { done <- CaptureEvidence(store, "client") }()
+			go func() { done <- CaptureEvidence(store.Commands(), trackingOf(store), "client") }()
 			store.Queries().WaitForPendingQueries(time.Second)
 			queryID := ""
 			for _, query := range store.Queries().GetPendingQueries() {
@@ -770,5 +772,12 @@ func TestAppendScreenshotToResponseKeepsBaseWithoutUsableImage(t *testing.T) {
 		if string(got.Result) != string(base.Result) {
 			t.Fatalf("unusable screenshot changed base: %s", got.Result)
 		}
+	}
+}
+
+func trackingOf(store *capture.Capture) func() bool {
+	return func() bool {
+		enabled, _, _ := store.Extension().GetTrackingStatus()
+		return enabled
 	}
 }

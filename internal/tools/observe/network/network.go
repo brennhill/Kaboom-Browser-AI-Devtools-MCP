@@ -6,6 +6,7 @@
 package network
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -257,7 +258,7 @@ func refreshWaterfallIfStale(deps core.Deps) []types.NetworkWaterfallEntry {
 		return allEntries
 	}
 
-	queryID, qerr := cap.Queries().CreatePendingQueryWithTimeout(
+	queryID, qerr := deps.Commands.Enqueue(
 		queries.PendingQuery{
 			Type:   "waterfall",
 			Params: json.RawMessage(`{}`),
@@ -269,7 +270,7 @@ func refreshWaterfallIfStale(deps core.Deps) []types.NetworkWaterfallEntry {
 		return allEntries
 	}
 
-	result, err := cap.Queries().WaitForResult(queryID, refreshTimeout)
+	result, err := deps.Commands.WaitQueryResult(context.Background(), queryID, refreshTimeout)
 	if err != nil || result == nil {
 		return allEntries
 	}

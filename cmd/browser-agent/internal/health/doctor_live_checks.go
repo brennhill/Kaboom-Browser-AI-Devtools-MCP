@@ -254,7 +254,7 @@ func circuitBreakerCheck(snap healthreader.Snapshot) DoctorCheck {
 
 // commandQueueCheck reports pending command-queue depth.
 func commandQueueCheck(cap *capture.Capture) DoctorCheck {
-	queueDepth := cap.Queries().QueueDepth()
+	queueDepth := cap.Commands().QueueDepth()
 	if queueDepth < 5 {
 		detail := "Command queue empty"
 		if queueDepth > 0 {

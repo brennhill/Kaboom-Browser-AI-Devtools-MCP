@@ -29,7 +29,7 @@ func createDrawModeTestServer(t *testing.T) (*httptest.Server, *annotation.Store
 	t.Cleanup(func() { store.Close() })
 
 	cap := capture.NewCapture()
-	handler := New(cap, store, nil)
+	handler := New(cap.Commands(), store, nil)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/draw-mode/complete", func(w http.ResponseWriter, r *http.Request) {
 		handler.HandleDrawModeComplete(w, r)

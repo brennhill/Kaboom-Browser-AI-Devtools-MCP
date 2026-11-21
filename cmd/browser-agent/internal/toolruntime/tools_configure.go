@@ -69,7 +69,7 @@ func buildQAFixtureHandler(h *ToolHandler) (*qafixturehandler.Handler, error) {
 	handler, err := qafixturehandler.New(qafixturehandler.Deps{
 		Context: h.shutdownCtx,
 		Execute: func(ctx context.Context, command string, params json.RawMessage, timeout time.Duration) (json.RawMessage, error) {
-			return qafixturetransport.Execute(ctx, h.capture, command, params, timeout)
+			return qafixturetransport.Execute(ctx, h.capture.Commands(), h.capture.Extension().IsExtensionConnected, command, params, timeout)
 		},
 		NewCorrelationID:    func() string { return toolresp.NewCorrelationID("qa_fixture") },
 		NewTransactionID:    func() string { return toolresp.NewCorrelationID("fixture_transaction") },

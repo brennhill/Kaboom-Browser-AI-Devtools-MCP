@@ -38,7 +38,7 @@ func TestListingSortsAndSuppliesDefaults(t *testing.T) {
 		"result":{"databases":[{"name":"zeta"},{"name":"alpha"}]}
 	}`))
 
-	result, err := Listing(cap)
+	result, err := Listing(cap.Commands())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestEntriesNormalizesSuccessAndPageErrors(t *testing.T) {
 			"success":true,
 			"result":{"entries":[{"key":1}]}
 		}`))
-		result, err := Entries(cap, "app", "users", 5)
+		result, err := Entries(cap.Commands(), "app", "users", 5)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -75,7 +75,7 @@ func TestEntriesNormalizesSuccessAndPageErrors(t *testing.T) {
 			"success":true,
 			"result":{"ok":false,"message":"store missing"}
 		}`))
-		if _, err := Entries(cap, "app", "missing", 5); err == nil || err.Error() != "store missing" {
+		if _, err := Entries(cap.Commands(), "app", "missing", 5); err == nil || err.Error() != "store missing" {
 			t.Fatalf("error = %v", err)
 		}
 	})
@@ -90,7 +90,7 @@ func TestListingDefaultsMissingAndNonArrayDatabasePayloads(t *testing.T) {
 			cap := capture.NewCapture()
 			t.Cleanup(cap.Close)
 			respondToNextQuery(t, cap, json.RawMessage(payload))
-			result, err := Listing(cap)
+			result, err := Listing(cap.Commands())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -111,7 +111,7 @@ func TestEntriesNormalizesNonArrayAndExistingMetadata(t *testing.T) {
 		"success":true,
 		"result":{"entries":"opaque","database":"returned-db","store":"returned-store"}
 	}`))
-	result, err := Entries(cap, "requested-db", "requested-store", 5)
+	result, err := Entries(cap.Commands(), "requested-db", "requested-store", 5)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestExecuteScriptNormalizesScalarAndErrorEnvelopes(t *testing.T) {
 			cap := capture.NewCapture()
 			t.Cleanup(cap.Close)
 			respondToNextQuery(t, cap, json.RawMessage(tc.payload))
-			result, err := executeScript(cap, "return 1", "coverage_contract", time.Second)
+			result, err := executeScript(cap.Commands(), "return 1", "coverage_contract", time.Second)
 			if tc.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
 					t.Fatalf("error = %v, want containing %q", err, tc.wantErr)

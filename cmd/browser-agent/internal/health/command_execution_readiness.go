@@ -37,11 +37,11 @@ func BuildCommandExecutionInfoAt(cap *capture.Capture, now time.Time) CommandExe
 		return info
 	}
 
-	pending := cap.Queries().GetPendingCommands()
-	failed := cap.Queries().GetFailedCommands()
-	completed := cap.Queries().GetCompletedCommands()
+	pending := cap.Commands().PendingCommands()
+	failed := cap.Commands().FailedCommands()
+	completed := cap.Commands().CompletedCommands()
 
-	info.QueueDepth = cap.Queries().QueueDepth()
+	info.QueueDepth = cap.Commands().QueueDepth()
 	info.PendingCount = len(pending)
 	info.OldestPendingAgeMs = oldestPendingAgeMs(pending, now)
 

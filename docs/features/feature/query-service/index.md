@@ -19,7 +19,16 @@ code_paths:
   - internal/browsercommand/owner.go
   - internal/browsercommand/result.go
   - internal/browsercommand/exchange.go
+  - internal/browsercommand/views.go
   - scripts/contracts/layering/main.go
+  - scripts/contracts/layering/command_owner.go
+  - cmd/browser-agent/internal/mediaapi/handler.go
+  - cmd/browser-agent/internal/screenrec/save.go
+  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
+  - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command.go
+  - cmd/browser-agent/internal/toolobserve/dispatcher.go
+  - cmd/browser-agent/internal/toolruntime/interact_wiring.go
+  - internal/tools/observe/idbquery/execute.go
   - internal/capture/capture.go
   - internal/capture/syncruntime/handler.go
   - cmd/browser-agent/internal/asynccommand/handler.go
@@ -48,6 +57,9 @@ test_paths:
   - internal/queries/command_trace_test.go
   - internal/queries/expire_signal_test.go
   - internal/browsercommand/owner_test.go
+  - internal/browsercommand/local_test.go
+  - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command_test.go
+  - cmd/browser-agent/internal/toolinteract/interactbatch/batch_test.go
   - internal/capture/syncruntime/sync_command_lifecycle_test.go
   - internal/capture/syncruntime/sync_test.go
   - scripts/contracts/layering/main_test.go
@@ -134,11 +146,26 @@ accepted unresolved command to make room for disposable history.
   exchange generation is current (results, ack, disconnect expiry and progress
   reconciliation all run inside the gate, so superseded polls cannot mutate
   current-generation commands); `query_result` is validated by identity and
-  client scope (its wire contract carries no generation); `daemon` failures need
-  a correlation ID and an error. Connection identity, liveness and generation
+  client scope (its wire contract carries no generation); `daemon` transitions
+  need a correlation ID and are either a failure (`error` with an error) or the
+  completion of a daemon-local command registered with `RegisterLocal` (for
+  example annotation waits). Connection identity, liveness and generation
   stay with `syncruntime.Runtime`. `scripts/contracts/layering` forbids the
   command module (`internal/browsercommand`, `internal/queries`) from importing
   `net/http`, `internal/mcp` or `internal/capture/**`.
+- Owner-only dispatcher access (kaboom-jdm5.5): every production caller —
+  interact (`toolinteract.Commands`, batch `WaitCommand`), observe
+  (`observecore.Deps.Commands`, storage/IndexedDB/waterfall), analyze annotation
+  waits (`annotationanalysis.Commands`), media/recording uploads
+  (`mediaapi.ResultSink`, `screenrec.ResultSink`, as `query_result`), QA fixtures,
+  health/doctor/operational traces (`Snapshot`, `PendingCommands`,
+  `CompletedCommands`, `FailedCommands`, `RecentTraces`) — goes through
+  `browsercommand.Owner` or a consumer interface it satisfies. `queries.QueryRunner`
+  is the shared "enqueue, then wait" port. The layering `command-owner` rule
+  (`scripts/contracts/layering/command_owner.go`) fails any production
+  `X.Queries()` call or `queries.QueryDispatcher` reference outside
+  `internal/queries`, `internal/browsercommand` and `internal/capture/capture.go`.
+  `Capture.Queries()` remains only as a test-fixture accessor.
 - Command lifecycle updates accept only `pending`, `complete`, `error`, `timeout`, `expired`, or `cancelled`; noncanonical status text is treated as protocol drift and recorded as an error.
 - Synchronous result consumers may bind waits to a caller context; cancellation
   and deadlines wake the canonical query condition through event-driven

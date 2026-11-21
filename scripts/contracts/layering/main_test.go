@@ -335,3 +335,36 @@ func TestCommandModuleHasNoTransportDependencies(t *testing.T) {
 		}
 	}
 }
+
+func TestCommandOwnerIsTheOnlyDispatcherPath(t *testing.T) {
+	root := t.TempDir()
+	q := modulePrefix + "internal/queries"
+	writeTree(t, root, map[string]string{
+		// Breach: production code reaching the dispatcher through Capture.Queries().
+		"cmd/browser-agent/internal/toolx/x.go": "package toolx\n\nfunc f(c interface{ Queries() any }) { _ = c.Queries() }\n",
+		// Breach: naming the dispatcher type outside the owner packages (aliased import).
+		"internal/tools/observe/page/p.go": "package page\n\nimport qq \"" + q + "\"\n\nvar _ *qq.QueryDispatcher\n",
+		// Breach: constructing a second dispatcher.
+		"internal/capture/other/o.go": "package other\n\nimport \"" + q + "\"\n\nvar d = queries.NewQueryDispatcher()\n",
+		// Clean: the owner, the dispatcher package, and the capture composition file.
+		"internal/browsercommand/owner.go": "package browsercommand\n\nimport \"" + q + "\"\n\ntype Owner struct{ queue *queries.QueryDispatcher }\n",
+		"internal/queries/dispatcher.go":   "package queries\n\ntype QueryDispatcher struct{}\n\nfunc NewQueryDispatcher() *QueryDispatcher { return nil }\n",
+		"internal/capture/capture.go":      "package capture\n\nimport \"" + q + "\"\n\ntype Capture struct{ d *queries.QueryDispatcher }\n\nfunc (c *Capture) Queries() *queries.QueryDispatcher { return c.d }\n",
+		// Clean: other queries symbols and test fixtures.
+		"internal/app/screenshot/s.go":               "package screenshot\n\nimport \"" + q + "\"\n\nvar _ queries.QueryRunner\n",
+		"cmd/browser-agent/internal/toolx/x_test.go": "package toolx\n\nfunc g(c interface{ Queries() any }) { _ = c.Queries() }\n",
+	})
+	scan, err := scanTree(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	violations := evaluateMatrix(scan)
+	if len(violations) != 3 {
+		t.Fatalf("violations = %v\nwant 3 command-owner breaches", violations)
+	}
+	for _, v := range violations {
+		if !contains(v, "command-owner") {
+			t.Errorf("unexpected violation kind: %s", v)
+		}
+	}
+}

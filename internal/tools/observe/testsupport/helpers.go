@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
@@ -21,6 +22,7 @@ import (
 func Deps(captured *capture.Capture) core.Deps {
 	return core.Deps{
 		Capture:              captured,
+		Commands:             commandsOf(captured),
 		Screenshots:          newScreenshots(captured),
 		LogEntries:           func() ([]types.LogEntry, []time.Time) { return nil, nil },
 		LogTotalAdded:        func() int64 { return 0 },
@@ -68,4 +70,12 @@ func ExtractMCPJSON(t *testing.T, response mcp.JSONRPCResponse) map[string]any {
 		t.Fatalf("decode response JSON: %v", err)
 	}
 	return data
+}
+
+// commandsOf returns the capture's command owner, or a nil runner for a nil capture.
+func commandsOf(captured *capture.Capture) queries.QueryRunner {
+	if captured == nil {
+		return nil
+	}
+	return captured.Commands()
 }

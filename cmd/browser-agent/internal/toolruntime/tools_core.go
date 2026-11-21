@@ -5,7 +5,6 @@ package toolruntime
 import (
 	"context"
 	"encoding/json"
-	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
 	"os"
 	"strings"
 	"sync"
@@ -47,6 +46,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
@@ -61,8 +61,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry/usagecallback"
@@ -360,15 +360,28 @@ func initAsyncCommandRuntime(handler *ToolHandler) {
 // initAnnotationAnalysis wires the draw-mode annotation store and analyzers.
 func initAnnotationAnalysis(handler *ToolHandler) {
 	handler.annotationStore = handler.state.AnnotationRuntime.Store()
+	var annotationCommands annotationanalysis.Commands
+	if handler.capture != nil {
+		annotationCommands = handler.capture.Commands()
+	}
 	handler.annotationAnalysis = annotationanalysis.New(
 		handler.annotationStore,
-		handler.capture,
+		annotationCommands,
 		handler.asyncCommands.FormatCommandResult,
 		handler.state.Logs.Entries,
 	)
 	if handler.capture != nil {
 		handler.annotationStore.SetCommandCompleter(func(correlationID string, result json.RawMessage) {
-			handler.capture.Queries().ApplyCommandResult(correlationID, "complete", result, "")
+			outcome := handler.capture.Commands().SubmitResult(browsercommand.Result{
+				Source: browsercommand.SourceDaemon, CorrelationID: correlationID, Status: "complete", Payload: result,
+			})
+			if outcome != browsercommand.OutcomeApplied {
+				handler.stateRecovery.Report(statediag.Diagnostic{
+					Name: "annotation_command_completion", CorrelationID: correlationID,
+					Detail: "annotation completion was rejected by the browser-command owner: " + string(outcome),
+					Fix:    "Retry analyze({what:'annotations'}) after the user finishes drawing.",
+				})
+			}
 		})
 	}
 }
@@ -472,7 +485,7 @@ func initInteractAndObserveDispatchers(handler *ToolHandler, observeDeps observe
 	var queryStore toolobserve.CommandStore
 	var inProgress func() []syncruntime.SyncInProgress
 	if handler.capture != nil {
-		queryStore = handler.capture.Queries()
+		queryStore = handler.capture.Commands()
 		inProgress = handler.capture.Extension().GetInProgressCommands
 	}
 	handler.observeDispatcher = toolobserve.NewDispatcher(toolobserve.Config{
@@ -530,7 +543,7 @@ func initSessionConfigHandlers(handler *ToolHandler) {
 			if handler.capture == nil {
 				return nil, false
 			}
-			return handler.capture.Queries().WaitForCommand(correlationID, timeout)
+			return handler.capture.Commands().WaitCommand(correlationID, timeout)
 		},
 		EnqueuePendingQuery: handler.asyncCommands.EnqueuePendingQuery,
 		RecordAIAction:      handler.actionRecorder.Record,
@@ -559,7 +572,7 @@ func initSessionConfigHandlers(handler *ToolHandler) {
 	)
 	var waitForSequenceCommand func(string, time.Duration) (*queries.CommandResult, bool)
 	if handler.capture != nil {
-		waitForSequenceCommand = handler.capture.Queries().WaitForCommand
+		waitForSequenceCommand = handler.capture.Commands().WaitCommand
 	}
 	handler.sequences = sequencehandler.New(sequencehandler.Deps{
 		Store:          handler.sessionStoreImpl,
@@ -685,8 +698,12 @@ func buildObserveLocalDeps(h *ToolHandler) toolobserve.Deps {
 }
 
 func buildObserveReadDeps(h *ToolHandler) observecore.Deps {
+	var commands queries.QueryRunner
+	if h.capture != nil {
+		commands = h.capture.Commands()
+	}
 	return observecore.Deps{
-		Capture: h.capture, Screenshots: newScreenshotService(h),
+		Capture: h.capture, Commands: commands, Screenshots: newScreenshotService(h),
 		LogEntries: func() ([]types.LogEntry, []time.Time) {
 			return h.state.Logs.EntriesWithAddedAt()
 		},
@@ -702,75 +719,13 @@ func buildObserveReadDeps(h *ToolHandler) observecore.Deps {
 	}
 }
 
-func initializeInteractActionOwners(h *ToolHandler) {
-	if h.Guards == nil {
-		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())
-	}
-	captureStore := func() *capture.Capture { return h.capture }
-	h.interactRuntime = toolinteract.NewActionRuntime(toolinteract.RuntimeDeps{
-		RequireCSPClear:     h.Guards.RequireCSPClear,
-		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery, MaybeWaitForCommand: h.asyncCommands.MaybeWaitForCommand,
-		RecordAIAction: h.actionRecorder.Record,
-		DefaultEvidenceCapture: func(clientID string) toolinteract.EvidenceShot {
-			return toolinteract.CaptureEvidence(h.capture, clientID)
-		},
-	})
-	h.domActions = toolinteract.NewDOMActions(h.interactRuntime, toolinteract.DOMDeps{
-		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
-		RequireTabTracking: h.Guards.RequireTabTracking, RecordDOMPrimitiveAction: h.actionRecorder.RecordDOMPrimitive,
-	})
-	h.storageActions = toolinteract.NewStorageActions(h.interactRuntime, toolinteract.StorageDeps{
-		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
-		RequireTabTracking: h.Guards.RequireTabTracking,
-	})
-	h.pageActions = toolinteract.NewPageActions(h.interactRuntime, h.domActions, h.storageActions, toolinteract.PageDeps{
-		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
-		RequireTabTracking: h.Guards.RequireTabTracking, Capture: captureStore,
-		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery, RecordAIAction: h.actionRecorder.Record,
-		MarkDrawStarted: func() {
-			if h.annotationStore != nil {
-				h.annotationStore.MarkDrawStarted()
-			}
-		},
-		CaptureScreenshot: newScreenshotService(h).Capture,
-		GetPageInfo: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return observepage.GetPageInfo(buildObserveReadDeps(h), req, args)
-		},
-	})
-	h.browserActions = toolinteract.NewBrowserActions(h.interactRuntime, h.pageActions, toolinteract.BrowserDeps{
-		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
-		RequireTabTracking: h.Guards.RequireTabTracking, Capture: captureStore,
-		InjectCSPBlockedActions: h.Guards.InjectCSPBlockedActions,
-		GetListenPort: func() int {
-			if h.state.ListenPort != nil {
-				return h.state.ListenPort.Get()
-			}
-			return serverdefaults.Port
-		},
-	})
-	h.workflowActions = toolinteract.NewWorkflowActions(
-		h.interactRuntime, h.domActions, h.browserActions, h.pageActions,
-		toolinteract.WorkflowDeps{
-			Capture: captureStore, ToolAnalyze: h.analyzeDispatcher.Handle,
-			ToolExportSARIF: h.generateDispatcher.ExportSARIF, Now: time.Now,
-			WaitForTrackedURLChange: func(beforeURL string, timeout time.Duration) (string, bool) {
-				return captureStore().Extension().WaitForTrackedURLChange(h.shutdownCtx, beforeURL, timeout)
-			},
-		},
-	)
-	h.batchActions = interactbatch.New(interactbatch.Deps{
-		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension, Capture: captureStore,
-		RecordAIAction: h.actionRecorder.Record, Interact: h.toolInteract, ReplayMu: &h.replayMu,
-	})
-}
-
 func buildScreenrecDeps(h *ToolHandler) screenrec.Deps {
 	if h.Guards == nil {
 		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())
 	}
 	getCommandResult := func(string) (*queries.CommandResult, bool) { return nil, false }
 	if h.capture != nil {
-		getCommandResult = h.capture.Queries().GetCommandResult
+		getCommandResult = h.capture.Commands().Command
 	}
 	return screenrec.Deps{
 		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery,

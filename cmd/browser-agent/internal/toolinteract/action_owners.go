@@ -29,6 +29,15 @@ type RuntimeDeps struct {
 	EvidenceRetryWait      func(time.Duration)
 }
 
+// Commands is the browser-command lifecycle surface interact actions use to
+// send synchronous queries and read async command outcomes.
+// internal/browsercommand.Owner satisfies it.
+type Commands interface {
+	queries.QueryRunner
+	WaitCommand(correlationID string, timeout time.Duration) (*queries.CommandResult, bool)
+	Command(correlationID string) (*queries.CommandResult, bool)
+}
+
 type DOMDeps struct {
 	RequirePilot, RequireExtension, RequireTabTracking toolguard.Check
 	RecordDOMPrimitiveAction                           func(string, string, string, string)
@@ -37,6 +46,7 @@ type DOMDeps struct {
 type BrowserDeps struct {
 	RequirePilot, RequireExtension, RequireTabTracking toolguard.Check
 	Capture                                            func() *capture.Capture
+	Commands                                           Commands
 	InjectCSPBlockedActions                            func(mcp.JSONRPCResponse) mcp.JSONRPCResponse
 	GetListenPort                                      func() int
 }
@@ -44,6 +54,7 @@ type BrowserDeps struct {
 type PageDeps struct {
 	RequirePilot, RequireExtension, RequireTabTracking toolguard.Check
 	Capture                                            func() *capture.Capture
+	Commands                                           Commands
 	EnqueuePendingQuery                                func(mcp.JSONRPCRequest, queries.PendingQuery, time.Duration) (mcp.JSONRPCResponse, bool)
 	RecordAIAction                                     func(string, string, map[string]any)
 	MarkDrawStarted                                    func()
@@ -264,16 +275,15 @@ const (
 
 // CaptureEvidence captures one screenshot through the canonical query lifecycle.
 // It lives with evidence state because its error vocabulary is part of that contract.
-func CaptureEvidence(store *capture.Capture, clientID string) EvidenceShot {
-	if store == nil {
+func CaptureEvidence(commands Commands, trackingEnabled func() bool, clientID string) EvidenceShot {
+	if commands == nil || trackingEnabled == nil {
 		return EvidenceShot{Error: "capture_not_initialized"}
 	}
-	enabled, _, _ := store.Extension().GetTrackingStatus()
-	if !enabled {
+	if !trackingEnabled() {
 		return EvidenceShot{Error: "no_tracked_tab"}
 	}
 
-	queryID, err := store.Queries().CreatePendingQueryWithTimeout(
+	queryID, err := commands.Enqueue(
 		queries.PendingQuery{Type: "screenshot", Params: json.RawMessage(`{}`)},
 		evidenceScreenshotTimeout,
 		clientID,
@@ -282,7 +292,7 @@ func CaptureEvidence(store *capture.Capture, clientID string) EvidenceShot {
 		return EvidenceShot{Error: "queue_full: " + err.Error()}
 	}
 
-	raw, err := store.Queries().WaitForResult(queryID, evidenceScreenshotTimeout)
+	raw, err := commands.WaitQueryResult(context.Background(), queryID, evidenceScreenshotTimeout)
 	if err != nil {
 		return EvidenceShot{Error: "screenshot_timeout: " + err.Error()}
 	}

@@ -89,7 +89,7 @@ func BuildResourcePressure(cap *capture.Capture, alerts *alertbuf.AlertBuffer) m
 			result[name] = ResourcePressure{Entries: pressure.Size, Capacity: pressure.Capacity,
 				DroppedCount: pressure.Dropped, OldestAgeMs: pressure.OldestAge.Milliseconds(), RecoverableEntries: pressure.Size}
 		}
-		queries := cap.Queries().GetSnapshot()
+		queries := cap.Commands().Snapshot()
 		result["pending_commands"] = ResourcePressure{Entries: queries.PendingQueryCount,
 			Capacity: queries.PendingCapacity, OldestAgeMs: queries.OldestPendingAge.Milliseconds(), ActiveEntries: queries.PendingQueryCount}
 		performance := cap.Performance().Pressure()

@@ -22,7 +22,7 @@ func TestHandleScreenshotValidatesPersistsResolvesAndThrottles(t *testing.T) {
 	t.Setenv(state.StateDirEnv, t.TempDir())
 	captured := capture.NewCapture()
 	t.Cleanup(captured.Close)
-	handler := New(captured, nil, nil)
+	handler := New(captured.Commands(), nil, nil)
 
 	request := func(method, clientID, body string) *httptest.ResponseRecorder {
 		t.Helper()

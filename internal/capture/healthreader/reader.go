@@ -41,7 +41,7 @@ func New(captured *capture.Capture) *Reader { return &Reader{capture: captured} 
 // Snapshot returns a lock-safe aggregate health view.
 func (r *Reader) Snapshot() Snapshot {
 	circuitOpen, circuitReason, circuitOpenedAt, windowEventCount := r.capture.Circuit().GetState()
-	querySnapshot := r.capture.Queries().GetSnapshot()
+	querySnapshot := r.capture.Commands().Snapshot()
 	extensionSnapshot := r.capture.Extension().Snapshot()
 	telemetrySnapshot := r.capture.Telemetry().Snapshot()
 	return Snapshot{

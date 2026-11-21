@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/screenshotframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -130,7 +131,7 @@ func (h *Handler) HandleScreenshot(w http.ResponseWriter, r *http.Request) {
 		"path":           savePath,
 		"correlation_id": body.CorrelationID,
 	}
-	if body.QueryID != "" && h.capture != nil {
+	if body.QueryID != "" && h.results != nil {
 		// Include data_url in query result so observe(what="screenshot") can return inline image.
 		// The HTTP response intentionally omits it to keep the /screenshots response lean.
 		queryResult := map[string]any{
@@ -142,7 +143,7 @@ func (h *Handler) HandleScreenshot(w http.ResponseWriter, r *http.Request) {
 		addCoordinateFrame(queryResult, body.CoordinateFrame, body.CoordinateFrameError)
 		// Error impossible: map contains only primitive types from input
 		resultJSON, _ := json.Marshal(queryResult)
-		h.capture.Queries().SetQueryResult(body.QueryID, resultJSON)
+		h.submitUploadResult(browsercommand.Result{QueryID: body.QueryID, Payload: resultJSON})
 	}
 
 	// Push screenshot notification to MCP inbox for non-query screenshots

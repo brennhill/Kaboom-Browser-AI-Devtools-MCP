@@ -12,6 +12,7 @@
 package toolinteract
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -485,7 +486,10 @@ func (h *BrowserActions) handleExecuteJS(req mcp.JSONRPCRequest, args json.RawMe
 // The extension-side persistTrackedTab handles async retarget via the
 // next /sync heartbeat. See issue #271.
 func (h *BrowserActions) applySwitchTabTracking(correlationID string) {
-	cmd, found := h.deps.Capture().Queries().GetCommandResult(correlationID)
+	if h.deps.Commands == nil {
+		return
+	}
+	cmd, found := h.deps.Commands.Command(correlationID)
 	if !found || cmd == nil || cmd.Status != "complete" {
 		return
 	}
@@ -566,20 +570,19 @@ func validateZoomRegionParams(req mcp.JSONRPCRequest, params zoomRegionParams) (
 }
 
 func (h *BrowserActions) captureZoomRegion(req mcp.JSONRPCRequest, params zoomRegionParams) mcp.JSONRPCResponse {
-	store := h.deps.Capture()
-	if store == nil {
-		return mcp.Fail(req, mcp.ErrNoData, "Capture is not initialized", "Restart the Kaboom daemon and retry.")
+	if h.deps.Commands == nil {
+		return mcp.Fail(req, mcp.ErrNoData, "Browser command owner is not initialized", "Restart the Kaboom daemon and retry.")
 	}
 	query := queries.PendingQuery{
 		Type:   "cdp_action",
 		Params: marshalQueryParams(zoomRegionQueryFields(params)),
 		TabID:  params.TabID,
 	}
-	queryID, err := store.Queries().CreatePendingQueryWithTimeout(query, zoomRegionTimeout, req.ClientID)
+	queryID, err := h.deps.Commands.Enqueue(query, zoomRegionTimeout, req.ClientID)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrExtError, "Command queue full: "+err.Error(), "Wait for in-flight commands to complete, then retry.")
 	}
-	raw, err := store.Queries().WaitForResult(queryID, zoomRegionTimeout)
+	raw, err := h.deps.Commands.WaitQueryResult(context.Background(), queryID, zoomRegionTimeout)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrExtTimeout, "zoom_region capture timeout: "+err.Error(),
 			"Confirm the extension is connected and the tab is not held by a performance trace, then retry.")

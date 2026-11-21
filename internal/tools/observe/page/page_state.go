@@ -6,6 +6,7 @@
 package page
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"sort"
@@ -222,7 +223,7 @@ func GetStorage(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 		)
 	}
 
-	stateResult, errResp := fetchStorageState(deps, req, cap)
+	stateResult, errResp := fetchStorageState(deps, req)
 	if errResp != nil {
 		return *errResp
 	}
@@ -235,7 +236,7 @@ func GetStorage(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 
 	// IndexedDB listing is best-effort (skip if storage_type filter excludes it)
 	if params.StorageType == "" {
-		attachIndexedDBListing(response, cap)
+		attachIndexedDBListing(response, deps.Commands)
 	}
 
 	return mcp.Succeed(req, "Browser storage", response)
@@ -245,8 +246,8 @@ func (p storageParams) includesType(storageType string) bool {
 	return p.StorageType == "" || p.StorageType == storageType
 }
 
-func fetchStorageState(deps core.Deps, req mcp.JSONRPCRequest, cap *capture.Capture) (map[string]any, *mcp.JSONRPCResponse) {
-	queryID, qerr := cap.Queries().CreatePendingQueryWithTimeout(
+func fetchStorageState(deps core.Deps, req mcp.JSONRPCRequest) (map[string]any, *mcp.JSONRPCResponse) {
+	queryID, qerr := deps.Commands.Enqueue(
 		queries.PendingQuery{
 			Type:   "state_capture",
 			Params: json.RawMessage(`{"action":"capture"}`),
@@ -259,7 +260,7 @@ func fetchStorageState(deps core.Deps, req mcp.JSONRPCRequest, cap *capture.Capt
 		return nil, &resp
 	}
 
-	result, err := cap.Queries().WaitForResult(queryID, 10*time.Second)
+	result, err := deps.Commands.WaitQueryResult(context.Background(), queryID, 10*time.Second)
 	if err != nil {
 		resp := mcp.Fail(req,
 			mcp.ErrExtTimeout,
@@ -327,8 +328,8 @@ func cookiesValue(v []any, name string, summary bool) any {
 	return filtered
 }
 
-func attachIndexedDBListing(response map[string]any, cap *capture.Capture) {
-	indexeddb, err := idbquery.Listing(cap)
+func attachIndexedDBListing(response map[string]any, commands queries.QueryRunner) {
+	indexeddb, err := idbquery.Listing(commands)
 	if err != nil {
 		response["indexeddb"] = map[string]any{
 			"supported": false,
@@ -378,7 +379,7 @@ func GetIndexedDB(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) 
 		)
 	}
 
-	storeData, err := idbquery.Entries(cap, params.Database, params.Store, params.Limit)
+	storeData, err := idbquery.Entries(deps.Commands, params.Database, params.Store, params.Limit)
 	if err != nil {
 		return mcp.Fail(req,
 			mcp.ErrExtError,

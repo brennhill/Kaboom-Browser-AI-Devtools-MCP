@@ -229,7 +229,11 @@ func (s *Server) Close() {
 var openapiJSON []byte
 
 func setupHTTPRoutes(server *Server, captured *capture.Capture) (*http.ServeMux, *toolruntime.ToolHandler) {
-	server.mediaHTTP = mediaapi.New(captured, server.annotationRuntime.Store(), server.pushRouter)
+	var mediaResults mediaapi.ResultSink
+	if captured != nil {
+		mediaResults = captured.Commands()
+	}
+	server.mediaHTTP = mediaapi.New(mediaResults, server.annotationRuntime.Store(), server.pushRouter)
 	mux := http.NewServeMux()
 	if captured != nil {
 		registerCaptureRoutes(mux, server, captured)
@@ -267,7 +271,7 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 	mux.HandleFunc("/sync", httpguard.CORS(httpguard.ExtensionOnly(newSyncHandler(captured).HandleSync)))
 	clientapi.Register(mux, captured, maxPostBodySize)
 	mux.HandleFunc("/recordings/save", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		screenrec.HandleSave(w, r, captured.Queries(), server.stateRecovery)
+		screenrec.HandleSave(w, r, captured.Commands(), server.stateRecovery)
 	})))
 	mux.HandleFunc("/recordings/storage", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleRecordingStorage)))
 	mux.HandleFunc("/recordings/reveal", httpguard.CORS(httpguard.ExtensionOnly(screenrec.HandleReveal)))

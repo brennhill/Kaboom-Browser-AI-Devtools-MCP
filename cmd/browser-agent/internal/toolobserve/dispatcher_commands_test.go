@@ -76,15 +76,15 @@ type commandStoreStub struct {
 	command   *queries.CommandResult
 }
 
-func (s commandStoreStub) WaitForCommand(string, time.Duration) (*queries.CommandResult, bool) {
+func (s commandStoreStub) WaitCommand(string, time.Duration) (*queries.CommandResult, bool) {
 	return s.command, s.command != nil
 }
-func (s commandStoreStub) GetCommandResult(string) (*queries.CommandResult, bool) {
+func (s commandStoreStub) Command(string) (*queries.CommandResult, bool) {
 	return s.command, s.command != nil
 }
-func (s commandStoreStub) GetPendingCommands() []*queries.CommandResult   { return s.pending }
-func (s commandStoreStub) GetCompletedCommands() []*queries.CommandResult { return s.completed }
-func (s commandStoreStub) GetFailedCommands() []*queries.CommandResult    { return s.failed }
+func (s commandStoreStub) PendingCommands() []*queries.CommandResult   { return s.pending }
+func (s commandStoreStub) CompletedCommands() []*queries.CommandResult { return s.completed }
+func (s commandStoreStub) FailedCommands() []*queries.CommandResult    { return s.failed }
 
 func TestFailedCommandsProjectsEmptyAndFailedStates(t *testing.T) {
 	t.Parallel()

@@ -27,16 +27,9 @@ import (
 // DefaultTimeout bounds both queueing and the wait for the extension's reply.
 const DefaultTimeout = 20 * time.Second
 
-// Commands is the browser-command lifecycle surface the use case needs.
-// internal/browsercommand.Owner satisfies it.
-type Commands interface {
-	Enqueue(query queries.PendingQuery, timeout time.Duration, clientID string) (string, error)
-	WaitQueryResult(ctx context.Context, queryID string, timeout time.Duration) (json.RawMessage, error)
-}
-
 // Deps wires the use case to its collaborators.
 type Deps struct {
-	Commands        Commands
+	Commands        queries.QueryRunner
 	TrackingEnabled func() bool
 	// Timeout overrides DefaultTimeout when positive.
 	Timeout time.Duration

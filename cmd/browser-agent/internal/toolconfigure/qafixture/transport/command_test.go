@@ -18,12 +18,12 @@ func TestExecuteRejectsCancellationDisconnectionAndPressure(t *testing.T) {
 	t.Parallel()
 	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := Execute(cancelled, nil, "qa", nil, time.Second); !errors.Is(err, context.Canceled) {
+	if _, err := Execute(cancelled, nil, nil, "qa", nil, time.Second); !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancelled command error = %v", err)
 	}
 	disconnected := capture.NewCapture()
 	t.Cleanup(disconnected.Close)
-	if _, err := Execute(context.Background(), disconnected, "qa", nil, time.Second); !errors.Is(err, context.Canceled) {
+	if _, err := Execute(context.Background(), disconnected.Commands(), disconnected.Extension().IsExtensionConnected, "qa", nil, time.Second); !errors.Is(err, context.Canceled) {
 		t.Fatalf("disconnected command error = %v", err)
 	}
 	connected := capture.NewCapture()
@@ -34,7 +34,7 @@ func TestExecuteRejectsCancellationDisconnectionAndPressure(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := Execute(context.Background(), connected, "qa", nil, time.Second); err == nil {
+	if _, err := Execute(context.Background(), connected.Commands(), connected.Extension().IsExtensionConnected, "qa", nil, time.Second); err == nil {
 		t.Fatal("saturated command queue accepted fixture command")
 	}
 }
@@ -53,7 +53,7 @@ func TestExecuteReturnsCorrelatedExtensionResult(t *testing.T) {
 			captureStore.Queries().SetQueryResultWithClient(pending[0].ID, json.RawMessage(`{"restored":true}`), "")
 		}
 	}()
-	result, err := Execute(context.Background(), captureStore, "qa_restore", json.RawMessage(`{"fixture":"corrupt"}`), time.Second)
+	result, err := Execute(context.Background(), captureStore.Commands(), captureStore.Extension().IsExtensionConnected, "qa_restore", json.RawMessage(`{"fixture":"corrupt"}`), time.Second)
 	<-completed
 	if err != nil || string(result) != `{"restored":true}` {
 		t.Fatalf("fixture result = %s, error = %v", result, err)

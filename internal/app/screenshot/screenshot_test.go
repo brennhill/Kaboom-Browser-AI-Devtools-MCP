@@ -42,7 +42,7 @@ func (f *fakeCommands) WaitQueryResult(_ context.Context, queryID string, timeou
 	return f.result, f.waitErr
 }
 
-func newService(commands Commands, tracked bool) *Service {
+func newService(commands queries.QueryRunner, tracked bool) *Service {
 	return New(Deps{Commands: commands, TrackingEnabled: func() bool { return tracked }})
 }
 

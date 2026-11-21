@@ -12,16 +12,25 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
+// Commands is the browser-command lifecycle surface annotation waits need:
+// a daemon-local command per wait, completed when the annotation is flushed.
+// internal/browsercommand.Owner satisfies it.
+type Commands interface {
+	RegisterLocal(correlationID string, ttl time.Duration)
+	Command(correlationID string) (*queries.CommandResult, bool)
+	SubmitResult(result browsercommand.Result) browsercommand.Outcome
+}
+
 // Handler owns annotation analysis over the shared annotation and command stores.
 type Handler struct {
 	annotationStore *annotation.Store
-	capture         *capture.Capture
+	commands        Commands
 	formatCommand   func(mcp.JSONRPCRequest, queries.CommandResult, string) mcp.JSONRPCResponse
 	logEntries      func() []types.LogEntry
 }
@@ -29,13 +38,13 @@ type Handler struct {
 // New constructs annotation analysis with explicit runtime dependencies.
 func New(
 	annotationStore *annotation.Store,
-	captureStore *capture.Capture,
+	commands Commands,
 	formatCommand func(mcp.JSONRPCRequest, queries.CommandResult, string) mcp.JSONRPCResponse,
 	logEntries func() []types.LogEntry,
 ) *Handler {
 	return &Handler{
 		annotationStore: annotationStore,
-		capture:         captureStore,
+		commands:        commands,
 		formatCommand:   formatCommand,
 		logEntries:      logEntries,
 	}
@@ -115,7 +124,7 @@ func (h *Handler) getAnonymousAnnotations(req mcp.JSONRPCRequest, wait bool, wai
 		}
 
 		corrID := toolresp.NewCorrelationID("ann")
-		h.capture.Queries().RegisterCommand(corrID, "", annotationWaitCommandTTL)
+		h.commands.RegisterLocal(corrID, annotationWaitCommandTTL)
 		h.annotationStore.RegisterWaiter(corrID, "", urlFilter)
 
 		return mcp.Succeed(req, "Waiting for annotations", map[string]any{
@@ -156,7 +165,7 @@ func (h *Handler) getNamedAnnotations(req mcp.JSONRPCRequest, sessionName string
 		}
 
 		corrID := toolresp.NewCorrelationID("ann")
-		h.capture.Queries().RegisterCommand(corrID, "", annotationWaitCommandTTL)
+		h.commands.RegisterLocal(corrID, annotationWaitCommandTTL)
 		h.annotationStore.RegisterWaiter(corrID, sessionName, urlFilter)
 
 		return mcp.Succeed(req, "Waiting for annotations", map[string]any{
@@ -276,7 +285,7 @@ func (h *Handler) toolFlushAnnotations(req mcp.JSONRPCRequest, correlationID str
 	sessionName, waiterURLFilter, _ := h.annotationStore.TakeWaiter(correlationID)
 
 	// Idempotent behavior: if the command is already terminal, return current state.
-	if cmd, found := h.capture.Queries().GetCommandResult(correlationID); found && cmd != nil && cmd.Status != "pending" {
+	if cmd, found := h.commands.Command(correlationID); found && cmd != nil && cmd.Status != "pending" {
 		return h.formatCommand(req, *cmd, correlationID)
 	}
 
@@ -286,10 +295,16 @@ func (h *Handler) toolFlushAnnotations(req mcp.JSONRPCRequest, correlationID str
 	}
 
 	payload := h.buildFlushedAnnotationResult(sessionName, effectiveURLFilter)
-	h.capture.Queries().ApplyCommandResult(correlationID, "complete", payload, "")
+	outcome := h.commands.SubmitResult(browsercommand.Result{
+		Source: browsercommand.SourceDaemon, CorrelationID: correlationID, Status: "complete", Payload: payload,
+	})
+	if outcome != browsercommand.OutcomeApplied {
+		return mcp.Fail(req, mcp.ErrInternal, "Annotation flush was rejected by the command owner: "+string(outcome),
+			"Retry analyze({what:'annotations',background:false}).")
+	}
 
 	// Normal path: return canonical command_result envelope.
-	if cmd, found := h.capture.Queries().GetCommandResult(correlationID); found && cmd != nil {
+	if cmd, found := h.commands.Command(correlationID); found && cmd != nil {
 		return h.formatCommand(req, *cmd, correlationID)
 	}
 

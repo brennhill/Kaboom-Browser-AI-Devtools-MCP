@@ -87,7 +87,7 @@ func (h *PageActions) enrichNavigateResponse(
 		return enqueueResponse
 	}
 	var textContent string
-	command, found := captureStore.Queries().WaitForCommand(correlationID, navigatePageSummaryWait)
+	command, found := h.deps.Commands.WaitCommand(correlationID, navigatePageSummaryWait)
 	if found && command.Status != "pending" && command.Result != nil {
 		var summary map[string]any
 		if json.Unmarshal(command.Result, &summary) == nil {

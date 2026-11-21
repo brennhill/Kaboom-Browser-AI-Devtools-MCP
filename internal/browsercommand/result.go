@@ -19,8 +19,10 @@ import "encoding/json"
 //     identity only: it needs a query ID or correlation ID, query results are
 //     scoped to ClientID, and command transitions stay monotonic (a terminal
 //     command ignores later results).
-//   - SourceDaemon: a daemon-originated terminal failure (disconnect, lost
-//     command). It requires a correlation ID and an error.
+//   - SourceDaemon: a daemon-originated terminal transition. A failure
+//     (disconnect, lost command) has status "error" and requires an error; a
+//     completion of a daemon-local command (RegisterLocal) has status
+//     "complete". Both require a correlation ID.
 type ResultSource string
 
 // Result sources; see ResultSource for each one's validation policy.
@@ -63,7 +65,7 @@ func (o *Owner) SubmitResult(result Result) Outcome {
 			return OutcomeRejected
 		}
 	case SourceDaemon:
-		if result.CorrelationID == "" || result.Error == "" {
+		if !validDaemonResult(result) {
 			return OutcomeRejected
 		}
 	default:
@@ -86,5 +88,21 @@ func (o *Owner) apply(result Result) {
 	}
 	if result.CorrelationID != "" {
 		o.queue.ApplyCommandResult(result.CorrelationID, result.Status, result.Payload, result.Error)
+	}
+}
+
+// validDaemonResult enforces the SourceDaemon policy: a correlated terminal
+// failure with an error, or a correlated completion without one.
+func validDaemonResult(result Result) bool {
+	if result.CorrelationID == "" {
+		return false
+	}
+	switch result.Status {
+	case "error":
+		return result.Error != ""
+	case "complete":
+		return result.Error == ""
+	default:
+		return false
 	}
 }

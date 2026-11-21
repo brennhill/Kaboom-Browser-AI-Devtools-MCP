@@ -6,6 +6,7 @@ package queries
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"time"
 )
@@ -109,3 +110,11 @@ const (
 	// This timeout must be >= extension execution timeout to avoid premature expiration.
 	AsyncCommandTimeout = 60 * time.Second
 )
+
+// QueryRunner is the consumer port for "enqueue one query, then wait for its
+// one-time result". observe, interact, analyze and fixture workflows depend on
+// it instead of the dispatcher; internal/browsercommand.Owner satisfies it.
+type QueryRunner interface {
+	Enqueue(query PendingQuery, timeout time.Duration, clientID string) (string, error)
+	WaitQueryResult(ctx context.Context, queryID string, timeout time.Duration) (json.RawMessage, error)
+}

@@ -29,7 +29,7 @@ func newBatchFixture(t *testing.T) *batchFixture {
 	handler = New(Deps{
 		RequirePilot:     allow,
 		RequireExtension: allow,
-		Capture:          func() *capture.Capture { return fixture.store },
+		WaitCommand:      fixture.store.Commands().WaitCommand,
 		RecordAIAction:   func(string, string, map[string]any) { fixture.recorded++ },
 		ReplayMu:         &sync.Mutex{},
 		Now:              deterministicBatchClock(),
@@ -171,7 +171,7 @@ func TestHandleAggregatesCompletedExtensionCommand(t *testing.T) {
 	t.Cleanup(store.Close)
 	handler := New(Deps{
 		RequirePilot: allow, RequireExtension: allow,
-		Capture:        func() *capture.Capture { return store },
+		WaitCommand:    store.Commands().WaitCommand,
 		ReplayMu:       &sync.Mutex{},
 		RecordAIAction: func(string, string, map[string]any) {},
 		Now:            deterministicBatchClock(),

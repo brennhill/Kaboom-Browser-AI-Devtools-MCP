@@ -23,7 +23,7 @@ func postScreenshotBody(t *testing.T, queryID string, extra map[string]any) map[
 	t.Setenv(state.StateDirEnv, t.TempDir())
 	captured := capture.NewCapture()
 	t.Cleanup(captured.Close)
-	handler := New(captured, nil, nil)
+	handler := New(captured.Commands(), nil, nil)
 
 	body := map[string]any{
 		"data_url": "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString([]byte("pixels")),

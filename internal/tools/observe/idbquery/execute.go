@@ -5,13 +5,13 @@
 package idbquery
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -20,8 +20,8 @@ const queryTimeout = 10 * time.Second
 
 // Listing enumerates IndexedDB databases in the tracked tab, each with its object stores,
 // sorted by database name. A page without IndexedDB reports supported=false rather than erroring.
-func Listing(cap *capture.Capture) (map[string]any, error) {
-	data, err := executeScript(cap, listingScript, "observe_storage_indexeddb", queryTimeout)
+func Listing(commands queries.QueryRunner) (map[string]any, error) {
+	data, err := executeScript(commands, listingScript, "observe_storage_indexeddb", queryTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -49,9 +49,9 @@ func Listing(cap *capture.Capture) (map[string]any, error) {
 
 // Entries reads up to limit rows from one object store. It returns an error when the page
 // reports failure (missing database, missing store, or a serialization fault).
-func Entries(cap *capture.Capture, database, store string, limit int) (map[string]any, error) {
+func Entries(commands queries.QueryRunner, database, store string, limit int) (map[string]any, error) {
 	script := buildEntriesScript(database, store, limit)
-	data, err := executeScript(cap, script, "observe_indexeddb_entries", queryTimeout)
+	data, err := executeScript(commands, script, "observe_indexeddb_entries", queryTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func Entries(cap *capture.Capture, database, store string, limit int) (map[strin
 	return data, nil
 }
 
-func executeScript(cap *capture.Capture, script, reason string, timeout time.Duration) (map[string]any, error) {
+func executeScript(commands queries.QueryRunner, script, reason string, timeout time.Duration) (map[string]any, error) {
 	params, _ := json.Marshal(map[string]any{
 		"script":     script,
 		"timeout_ms": int(timeout.Milliseconds()),
@@ -88,7 +88,7 @@ func executeScript(cap *capture.Capture, script, reason string, timeout time.Dur
 		"reason":     reason,
 	})
 
-	queryID, qerr := cap.Queries().CreatePendingQueryWithTimeout(
+	queryID, qerr := commands.Enqueue(
 		queries.PendingQuery{
 			Type:   "execute",
 			Params: params,
@@ -100,7 +100,7 @@ func executeScript(cap *capture.Capture, script, reason string, timeout time.Dur
 		return nil, qerr
 	}
 
-	result, err := cap.Queries().WaitForResult(queryID, timeout)
+	result, err := commands.WaitQueryResult(context.Background(), queryID, timeout)
 	if err != nil {
 		return nil, err
 	}

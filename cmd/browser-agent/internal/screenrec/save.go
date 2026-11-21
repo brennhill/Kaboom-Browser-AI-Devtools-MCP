@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
@@ -175,21 +177,27 @@ func stableVideoCleanupError(closeErr, cleanupErr error) error {
 	return cleanupErr
 }
 
+// ResultSink accepts the saved-recording result for the query that requested
+// it. internal/browsercommand.Owner satisfies it.
+type ResultSink interface {
+	SubmitResult(result browsercommand.Result) browsercommand.Outcome
+}
+
 // HandleSave handles POST /recordings/save from the extension.
 // Accepts multipart form with "video" (binary) and "metadata" (JSON string) fields.
 func HandleSave(
 	w http.ResponseWriter,
 	r *http.Request,
-	cap interface{ SetQueryResult(string, json.RawMessage) },
+	results ResultSink,
 	diagnostics statediag.Reporter,
 ) {
-	handleSaveWithOperations(w, r, cap, diagnostics, defaultVideoDiskOperations())
+	handleSaveWithOperations(w, r, results, diagnostics, defaultVideoDiskOperations())
 }
 
 func handleSaveWithOperations(
 	w http.ResponseWriter,
 	r *http.Request,
-	cap interface{ SetQueryResult(string, json.RawMessage) },
+	results ResultSink,
 	diagnostics statediag.Reporter,
 	ops videoDiskOperations,
 ) {
@@ -228,7 +236,7 @@ func handleSaveWithOperations(
 	}
 	statediag.Resolve(diagnostics, "saved_video_state")
 
-	if upload.queryID != "" && cap != nil {
+	if upload.queryID != "" && results != nil {
 		// Error impossible: map contains only primitive types from input
 		result := mcp.SafeMarshal(map[string]any{
 			"status":           "saved",
@@ -238,7 +246,12 @@ func handleSaveWithOperations(
 			"size_bytes":       upload.meta.SizeBytes,
 			"truncated":        upload.meta.Truncated,
 		}, "{}")
-		cap.SetQueryResult(upload.queryID, result)
+		outcome := results.SubmitResult(browsercommand.Result{
+			Source: browsercommand.SourceQueryResult, QueryID: upload.queryID, Payload: result,
+		})
+		if outcome != browsercommand.OutcomeApplied {
+			diag.Printf("[Kaboom] event=recording_result_rejected outcome=%s query_id=%s\n", outcome, upload.queryID)
+		}
 	}
 
 	util.JSONResponse(w, http.StatusOK, map[string]any{

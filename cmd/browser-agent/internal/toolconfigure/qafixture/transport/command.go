@@ -1,4 +1,4 @@
-// command.go — Sends bounded QA fixture commands through the extension query queue.
+// command.go — Sends bounded QA fixture commands through the browser-command owner.
 
 package transport
 
@@ -7,21 +7,21 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
 // Execute sends one fixture command and waits for its correlated extension result.
-func Execute(ctx context.Context, captureStore *capture.Capture, command string, params json.RawMessage, timeout time.Duration) (json.RawMessage, error) {
+// A nil commands owner or a disconnected extension reports context.Canceled.
+func Execute(ctx context.Context, commands queries.QueryRunner, connected func() bool, command string, params json.RawMessage, timeout time.Duration) (json.RawMessage, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	if captureStore == nil || !captureStore.Extension().IsExtensionConnected() {
+	if commands == nil || connected == nil || !connected() {
 		return nil, context.Canceled
 	}
-	queryID, err := captureStore.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{Type: command, Params: params}, timeout, "")
+	queryID, err := commands.Enqueue(queries.PendingQuery{Type: command, Params: params}, timeout, "")
 	if err != nil {
 		return nil, err
 	}
-	return captureStore.Queries().WaitForResultContext(ctx, queryID, timeout)
+	return commands.WaitQueryResult(ctx, queryID, timeout)
 }

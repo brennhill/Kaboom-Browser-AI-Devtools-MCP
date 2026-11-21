@@ -15,6 +15,9 @@
 //	internal/app/**      ↛ net/http/**, internal/mcp, internal/capture/**, internal/tools/**
 //	                     (application use cases take narrow ports, never MCP
 //	                     request/response types or the whole *capture.Capture)
+//	command-owner        no production X.Queries() call or queries.QueryDispatcher
+//	                     reference outside internal/queries, internal/browsercommand
+//	                     and internal/capture/capture.go (command_owner.go)
 //	capture.NewCapture   only from cmd/browser-agent (ports are wired by the
 //	                     composition root; detection resolves import ALIASES
 //	                     and package-level var initializers, not the literal
@@ -83,7 +86,10 @@ type treeScan struct {
 	// compositionRootBreaches lists files outside cmd/browser-agent that
 	// construct capture.NewCapture (via any import alias).
 	compositionRootBreaches []string
-	interfaces              []ifaceInfo
+	// commandOwnerBreaches lists production dispatcher references outside the
+	// browser-command owner (see command_owner.go).
+	commandOwnerBreaches []string
+	interfaces           []ifaceInfo
 }
 
 // ignoredDir skips trees that are not this checkout's hand-written source.
@@ -227,6 +233,7 @@ func scanTree(root string) (*treeScan, error) {
 			}
 		}
 		scan.pkgOf[fileKey] = pkgPath
+		scan.commandOwnerBreaches = append(scan.commandOwnerBreaches, commandOwnerBreaches(parsed, fileKey, pkgPath, scan.alias[fileKey])...)
 
 		for _, declaration := range parsed.Decls {
 			gd, ok := declaration.(*ast.GenDecl)
@@ -416,6 +423,7 @@ func evaluateMatrix(scan *treeScan) []string {
 	for _, file := range scan.compositionRootBreaches {
 		violations = append(violations, fmt.Sprintf("composition-root: %s constructs capture.NewCapture", file))
 	}
+	violations = append(violations, scan.commandOwnerBreaches...)
 	sort.Strings(violations)
 	return violations
 }
