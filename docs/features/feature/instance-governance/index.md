@@ -4,7 +4,7 @@ feature_id: feature-instance-governance
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - internal/proclock/proclock.go
   - internal/proclock/proclock_unix.go
@@ -12,6 +12,7 @@ code_paths:
   - internal/procidentity/procidentity.go
   - internal/procidentity/procidentity_unix.go
   - internal/procidentity/procidentity_windows.go
+  - internal/procidentity/procidentity_info.go
   - internal/instancereg/registry.go
   - internal/instancereg/prune.go
   - internal/instancegov/instancegov.go
@@ -37,6 +38,7 @@ code_paths:
   - cmd/browser-agent/internal/runtimeflags/flags.go
   - cmd/browser-agent/internal/startupconfig/help.go
 test_paths:
+  - cmd/browser-agent/internal/censuscmd/census_test.go
   - internal/proclock/proclock_test.go
   - internal/procidentity/procidentity_test.go
   - internal/instancereg/registry_test.go

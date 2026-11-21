@@ -1,10 +1,10 @@
 ---
 feature: Reproduction Scripts
-status: in-progress
+status: implemented
 version: 0.7.12
 doc_type: tech-spec
 feature_id: feature-reproduction-scripts
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -13,9 +13,9 @@ last_verified_date: 2026-03-05
 
 ## Overview
 
-Replace the `toolGetReproductionScript()` stub in [internal/toolgenerate/dispatcher.go](cmd/browser-agent/internal/toolgenerate/dispatcher.go) with a complete implementation that generates reproduction scripts from captured `EnhancedAction` data. Two output formats: Playwright (test code) and Kaboom (natural language).
+`generate({format: "reproduction"})` produces reproduction scripts from captured `EnhancedAction` data. Two output formats: Playwright (test code) and Kaboom (natural language, `output_format: "kaboom-agentic-browser"`, the default).
 
-The daemon-side logic lives with the generate boundary in `cmd/browser-agent/internal/toolgenerate/dispatcher.go`.
+The generate boundary is `Dispatcher.getReproductionScript()` in [dispatcher.go](../../../../cmd/browser-agent/internal/toolgenerate/dispatcher.go). It is a thin adapter: parsing, filtering, script generation and result assembly live in the `internal/reproduction` package (`internal/reproduction/reproduction.go`, `reproduction_kaboom.go`, `reproduction_playwright.go`, `reproduction_selectors.go`, `reproduction_locators.go`, `reproduction_utils.go`).
 
 ---
 
@@ -28,20 +28,20 @@ sequenceDiagram
     participant Browser as Browser (Extension)
     participant Capture as Capture Buffer
     participant Generate as generate() Tool
-    participant Script as reproduction.go
+    participant Script as internal/reproduction
 
     Browser->>Capture: EnhancedAction (click, input, navigate...)
     Note over Capture: Ring buffer, 1000 max<br/>Multi-strategy selectors per action
 
-    Generate->>Script: toolGetReproductionScript(args)
+    Generate->>Script: ParseParams / FilterLastN / GenerateScript / BuildResult
     Script->>Capture: Telemetry().Actions().Snapshot().Actions
     Capture-->>Script: []EnhancedAction
 
-    alt output_format = "kaboom"
-        Script->>Script: generateKaboomScript(actions, opts)
+    alt output_format = "kaboom-agentic-browser" (default)
+        Script->>Script: GenerateKaboomScript(actions, opts)
         Script-->>Generate: Natural language steps
     else output_format = "playwright"
-        Script->>Script: generateReproPlaywrightScript(actions, opts)
+        Script->>Script: GeneratePlaywrightScript(actions, opts)
         Script-->>Generate: Playwright test code
     end
 
@@ -71,69 +71,66 @@ The generation code reads from this map to produce the best possible description
 
 ### Generate Boundary: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
 
-**Size target:** ~250 LOC
-
-```go
-// reproduction.go — Reproduction script generation from captured actions.
-// Generates Playwright tests or Kaboom natural language scripts.
-package main
-```
+`Dispatcher.getReproductionScript()` validates `output_format` (rejecting anything other than `kaboom-agentic-browser` or `playwright` with `invalid_param`), reads `Capture.Telemetry().Actions().Snapshot().Actions`, and delegates to `package reproduction` in `internal/reproduction/`.
 
 ### Core Functions
 
-#### 1. `toolGetReproductionScript()` — Entry Point
+#### 1. `getReproductionScript()` + `reproduction.ParseParams()` — Entry Point
 
-Replaces the stub. Parses parameters, fetches actions, dispatches to format-specific generator.
+Parses parameters, fetches actions, dispatches to the format-specific generator.
 
 ```go
-type ReproductionParams struct {
+type Params struct {
     Format            string `json:"format"`             // always "reproduction"
-    OutputFormat      string `json:"output_format"`      // "kaboom" (default) | "playwright"
+    OutputFormat      string `json:"output_format"`      // "kaboom-agentic-browser" (default) | "playwright"
     LastN             int    `json:"last_n"`             // optional: filter to last N actions
     BaseURL           string `json:"base_url"`           // optional: rewrite origins
     IncludeScreenshots bool  `json:"include_screenshots"` // optional: screenshot steps (playwright)
     ErrorMessage      string `json:"error_message"`      // optional: error context
 }
 
-type ReproductionResult struct {
+type Result struct {
     Script      string              `json:"script"`
     Format      string              `json:"format"`
     ActionCount int                 `json:"action_count"`
     DurationMs  int64               `json:"duration_ms"`
     StartURL    string              `json:"start_url"`
-    Metadata    ReproductionMeta    `json:"metadata"`
+    Metadata    Meta                `json:"metadata"`
 }
 
-type ReproductionMeta struct {
-    GeneratedAt      string   `json:"generated_at"`
-    SelectorsUsed    []string `json:"selectors_used"`
-    ActionsAvailable int      `json:"actions_available"`
-    ActionsIncluded  int      `json:"actions_included"`
+type Meta struct {
+    GeneratedAt           string         `json:"generated_at"`
+    SelectorsUsed         []string       `json:"selectors_used"`
+    ActionsAvailable      int            `json:"actions_available"`
+    ActionsIncluded       int            `json:"actions_included"`
+    FallbackOrder         []string       `json:"fallback_order"`   // selector, ax, coordinate
+    LocatorCoverage       map[string]int `json:"locator_coverage"`
+    EnvironmentPinned     bool           `json:"environment_pinned"`
+    EnvironmentPinChanged bool           `json:"environment_pin_changed,omitempty"`
 }
 ```
 
 ##### Flow:
-1. Parse `ReproductionParams` from args
-2. Read `h.capture.Telemetry().Actions().Snapshot().Actions`
-3. If no actions → return structured error `no_actions_captured`
-4. Apply `last_n` filter (slice from end)
-5. Dispatch to `generateKaboomScript()` or `generateReproPlaywrightScript()`
-6. Compute metadata (duration, selectors used, counts)
-7. Return `ReproductionResult`
+1. `ParseParams(args)` (defaults `output_format` to `kaboom-agentic-browser`), then `ValidateOutputFormat()`
+2. Read `h.deps.Capture.Telemetry().Actions().Snapshot().Actions`
+3. `FilterLastN()` applies the `last_n` filter (slice from end)
+4. `GenerateScript()` dispatches to `GenerateKaboomScript()` or `GeneratePlaywrightScript()`
+5. `BuildResult()` computes metadata (duration, selectors used, counts, locator coverage, environment pin)
+6. Return `Result`
 
-#### 2. `generateKaboomScript()` — Natural Language
+#### 2. `GenerateKaboomScript()` — Natural Language
 
 Converts actions to numbered human-readable steps.
 
 ```go
-func generateKaboomScript(actions []capture.EnhancedAction, opts ReproductionParams) string
+func GenerateKaboomScript(actions []types.EnhancedAction, opts Params) string
 ```
 
 ##### Algorithm:
 1. Write header: `# Reproduction: {description}\n# Captured: {time} | {count} actions | {url}\n`
 2. For each action:
    a. Check timing gap from previous action → insert `[Ns pause]` if > 2s
-   b. Build element description via `describeElement(action)` (see below)
+   b. Build element description via `DescribeElement(action)` (see below)
    c. Format step based on action type:
       - `navigate` → `Navigate to: {url}`
       - `click` → `Click: {description}`
@@ -143,12 +140,12 @@ func generateKaboomScript(actions []capture.EnhancedAction, opts ReproductionPar
       - `scroll` → `Scroll to: y={position}`
 3. If `error_message` provided → append `\n# Error: {message}`
 
-#### 3. `describeElement()` — Human-Readable Element Description
+#### 3. `DescribeElement()` — Human-Readable Element Description
 
 Converts multi-strategy selectors into the most readable description possible.
 
 ```go
-func describeElement(action capture.EnhancedAction) string
+func DescribeElement(action types.EnhancedAction) string
 ```
 
 ##### Priority chain (first match wins):
@@ -171,12 +168,12 @@ func describeElement(action capture.EnhancedAction) string
 - Priorities 5-6 are readable but without role context
 - Priorities 7-8 are technical fallbacks
 
-#### 4. `generateReproPlaywrightScript()` — Playwright Test
+#### 4. `GeneratePlaywrightScript()` — Playwright Test
 
 Converts actions to a Playwright test using the best available Playwright locator.
 
 ```go
-func generateReproPlaywrightScript(actions []capture.EnhancedAction, opts ReproductionParams) string
+func GeneratePlaywrightScript(actions []types.EnhancedAction, opts Params) string
 ```
 
 ##### Locator priority (matches Playwright best practices):
@@ -212,12 +209,12 @@ func generateReproPlaywrightScript(actions []capture.EnhancedAction, opts Reprod
 ### E1: No Actions Captured
 
 **Trigger:** `Actions().Snapshot().Actions` returns an empty slice.
-**Resolution:** Return structured error `no_actions_captured` with hint: "Interact with the page first, then retry."
+**Resolution:** No error is returned; the Kaboom generator emits `# No actions captured` and the result reports `action_count: 0`.
 
 ### E2: All Selectors Missing
 
 **Trigger:** Action has nil/empty `Selectors` map.
-**Resolution:** `describeElement()` returns `(unknown element)`. Playwright generator emits comment `// action - no selector available`.
+**Resolution:** `DescribeElement()` returns `(unknown element)`. Playwright generator emits comment `// action - no selector available`.
 
 ### E3: Redacted Input Values
 
@@ -227,7 +224,7 @@ func generateReproPlaywrightScript(actions []capture.EnhancedAction, opts Reprod
 ### E4: Very Long Scripts (1000 actions)
 
 **Trigger:** Full buffer with 1000 actions.
-**Resolution:** Cap output at 200KB. If exceeded, truncate from the beginning (keep most recent actions) and prepend `# Note: Script truncated to last {N} actions (200KB limit)`.
+**Resolution:** The Playwright script is hard-capped at 200KB (`maxReproOutputBytes`); output beyond the cap is cut off. Use `last_n` to keep the most recent actions.
 
 ### E5: URL Rewriting with base_url
 
@@ -256,7 +253,7 @@ func generateReproPlaywrightScript(actions []capture.EnhancedAction, opts Reprod
 The `Selectors` map from the extension uses `map[string]any` in Go. Helper functions extract typed values safely:
 
 ```go
-func selectorString(selectors map[string]any, key string) string {
+func selectorStr(selectors map[string]any, key string) string {
     v, ok := selectors[key].(string)
     if !ok { return "" }
     return v
@@ -275,40 +272,36 @@ func selectorRole(selectors map[string]any) (role, name string) {
 
 ---
 
-## Files Changed
+## Files
 
-| File | Change | LOC |
-|------|--------|-----|
-| `cmd/browser-agent/internal/toolgenerate/dispatcher.go` | Generate adapter and reproduction formatting | <800 |
-| `internal/tools/interact/reproduction_test.go` | **NEW** — Tests | ~300 |
-| `cmd/browser-agent/internal/toolgenerate/dispatcher.go` | Update `toolGetReproductionScript()` to delegate to reproduction.go | ~5 |
-
-**Total new code:** ~555 LOC
+| File | Role |
+|------|------|
+| `cmd/browser-agent/internal/toolgenerate/dispatcher.go` | Generate adapter (`getReproductionScript`) |
+| `internal/reproduction/reproduction.go` | Params, result, validation, dispatch, metadata |
+| `internal/reproduction/reproduction_kaboom.go` | Kaboom natural-language generator |
+| `internal/reproduction/reproduction_playwright.go` | Playwright generator |
+| `internal/reproduction/reproduction_selectors.go` | `DescribeElement`, `PlaywrightLocator`, selector helpers |
+| `internal/reproduction/reproduction_locators.go` | Fallback locators (selector, AX, coordinate) and environment pin |
+| `internal/reproduction/reproduction_utils.go` | Escaping, URL rewriting, truncation helpers |
 
 ---
 
 ## Testing Strategy
 
-### Unit Tests (`reproduction_test.go`)
+### Unit Tests
 
-1. **TestReproduction_Kaboom_BasicFlow** — navigate + click + type → verify natural language output
-2. **TestReproduction_Kaboom_AllActionTypes** — one of each type → verify format for every action
-3. **TestReproduction_Kaboom_ElementDescriptionPriority** — verify selector priority chain (text+role > ariaLabel > testId > etc.)
-4. **TestReproduction_Kaboom_TimingPauses** — actions > 2s apart → verify `[Ns pause]` inserted
-5. **TestReproduction_Kaboom_RedactedValues** — password input → `[user-provided]`
-6. **TestReproduction_Kaboom_AIActions** — Source="ai" → `(AI)` prefix
-7. **TestReproduction_Playwright_BasicFlow** — verify valid Playwright test output
-8. **TestReproduction_Playwright_LocatorPriority** — testId > role > ariaLabel > text > id > cssPath
-9. **TestReproduction_Playwright_URLRewriting** — base_url rewrites origins
-10. **TestReproduction_Playwright_SpecialCharacters** — quotes and newlines escaped
-11. **TestReproduction_EmptyActions** — returns error
-12. **TestReproduction_LastN** — filter to last N actions
-13. **TestReproduction_OutputCap** — 1000 actions doesn't exceed 200KB
-14. **TestReproduction_DefaultFormat** — empty output_format defaults to "kaboom"
+`internal/reproduction/reproduction_test.go` covers the format behaviours, including:
+
+1. **TestReproduction_Kaboom_BasicFlow** / **AllActionTypes** / **ElementDescriptionPriority** / **TimingPauses** / **RedactedValues** / **AIActions** / **ErrorMessage**
+2. **TestReproduction_Playwright_BasicFlow** / **LocatorPriority** / **URLRewriting** / **SpecialCharacters** / **TimingPauses**
+3. **TestReproduction_EmptyActions**, **TestReproduction_LastN**, **TestReproduction_DefaultFormat**
+4. Per-step `TestPlaywrightStep_*` cases
+
+`internal/reproduction/reproduction_locators_test.go` covers fallback locators and environment pinning; `internal/reproduction/golden_test.go` compares Playwright output against golden files. `internal/tools/interact/reproduction_test.go` covers selector parsing for reproduction.
 
 ### Integration Test
 
-Run via existing `go test ./cmd/browser-agent/...` — the generate tool dispatch in `internal/toolgenerate/dispatcher.go` ensures the `reproduction` format reaches the new code.
+`cmd/browser-agent/internal/toolgenerate/toolgenerate_test.go` exercises the generate dispatch so the `reproduction` format reaches `package reproduction`.
 
 ---
 
@@ -321,11 +314,3 @@ Run via existing `go test ./cmd/browser-agent/...` — the generate tool dispatc
 | Memory | < 2MB transient | Actions already in buffer; script is one string allocation |
 
 ---
-
-## Implementation Order
-
-1. Write `reproduction_test.go` with tests for both formats (TDD)
-2. Write `reproduction.go` — types, helpers, `generateKaboomScript()`, `generateReproPlaywrightScript()`
-3. Update `toolGetReproductionScript()` in `internal/toolgenerate/dispatcher.go` to call new code
-4. Run tests: `go test ./cmd/browser-agent/... -run TestReproduction`
-5. Run full suite: `go test ./... -timeout 120s`

@@ -308,7 +308,7 @@ func newExchangeRecorder() syncruntime.ExchangeRecorder {
 		// normal production configuration rather than a missing setting.
 		return nil
 	}
-	fmt.Fprintf(os.Stderr, "kaboom: recording sync command exchanges to %s\n", path)
+	diag.Printf("kaboom: recording sync command exchanges to %s\n", path)
 	return synctranscript.NewFileRecorder(path)
 }
 

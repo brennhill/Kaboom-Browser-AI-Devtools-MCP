@@ -3,7 +3,7 @@ feature: performance-audit
 status: proposed
 doc_type: tech-spec
 feature_id: feature-performance-audit
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -66,12 +66,14 @@ Server returns audit report to AI
 
 ## Implementation Strategy
 
-**Extension files**:
-- `extension/lib/performance-audit.js` (new): Audit engine, severity classifier, recommendation generator
-- `extension/inject.js` (modified): Import and invoke performance audit on query
+Not built yet (reviewed 2026-11-21). The audit engine and a dedicated `performance_audit` handler do not exist. What exists today is the raw input this audit would consume: performance snapshots built in `src/lib/analysis/perf-snapshot.ts`, stored by `internal/capture/perfstore/store.go`, and typed in `internal/performance/types.go`.
 
-**Server files**:
-- `cmd/browser-agent/queries.go`: Add `toolObservePerformanceAudit()` handler
+**Planned extension work**:
+- New audit module in the extension's analysis library (`src/lib/analysis/`): audit engine, severity classifier, recommendation generator
+- Invoke the audit from the page inject layer on query
+
+**Planned server work**:
+- A new analyze/observe handler that dispatches the audit query and returns the report
 
 **Trade-offs**:
 - Extension-side analysis (not server-side) because requires DOM access and Resource Timing API. Server only receives final audit report.

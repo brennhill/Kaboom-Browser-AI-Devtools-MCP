@@ -72,6 +72,7 @@ code_paths:
   - scripts/quality/contracts/bundle-size/check-bundle-size.cjs
   - scripts/security/check-secrets.sh
   - scripts/build/run-go-coverage.sh
+  - scripts/build/go-coverage-packages.sh
   - scripts/quality/contracts/check-baseline-currency.sh
   - .secrets-allowlist
   - .gitleaks.toml
@@ -286,7 +287,10 @@ OpenAI key rules and anchored fixture paths). Intentional fake-key
 fixtures are listed with reasons in `.secrets-allowlist` and mirrored in
 `.gitleaks.toml`; a path on those lists may never contain a real credential.
 
-Go coverage floors are enforced by `run-go-coverage.sh` as the maximum of the
+The measured set is the first-party package list from `go-coverage-packages.sh`
+(`go list ./...` minus `node_modules/`, whose npm-installed Go sources would
+otherwise make the denominator depend on the local install). Go coverage floors
+are enforced by `run-go-coverage.sh` as the maximum of the
 historical minimum and the upward-only ratchet in `.coverage-baseline.json`;
 `GO_COVERAGE_MINIMUM` can only raise the bar, and
 `make coverage-baseline-update` locks in demonstrated improvements. A missing

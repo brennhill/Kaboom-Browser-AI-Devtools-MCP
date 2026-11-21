@@ -3,7 +3,7 @@ feature: instance-governance
 status: implemented
 doc_type: tech-spec
 feature_id: feature-instance-governance
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 ---
 
 # Instance Governance — Tech Spec
@@ -13,7 +13,7 @@ last_reviewed: 2026-09-05
 | Component | File(s) | Responsibility |
 | --- | --- | --- |
 | Kernel lock | `internal/proclock/proclock.go`, `proclock_unix.go` (`//go:build !windows`, flock), `proclock_windows.go` (`//go:build windows`, LockFileEx) | `Acquire`/`Release`/`Write`/`ReadUnlocked` on an exclusive, process-lifetime lock file. Released by the kernel on any process death, including SIGKILL and OOM. |
-| Process identity | `internal/procidentity/procidentity.go`, `procidentity_unix.go` (`ps` listing), `procidentity_windows.go` (`//go:build windows`, WMIC) | `Info{Start, Command}` compared as opaque strings; `Snapshot`/`Self`/`IsAlive`/`AliveIn` answer "is pid N still running as the process a record was written for," not "does some process hold pid N." |
+| Process identity | `internal/procidentity/procidentity.go`, `procidentity_unix.go` (`ps` listing), `procidentity_windows.go` (`//go:build windows`, Win32 `CreateToolhelp32Snapshot` + `GetProcessTimes` via stdlib `syscall`; creation FILETIME ticks as `Start`, exe name as `Command`), `procidentity_info.go` (platform-neutral `buildInfo`). WMIC was removed because current Windows images (windows-2025) no longer ship it, which made every Windows daemon fail to register | `Info{Start, Command}` compared as opaque strings; `Snapshot`/`Self`/`IsAlive`/`AliveIn` answer "is pid N still running as the process a record was written for," not "does some process hold pid N." |
 | Machine registry | `internal/instancereg/registry.go`, `prune.go` | `Record` (snake_case JSON: `pid`, `role`, `ports`, `state_dir`, `version`, `install_epoch`, `parallel`, `started_at`, `heartbeat_at`, `identity`), `Register`/`Handle.Heartbeat`/`Handle.SetPorts`/`Handle.Close`, `List`, `Live` (identity-checked subset of `List`), `Prune`, `DecodeRecord`, `RecordJSON`, `SingletonLockPath`. |
 | Admission policy | `internal/instancegov/instancegov.go`, `policy.go`, `cpu.go`, `runtime.go` | `Admit`/`Config`/`Result`, `Policy`/`DefaultPolicy`, `IsWedged`, `Surplus`, `oldestFirst`, `shouldRequestHandoff`/`requestHandoff`, `StartHeartbeat`/`StartIdleWatch`. |
 | Idle exit | `internal/idlewatch/idlewatch.go` | `Watcher`/`Config{IdleAfter, MaxLifetime, Poll, Busy}`; a clock-driven `Tick`, so tests never sleep. |

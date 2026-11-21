@@ -8,7 +8,7 @@ relates-to: [tech-spec.md, product-spec.md]
 last-verified: 2026-03-05
 doc_type: qa-plan
 feature_id: feature-cursor-pagination
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -16,14 +16,16 @@ last_verified_date: 2026-03-05
 # QA Plan: Cursor-Based Pagination
 
 **Status:** COMPLETED (shipped in v5.3)
-**Canonical Test Reference:** `docs/core/quality/uat-v5.3-checklist.md`
+**Canonical Test Reference:** `internal/pagination/pagination_test.go`, `internal/pagination/cursor_test.go`, `internal/tools/observe/logs/logs_edge_test.go` (the v5.3 UAT checklist has been retired)
 **Last Verified:** 2026-01-30
 
 ---
 
 ## Overview
 
-Cursor-based pagination was fully tested and verified in v5.3. All test scenarios are documented in the v5.3 UAT checklist.
+Cursor-based pagination was tested and verified in v5.3. The v5.3 UAT checklist referenced by the section numbers below has since been retired; automated coverage now lives in the Go unit tests listed above, and broader manual UAT in `docs/core/quality/comprehensive-uat-plan.md`.
+
+**Scope note:** at runtime only `observe({what: "logs"})` applies cursor params. `network_waterfall`, `network_bodies`, `websocket_events`, and `actions` advertise them in their mode specs but currently honor `limit` only (see tech-spec.md), so cursor scenarios should be exercised against `logs`.
 
 ---
 
@@ -47,8 +49,8 @@ Cursor-based pagination was fully tested and verified in v5.3. All test scenario
    - Single call without limit constraints
 
 4. ✅ **Pagination with filtering**
-   - Combine `after_cursor` with `url` filter
-   - Combine `before_cursor` with `method` filter
+   - Combine `after_cursor` with `url` filter (logs)
+   - Combine `before_cursor` with `min_level` / `source` filters (logs)
    - Verify filters applied before pagination
 
 5. ✅ **Cursor expiration handling**
@@ -128,5 +130,5 @@ For v6.0+ features that depend on pagination:
 
 - **tech-spec.md** — Complete technical specification
 - **product-spec.md** — Feature requirements
-- **../../../core/quality/uat-v5.3-checklist.md** — Full UAT scenarios
+- **../../../core/quality/comprehensive-uat-plan.md** — Comprehensive UAT plan
 - **../../../core/quality/known-issues.md** — Current blockers

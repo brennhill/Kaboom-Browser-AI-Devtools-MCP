@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-behavioral-baselines
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -182,4 +182,4 @@ If a baseline exceeds the size limit, the save fails with an error and the file 
 
 ## File Location
 
-Implementation goes in `cmd/browser-agent/ai_baselines.go` with tests in `cmd/browser-agent/ai_baselines_test.go`.
+Not yet implemented. Planned: a new behavioral-baselines module under the Go server with co-located unit tests. Note that the shipped `analyze` modes `visual_baseline` / `visual_baselines` (in `cmd/browser-agent/internal/toolanalyze/visual/handler.go`) cover screenshot baselines only, not the behavioral fingerprints described here.

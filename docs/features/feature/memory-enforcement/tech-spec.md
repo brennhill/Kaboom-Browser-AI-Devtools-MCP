@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: superseded
 scope: feature/memory-enforcement/implementation
 ai-priority: high
 tags: [implementation, architecture]
@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-memory-enforcement
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -17,6 +17,8 @@ last_verified_date: 2026-03-05
 > See also: [Product Spec](product-spec.md) and [Memory Enforcement Review](./index.md).
 
 # Technical Spec: Memory Enforcement
+
+> **Status (reviewed 2026-11-21): server-side design superseded.** The global server-side threshold eviction described below (soft/hard/critical limits, minimal mode, periodic 10s check, `isMemoryExceeded`/`calcTotalMemory`) was removed in "refactor: Remove global memory enforcement". The server now bounds memory per buffer instead: the network-body store has an entry capacity plus an 8MB byte limit (`defaultMemoryLimit` in `internal/capture/bodystore/store.go`), and the WebSocket event store has a 4MB byte limit (`wsBufferMemoryLimit` in `internal/capture/telemetrystore/store.go`); both evict oldest-first on push. The **extension-side** section (20MB soft / 50MB hard, 30s check) is implemented as described. The server-side sections are kept as design history only.
 
 ## Purpose
 
@@ -206,8 +208,6 @@ This lets the AI agent understand memory pressure and adjust its behavior (e.g.,
 
 ## File Locations
 
-Server implementation: `cmd/browser-agent/memory.go` with tests in `cmd/browser-agent/memory_test.go`.
+Server implementation (per-buffer caps that replaced global enforcement): `internal/capture/bodystore/store.go` and `internal/capture/telemetrystore/store.go`, with tests in `internal/capture/bodystore/store_test.go` and `internal/capture/pipelinetest/memory_test.go`.
 
-Extension implementation: memory check in `extension/background.js` with tests in `extension-tests/memory.test.js`.
-
-Note: The existing `isMemoryExceeded()`, `calcTotalMemory()`, `calcWSMemory()`, and `calcNBMemory()` functions in `queries.go` should be moved to `memory.go` as part of this feature.
+Extension implementation: memory pressure checks in `src/background/caches/cache-limits.ts` (limits also in `src/lib/constants.ts`), with tests in `tests/extension/performance/memory.test.js` and `tests/extension/performance/cache-limits.test.js`.

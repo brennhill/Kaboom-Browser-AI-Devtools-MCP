@@ -9,3 +9,7 @@ var MatchesForTest = matches
 
 // LookupForTest exposes the single-pid identity query to tests.
 var LookupForTest = lookup
+
+// BuildInfoForTest exposes the platform-neutral Info constructor used by the
+// Windows snapshot so its validation is tested on every OS.
+var BuildInfoForTest = buildInfo

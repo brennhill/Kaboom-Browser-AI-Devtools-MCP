@@ -256,6 +256,7 @@ type fakeState struct {
 	// Pluggable overrides (nil => default behavior).
 	waitFn           func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse
 	waitTrackedURLFn func(beforeURL string, timeout time.Duration) (string, bool)
+	nowFn            func() time.Time // controlled clock; nil => time.Now
 	screenshot       func(screenshot.Options) (screenshot.Result, error)
 	pageInfo         func() pageinfo.Info
 	auditFn          func(scope string) (a11yaudit.Result, error)
@@ -468,7 +469,7 @@ func newFakeActionOwners(t *testing.T) (*fakeActionOwners, *fakeState) {
 			}
 			return map[string]any{"status": "exported"}, nil
 		},
-		Now: time.Now,
+		Now: fs.now,
 		WaitForTrackedURLChange: func(beforeURL string, timeout time.Duration) (string, bool) {
 			if fs.waitTrackedURLFn != nil {
 				return fs.waitTrackedURLFn(beforeURL, timeout)
@@ -747,4 +748,13 @@ func TestCaptureEvidenceResultContracts(t *testing.T) {
 			}
 		})
 	}
+}
+
+// now is the workflow owner clock. Tests that assert a derived stage timeout
+// pin nowFn so the budget does not shrink by however long the run took.
+func (fs *fakeState) now() time.Time {
+	if fs.nowFn != nil {
+		return fs.nowFn()
+	}
+	return time.Now()
 }

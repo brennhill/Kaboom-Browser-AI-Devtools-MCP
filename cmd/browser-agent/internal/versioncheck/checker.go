@@ -4,9 +4,9 @@
 package versioncheck
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/semver"
 	"context"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/semver"
 	"net/http"
 	"strings"
 	"sync"

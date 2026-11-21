@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-ai-web-pilot
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -47,7 +47,7 @@ This prevents runaway agents from self-authorizing code execution or state manip
 
 ## Features
 
-### 1. Highlight Element (`highlight_element`)
+### 1. Highlight Element (`interact what:"highlight"`)
 
 **Purpose:** AI points at DOM elements so developer can visually confirm "this is the button I'm talking about."
 
@@ -64,8 +64,8 @@ This prevents runaway agents from self-authorizing code execution or state manip
 
 #### Tool Schema:
 ```
-highlight_element
-  selector: string (required) — CSS selector for target element
+interact what:"highlight"
+  selector | element_id | index | nth (+ scope_selector, frame) — target element
   duration_ms: integer (default 5000) — How long to show highlight
 ```
 
@@ -73,7 +73,7 @@ highlight_element
 
 ---
 
-### 2. Browser State Snapshots (`manage_state`)
+### 2. Browser State Snapshots (`interact what:"save_state" | "load_state" | "list_states" | "delete_state"`)
 
 **Purpose:** Save and restore `localStorage`, `sessionStorage`, and cookies to skip repetitive click-through flows.
 
@@ -86,10 +86,10 @@ Snapshots stored in extension's `chrome.storage.local` under `kaboom_state_snaps
 
 #### Tool Schema:
 ```
-manage_state
-  action: "save" | "load" | "list" | "delete" (required)
-  snapshot_name: string (required for save/load/delete)
-  include_url: boolean (default true) — Navigate to saved URL on load
+interact what:"save_state" | "load_state" | "list_states" | "delete_state"
+  snapshot_name: string (required for save_state/load_state/delete_state)
+  storage_type: optional storage scope
+  include_url: boolean (save_state) — Record the page URL with the snapshot
 ```
 
 #### Returns:
@@ -99,7 +99,7 @@ manage_state
 
 ---
 
-### 3. Execute JavaScript (`execute_javascript`)
+### 3. Execute JavaScript (`interact what:"execute_js"`)
 
 **Purpose:** Run arbitrary JS in browser context to inspect runtime state (Redux stores, globals, framework internals).
 
@@ -117,8 +117,9 @@ manage_state
 
 #### Tool Schema:
 ```
-execute_javascript
+interact what:"execute_js"
   script: string (required) — JS code to execute, must return JSON-serializable value
+  world: optional — JavaScript world to run in
   timeout_ms: integer (default 5000) — Execution timeout
 ```
 
@@ -206,15 +207,15 @@ if (storage.trackedTabId) {
 
 Tools registered conditionally based on extension state. When disabled, tools still appear in `tools/list` but return the opt-in error on invocation. This gives AI visibility that the capability exists.
 
-Tools added to the `configure` composite tool:
+As shipped, these are actions of the `interact` tool (not `configure`), gated by the pilot check in `cmd/browser-agent/internal/toolguard/guards.go`:
 ```
-configure action:"highlight" selector:"#submit-btn" duration_ms:3000
-configure action:"save_state" snapshot_name:"cart_full"
-configure action:"load_state" snapshot_name:"cart_full"
-configure action:"execute" script:"window.__NEXT_DATA__"
+interact what:"highlight" selector:"#submit-btn" duration_ms:3000
+interact what:"save_state" snapshot_name:"cart_full"
+interact what:"load_state" snapshot_name:"cart_full"
+interact what:"list_states"
+interact what:"delete_state" snapshot_name:"cart_full"
+interact what:"execute_js" script:"window.__NEXT_DATA__"
 ```
-
-Or as standalone tools if the composite pattern doesn't fit the use case.
 
 ---
 
@@ -229,13 +230,14 @@ Or as standalone tools if the composite pattern doesn't fit the use case.
 
 ---
 
-## Files Modified
+## Files (as implemented)
 
-| File | Change |
-|------|--------|
-| `extension/popup.html` | Add AI Web Pilot toggle |
-| `extension/popup.js` | Handle toggle state |
-| `extension/background.js` | Route new message types |
-| `extension/inject.js` | Implement highlight, state, execute handlers |
-| `cmd/browser-agent/tools_core.go` | Add MCP tool handlers |
-| `cmd/browser-agent/pilot.go` (new) | AI Web Pilot domain logic |
+| File | Role |
+|------|------|
+| `src/popup/ai-web-pilot.ts`, `src/popup.ts` | AI Web Pilot toggle in the popup (compiled to `extension/popup.js`; markup in `extension/popup.html`) |
+| `src/background/commands/interact.ts` | Background routing for `highlight` and `execute_js` |
+| `src/inject/state.ts` | Page-context state capture/restore |
+| `internal/schema/interact/actions.go` | `highlight`, `save_state`, `load_state`, `list_states`, `delete_state`, `execute_js` action specs |
+| `cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go` | Interact dispatch table entries for the actions above |
+| `cmd/browser-agent/internal/toolinteract/interactstate/state.go` | `HandleStateSave` / `HandleStateLoad` / `HandleStateList` / `HandleStateDelete` |
+| `cmd/browser-agent/internal/toolguard/guards.go` | Pilot opt-in gate (no separate pilot domain file was created) |

@@ -56,6 +56,7 @@ code_paths:
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation.go
   - cmd/browser-agent/internal/daemonlife/lifecycle.go
   - internal/proclock/proclock.go
+  - internal/instancegov/runtime.go
   - internal/instancegov/instancegov.go
   - internal/instancereg/registry.go
   - cmd/browser-agent/internal/daemonlife/install_epoch.go

@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-spa-route-measurement
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -17,6 +17,8 @@ last_verified_date: 2026-03-05
 > See also: [Product Spec](product-spec.md) and [Spa Route Measurement Review](./index.md).
 
 # Technical Spec: SPA Route Measurement
+
+> **Status: proposed, not implemented (reviewed 2026-11-21).** There is no per-route performance measurement or `get_route_metrics` tool. The only shipped SPA navigation hook is the pushState/replaceState/popstate capture in `src/lib/page/actions.ts`, which records navigation actions for reproduction scripts, not performance metrics.
 
 ## Purpose
 
@@ -209,10 +211,10 @@ Normalization uses heuristics: segments that are purely numeric are replaced wit
 
 ---
 
-## File Locations
+## File Locations (planned)
 
-Extension implementation: `extension/inject.js` (pushState/popstate interception, quiescence detection, metric collection).
+None of these exist yet.
 
-Server implementation: `cmd/browser-agent/performance.go` (route metrics storage, baseline computation, MCP tool handler).
-
-Tests: `extension-tests/spa-routes.test.js` (extension-side), `cmd/browser-agent/performance_test.go` (server-side).
+- Extension: route-transition measurement (quiescence detection, metric collection) would extend the existing navigation interception in `src/lib/page/actions.ts`, or live in a new page-context module beside it.
+- Server: a new route-metrics store with baseline computation and an MCP handler (planned package, not yet created).
+- Tests: extension-side and server-side unit tests alongside the new modules.

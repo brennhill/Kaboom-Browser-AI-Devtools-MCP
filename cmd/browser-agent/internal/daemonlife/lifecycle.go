@@ -12,7 +12,6 @@ import (
 	"os"
 	"syscall"
 	"time"
-
 )
 
 // SignalSource describes a process signal for correlated shutdown diagnostics.
@@ -43,4 +42,3 @@ var (
 	// tiebreaker at equal versions). Injectable for tests.
 	daemonInstallEpoch = resolveInstallEpoch
 )
-

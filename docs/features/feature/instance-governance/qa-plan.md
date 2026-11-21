@@ -3,7 +3,7 @@ feature: instance-governance
 status: implemented
 doc_type: qa-plan
 feature_id: feature-instance-governance
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 ---
 
 # Instance Governance — QA Plan
@@ -13,7 +13,7 @@ last_reviewed: 2026-09-05
 | Behaviour | Test file |
 | --- | --- |
 | Acquire grants a free lock; a second acquire in the same process is refused; release is idempotent and nil-safe; the kernel releases the lock when the holder is killed (a subprocess helper holds the lock, is killed, and a fresh acquire succeeds). | `internal/proclock/proclock_test.go` (150 lines) |
-| A process snapshot includes this process itself; an impossible pid is omitted; a recycled pid (same pid, different start/command) is rejected as a match; an empty identity on either side never matches; `Self()` returns this process's own identity. | `internal/procidentity/procidentity_test.go` (83 lines) |
+| A process snapshot includes this process itself; an impossible pid is omitted; a recycled pid (same pid, different start/command) is rejected as a match; an empty identity on either side never matches; `Self()` returns this process's own identity; the Windows `buildInfo` constructor yields a stable identity from creation ticks and rejects zero/negative pid or ticks and empty names (OS-independent regression for the WMIC removal). | `internal/procidentity/procidentity_test.go` |
 | Registry directory resolution ignores a `KABOOM_STATE_DIR` override; refuses the real home directory when `testing.Testing()` is true and no `KABOOM_REGISTRY_DIR` is set; register/list/deregister round-trips; a heartbeat call advances only `heartbeat_at`, never `started_at`; `Prune` removes dead and pid-recycled records but keeps a live-but-wedged one; `List` skips unparseable/corrupt entries instead of failing the whole listing. | `internal/instancereg/registry_test.go` (211 lines) |
 | `autoParallelCap` is bounded to [2, 4] by core count; `DefaultPolicy` allows exactly one production daemon; `Surplus` counts the incoming candidate, evicts oldest-first and only the excess, clamps an impossible (< 1) cap to 1, and never returns more victims than there are members; `oldestFirst` sorts unreadable start times last and does not mutate its input; `Daemons`/`Bridges` select strictly by role/kind; `IsWedged` falls back to start time when the heartbeat is unreadable. | `internal/instancegov/policy_test.go` (169 lines) |
 | First production daemon proceeds and registers; a second defers to the lock holder; a newer version requests handoff and proceeds; an older version defers to a newer incumbent; a parallel daemon over cap evicts the oldest; parallel daemons never take the singleton lock; `Release` deregisters and unlocks; a failed handoff does not let the caller proceed; a deferral names the incumbent even when it just acquired the lock; a deferral waits briefly for the incumbent to publish; a newer install epoch supersedes at the same version; an equal-or-older install defers at the same version; an unknown install epoch never supersedes. | `internal/instancegov/instancegov_test.go` (400 lines, 13 test functions) |

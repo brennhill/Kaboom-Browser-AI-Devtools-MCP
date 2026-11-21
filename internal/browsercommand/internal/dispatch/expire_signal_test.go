@@ -9,6 +9,7 @@ package dispatch
 import (
 	"encoding/json"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -224,4 +225,58 @@ func TestExpireAllPendingQueries_EmptyQueue(t *testing.T) {
 
 	// Should be a no-op, no panic
 	qd.ExpireAllPendingQueries("no pending commands")
+}
+
+func TestCleanExpiredResultsPrunesStaleStateAndExpiresOrphans(t *testing.T) {
+	t.Parallel()
+	qd := NewQueryDispatcher()
+	t.Cleanup(qd.Close)
+	now := time.Now()
+	grace := queries.AsyncCommandTimeout + 10*time.Second
+
+	qd.mu.Lock()
+	qd.queryResults["stale"] = QueryResultEntry{Result: json.RawMessage(`1`), CreatedAt: now.Add(-2 * queries.QueryResultTTL)}
+	qd.queryResults["fresh"] = QueryResultEntry{Result: json.RawMessage(`2`), CreatedAt: now}
+	qd.pendingQueries = append(qd.pendingQueries,
+		PendingQueryEntry{Query: queries.PendingQueryResponse{ID: "orphan", CorrelationID: "corr-orphan"}, Expires: now.Add(-grace - time.Minute)},
+		PendingQueryEntry{Query: queries.PendingQueryResponse{ID: "orphan-untracked"}, Expires: now.Add(-grace - time.Minute)},
+		PendingQueryEntry{Query: queries.PendingQueryResponse{ID: "live", CorrelationID: "corr-live"}, Expires: now.Add(time.Minute)},
+	)
+	qd.mu.Unlock()
+
+	qd.resultsMu.Lock()
+	qd.activeCommands["corr-orphan"] = &queries.CommandResult{CorrelationID: "corr-orphan", Status: "pending", CreatedAt: now, ExpiresAt: now.Add(time.Hour)}
+	qd.activeCommands["corr-ancient"] = &queries.CommandResult{CorrelationID: "corr-ancient", Status: "pending", CreatedAt: now.Add(-2 * queries.QueryResultTTL), ExpiresAt: now.Add(time.Hour)}
+	qd.resultsMu.Unlock()
+
+	qd.cleanExpiredResults()
+
+	qd.mu.Lock()
+	_, staleKept := qd.queryResults["stale"]
+	_, freshKept := qd.queryResults["fresh"]
+	pending := make([]string, 0, len(qd.pendingQueries))
+	for _, entry := range qd.pendingQueries {
+		pending = append(pending, entry.Query.ID)
+	}
+	qd.mu.Unlock()
+	if staleKept || !freshKept {
+		t.Fatalf("results after cleanup: stale kept=%v fresh kept=%v", staleKept, freshKept)
+	}
+	if strings.Join(pending, ",") != "live" {
+		t.Fatalf("pending after cleanup = %v, want [live]", pending)
+	}
+
+	qd.resultsMu.RLock()
+	orphan := qd.activeCommands["corr-orphan"]
+	_, ancientKept := qd.activeCommands["corr-ancient"]
+	qd.resultsMu.RUnlock()
+	if ancientKept {
+		t.Fatal("command older than the result TTL was not pruned")
+	}
+	if orphan != nil && orphan.Status != "expired" {
+		t.Fatalf("orphaned command status = %q, want expired", orphan.Status)
+	}
+	if result, ok := qd.GetCommandResult("corr-orphan"); !ok || result.Status != "expired" {
+		t.Fatalf("orphaned command = %#v, %v; want expired outcome preserved", result, ok)
+	}
 }

@@ -29,6 +29,7 @@ code_paths:
   - internal/capture/syncruntime/tracking_projection.go
 test_paths:
   - internal/capture/syncruntime/tracking_projection_test.go
+  - cmd/browser-agent/internal/asynccommand/execute_test.go
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go

@@ -190,6 +190,46 @@ func TestEval_PerformanceEnforcesLatencyBudget(t *testing.T) {
 	}
 }
 
+// scriptedLatencyRuntime reports the given latencies in order, one per run.
+func scriptedLatencyRuntime(latencies ...time.Duration) (fixtureRuntime, *int) {
+	calls := 0
+	return fixtureRuntime{
+		run: func(string, hook.Input, string, string) string { return "" },
+		measure: func(run func() string) (string, time.Duration) {
+			latency := latencies[min(calls, len(latencies)-1)]
+			calls++
+			return run(), latency
+		},
+	}, &calls
+}
+
+// Regression: one contended wall-clock sample (186ms vs a 100ms budget under
+// full-suite load) failed the coverage gate. A transient spike must not fail
+// the budget when a fresh attempt meets it.
+func TestEval_PerformanceToleratesTransientSchedulerSpike(t *testing.T) {
+	if raceDetectorActive {
+		t.Skip("race instrumentation intentionally disables wall-clock SLO assertions")
+	}
+	fix := &Fixture{Expect: Expectation{MaxLatencyMs: 100}}
+	runtime, calls := scriptedLatencyRuntime(186*time.Millisecond, 3*time.Millisecond)
+	result := runPerformanceFixtureWith(fix, "", runtime, performanceAttempts)
+	if !result.Passed || *calls != 2 {
+		t.Fatalf("passed=%v calls=%d failures=%v, want pass on second attempt", result.Passed, *calls, result.Failures)
+	}
+}
+
+func TestEval_PerformanceFailsWhenEveryAttemptExceedsBudget(t *testing.T) {
+	if raceDetectorActive {
+		t.Skip("race instrumentation intentionally disables wall-clock SLO assertions")
+	}
+	fix := &Fixture{Expect: Expectation{MaxLatencyMs: 100}}
+	runtime, calls := scriptedLatencyRuntime(186 * time.Millisecond)
+	result := runPerformanceFixtureWith(fix, "", runtime, performanceAttempts)
+	if result.Passed || *calls != performanceAttempts || len(result.Failures) != 1 || !strings.HasPrefix(result.Failures[0], "latency ") {
+		t.Fatalf("passed=%v calls=%d failures=%v, want latency failure after %d attempts", result.Passed, *calls, result.Failures, performanceAttempts)
+	}
+}
+
 func mustAbs(t *testing.T, path string) string {
 	t.Helper()
 	abs, err := filepath.Abs(path)

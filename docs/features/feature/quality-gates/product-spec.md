@@ -3,7 +3,7 @@ doc_type: product-spec
 feature_id: feature-quality-gates
 status: proposed
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 links:
   index: ./index.md
   setup_guide: ./setup-guide.md

@@ -7,7 +7,7 @@ relates-to: [product-spec.md, ../backend-control/tech-spec.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-code-navigation-modification
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -284,17 +284,19 @@ observe({
 
 ## Code References
 
-### New files to create:
-- `cmd/server/code/searcher.go` — File search engine
-- `cmd/server/code/reader.go` — File reader
-- `cmd/server/code/editor.go` — Code editor with line-based edits
-- `cmd/server/code/git.go` — Git integration (staging, diff, rollback)
-- `cmd/server/code/tests.go` — Test runner
-- `cmd/server/code/logger.go` — Modification logger
+Not yet implemented; no code exists for this feature. (The original plan named a `cmd/server/...` tree that never existed in this repo; the Go server lives under `cmd/browser-agent` and `internal/`.)
 
-### Existing files to modify:
-- `cmd/server/mcp/server.go` — Add code_* action handlers
-- `cmd/server/mcp/observe.go` — Add modification_log mode
+### Planned new components (in a new Go package under `internal/`):
+- File search engine
+- File reader
+- Code editor with line-based edits
+- Git integration (staging, diff, rollback)
+- Test runner
+- Modification logger
+
+### Planned integration points:
+- MCP tool dispatch: add the `code_*` action handlers to the appropriate tool's mode dispatcher
+- `observe` dispatcher (`cmd/browser-agent/internal/toolobserve/dispatcher.go`): add a `modification_log` mode
 
 ## Performance Requirements
 - File search: <100ms for typical project (5K files)

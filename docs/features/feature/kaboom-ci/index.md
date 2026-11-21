@@ -84,7 +84,7 @@ last_verified_date: 2026-08-05
   `build_only` scope, and expiry dates. Expired or stale entries fail the gate;
   the daily scheduled workflow reruns the same canonical check so newly
   disclosed vulnerabilities surface without a source change. Active workflows
-  pin the patched Go 1.25.12 toolchain declared by `go.mod`.
+  pin the patched Go 1.26.11 toolchain declared by `go.mod`.
 - Go scanner versions have one shell/Make-compatible source of truth. Local
   bootstrap, pre-commit guidance, development docs, and hosted CI consume the
   same installer; a contract test rejects direct workflow installs, `latest`,

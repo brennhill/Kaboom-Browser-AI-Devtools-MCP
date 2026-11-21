@@ -58,8 +58,12 @@ rm -rf "$SUBPROCESS_DIR"
 mkdir -p "$SUBPROCESS_DIR"
 
 cd "$PROJECT_ROOT"
+GO_PACKAGES="$(scripts/build/go-coverage-packages.sh)"
+GO_COVERPKG="$(printf '%s\n' "$GO_PACKAGES" | paste -sd, -)"
+export KABOOM_GO_COVERPKG="$GO_COVERPKG"
+# shellcheck disable=SC2086 # one package per word is intended
 KABOOM_GO_COVERDIR="$SUBPROCESS_DIR" \
-  go test -count=1 -coverpkg=./... -coverprofile="$PACKAGE_PROFILE" ./...
+  go test -count=1 -coverpkg="$GO_COVERPKG" -coverprofile="$PACKAGE_PROFILE" $GO_PACKAGES
 KABOOM_GO_COVERDIR="$SUBPROCESS_DIR" \
   scripts/build/run-go-integration.sh -count=1
 

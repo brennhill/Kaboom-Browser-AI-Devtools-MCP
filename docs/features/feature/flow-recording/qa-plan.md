@@ -4,7 +4,7 @@ status: ready
 version: 0.7.12
 doc_type: qa-plan
 feature_id: feature-flow-recording
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -51,7 +51,7 @@ make ci-local
 
 ### Module 1: WebSocket Migration
 
-**File:** `cmd/browser-agent/websocket_test.go` (new)
+**Status: not built.** The WebSocket migration was never implemented: the extension still talks to the server over the HTTP `/sync` loop, and the zero-dependency rule rules out `gorilla/websocket`. There is no test file for this module. The cases below are kept as deferred design only.
 
 #### Test Case 1.1: WebSocket Connection Established
 ```
@@ -128,7 +128,7 @@ AND: Resumes streaming (no polling after reconnect)
 
 ### Module 2: Recording Storage (Server)
 
-**File:** `cmd/browser-agent/recording_test.go` (new)
+**File:** `internal/recording/manager_test.go` (plus `internal/recording/manager_active_test.go`, `internal/recording/types_test.go`)
 
 #### Test Case 2.1: Create Recording Metadata
 ```
@@ -264,7 +264,7 @@ AND: Timestamps in order
 
 ### Module 3: Playback Engine
 
-**File:** `cmd/browser-agent/playback_test.go` (new)
+**File:** `internal/recording/playback/playback_test.go`
 
 #### Test Case 3.1: Load Recording
 ```
@@ -423,7 +423,7 @@ AND: Playback completes successfully
 
 ### Module 4: Log Diffing Engine
 
-**File:** `cmd/browser-agent/log_diff_test.go` (new)
+**File:** `internal/recording/logdiff/logdiff_test.go`
 
 #### Test Case 4.1: Compare Identical Logs
 ```
@@ -548,7 +548,7 @@ THEN: Error includes:
 
 ### Module 5: Extension Recording
 
-**File:** `tests/extension/recording-lifecycle/recording.test.js` (new)
+**File:** `tests/extension/recording-lifecycle/recording.test.js`
 
 #### Test Case 5.1: Start Recording
 ```
@@ -678,7 +678,7 @@ AND: ID matches generated name
 
 ## Integration Tests (End-to-End)
 
-**File:** `cmd/browser-agent/integration/runtime/protocol_test.go` (new)
+**File:** `cmd/browser-agent/integration/runtime/protocol_test.go`
 
 ### Integration Test 1: Full Recording → Playback → Diff Workflow
 
@@ -985,33 +985,7 @@ dd if=/dev/zero of=dummy2.bin bs=1M count=200
 
 ### UAT 6: WebSocket Connection (Developer View)
 
-**Objective:** Verify WebSocket is active and efficient
-
-#### Steps:
-1. Open Chrome DevTools → Network tab
-2. Filter to "WS" (WebSocket)
-3. Verify: `ws://localhost:3001/api/stream` connected
-4. Start recording
-5. Perform 10 actions (click, type, click, etc.)
-6. Watch Network tab
-
-#### Expected Result:
-- ✓ WebSocket shows single persistent connection (no polls)
-- ✓ Events arrive within 100ms of occurrence
-- ✓ No "pending" queries in background
-- ✓ Extension shows: "Connected via WebSocket"
-
-#### Fallback Test:
-1. In Chrome DevTools, simulate network throttling
-2. Simulate offline (DevTools → Network → Offline)
-3. Wait 5 seconds
-4. Go back online
-
-#### Expected Result:
-- ✓ Extension detects loss, switches to polling
-- ✓ Popup shows: "Polling (WebSocket unavailable)"
-- ✓ Continues capturing (non-blocking)
-- ✓ After reconnect, back to WebSocket
+**Removed:** depended on the unbuilt WebSocket migration (Module 1). The extension uses the HTTP `/sync` loop; there is no WebSocket stream to verify.
 
 ---
 

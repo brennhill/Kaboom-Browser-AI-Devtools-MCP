@@ -1,10 +1,10 @@
 ---
 feature: Draw Mode
-status: proposed
+status: shipped
 version: v0.7-rev1
 doc_type: tech-spec
 feature_id: draw-mode
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -62,7 +62,7 @@ sequenceDiagram
     Server-->>LLM: {status: "pending", correlation_id: "dm_abc"}
 
     LLM->>Server: analyze({what: "annotations", wait: true})
-    Note over Server: Block on annotations<br/>(5-minute timeout)
+    Note over Server: Block on annotations<br/>(15s default, timeout_ms up to 10 min)
 
     BG->>Server: Poll /pending-queries
     Server-->>BG: {type: "draw_mode", action: "start"}
@@ -85,7 +85,7 @@ sequenceDiagram
     User->>CS: Press Enter (submit completed annotations)
     CS->>CS: Capture annotated screenshot (PNG)
     CS->>BG: DRAW_MODE_COMPLETED<br/>{annotations, screenshot_path}
-    BG->>Server: POST /draw-mode-result<br/>{correlation_id, annotations, screenshot}
+    BG->>Server: POST /draw-mode/complete<br/>{correlation_id, annotations, screenshot}
 
     Server->>Server: Resolve blocked analyze call
     Server-->>LLM: {annotations: [...], screenshot_path: "/tmp/...", count: 2}
@@ -93,11 +93,7 @@ sequenceDiagram
     Note over LLM: LLM reads annotations
 
     LLM->>Server: analyze({what: "annotation_detail",<br/>correlation_id: "ann_detail_abc"})
-    Server->>BG: PendingQuery for detail
-    BG->>CS: Request computed styles<br/>for annotation element
-    CS->>CS: getComputedStyle() + selector
-    CS->>BG: Detail response
-    BG->>Server: POST /annotation-detail-result
+    Server->>Server: Look up element_details captured<br/>with the session (annotation store, 10 min TTL)
     Server-->>LLM: {selector, computed_styles, ...}
 ```
 
@@ -123,7 +119,7 @@ sequenceDiagram
     User->>CS: Press Enter (submit completed annotations)
     CS->>CS: Capture screenshot
     CS->>BG: DRAW_MODE_COMPLETED<br/>{annotations, screenshot_path}
-    BG->>Server: POST /draw-mode-result<br/>{annotations, screenshot}
+    BG->>Server: POST /draw-mode/complete<br/>{annotations, screenshot}
     Note over Server: Store annotations<br/>(available for next analyze call)
 
     Note over LLM: User tells LLM about annotations
@@ -373,82 +369,67 @@ delivered because Escape is cancellation, not submission.
 | Message | Direction | Transport | Payload |
 |---------|-----------|-----------|---------|
 | `KABOOM_DRAW_MODE_START` | Server -> Extension | PendingQuery (polled via WebSocket/HTTP) | `{action: "draw_mode_start", correlation_id: "dm_abc"}` |
-| `DRAW_MODE_COMPLETED` | Extension -> Server | HTTP POST `/draw-mode-result` | `{correlation_id, annotations[], screenshot_base64, page_url}` |
-| `ANNOTATION_DETAIL_REQUEST` | Server -> Extension | PendingQuery | `{action: "annotation_detail", correlation_id: "ann_detail_abc", selector: "..."}` |
-| `ANNOTATION_DETAIL_RESULT` | Extension -> Server | HTTP POST `/annotation-detail-result` | `{correlation_id, selector, computed_styles, ...}` |
+| `DRAW_MODE_COMPLETED` | Extension -> Server | HTTP POST `/draw-mode/complete` | `{tab_id, correlation_id, annotations[], element_details{}, screenshot_data_url, page_url, annot_session_name}` |
+
+Annotation detail has no extension round trip: per-annotation DOM/style detail is sent up front in `element_details` and served by `analyze({what: "annotation_detail"})` from the server-side annotation store (expires after 10 minutes).
 
 #### PendingQuery System:
 
 Draw mode uses the existing PendingQuery infrastructure:
 1. LLM calls `interact({what: "draw_mode_start"})` -> Go server creates a PendingQuery with type `draw_mode`
-2. Extension polls `/pending-queries` -> picks up the draw_mode query
+2. Extension picks up the draw_mode query via `/sync`
 3. Extension activates draw mode overlay
-4. On completion, extension POSTs results to `/draw-mode-result`
+4. On completion, extension POSTs results to `/draw-mode/complete`
 5. Go server resolves the blocked `analyze({what: "annotations", wait: true})` call
 
 #### Blocking Analyze Call:
 
 When `analyze({what: "annotations", wait: true})` is called:
-- Server checks if draw mode is active (PendingQuery exists)
-- If active, blocks with a 5-minute timeout
-- When `/draw-mode-result` is posted, the blocked call resolves
-- If timeout expires, returns `{status: "timeout", message: "Draw mode timed out after 5 minutes. User may have forgotten to submit with Enter."}`
+- Server waits synchronously for 15 seconds by default (`annotationBlockingWaitDefault`); `timeout_ms` extends this up to a 10-minute cap (`annotationBlockingWaitMax`)
+- When `/draw-mode/complete` is posted, the blocked call resolves
+- If no annotations arrive in the window, the call returns a pending/async result (correlation id) that can be polled; pending annotation commands stay active for 10 minutes
 
 #### Screenshot Transfer:
 
 - Content script captures screenshot via `chrome.tabs.captureVisibleTab()`
-- Screenshot sent as base64-encoded PNG in the `/draw-mode-result` POST body
+- Screenshot sent as a PNG data URL (`screenshot_data_url`) in the `/draw-mode/complete` POST body
 - Go server decodes and saves to temp directory
 - File path returned in the analyze response
 
 ---
 
-## File Plan
+## File Plan (as implemented)
 
-### New Files
+The original plan proposed flat `cmd/browser-agent/tools_*.go` files and a `queries.go` HTTP handler; the shipped code lives in the packages below.
 
-| File | Purpose | LOC |
-|------|---------|-----|
-| `extension/content/draw-mode.js` | Canvas overlay, rectangle drawing, text input, DOM capture, annotation CRUD, persistence | ~500 |
-| `extension/content/draw-mode-export.js` | Screenshot capture with annotations, base64 encoding, result packaging | ~150 |
-| `extension/background/draw-mode-handler.js` | Message routing between content script and server, PendingQuery polling, result POST | ~100 |
-| `cmd/browser-agent/tools_interact_draw.go` | `draw_mode_start` action handler in interact tool, PendingQuery creation | ~100 |
-| `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` | `annotations` and `annotation_detail` handlers, bounded waiting, response shaping | implemented |
-| `internal/annotation/` | In-memory annotation storage, TTL, detail lookup, persistence, and cleanup | implemented |
+### Extension (TypeScript sources in `src/`, compiled to `extension/`)
 
-### Modified Files
+| File | Purpose |
+|------|---------|
+| `src/content/draw-mode/lifecycle-overlay.js`, `src/content/draw-mode/input-rendering.js`, `src/content/draw-mode/persistence-submission.js` | Canvas overlay, rectangle drawing, text input, DOM capture, persistence, submission (bundled to `extension/content/draw-mode.js` and `extension/content/draw-mode-export.js`) |
+| `extension/background/draw-mode-handler.js` | Background message routing and result POST |
+| `src/background/ui/draw-mode-toggle.ts` | Shared toggle used by keyboard shortcut, context menu and popup |
+| `src/background/commands/analyze.ts` | `draw_mode` command handler for server-queued activation |
+| `src/popup/draw-mode.ts` | Popup Draw Mode toggle and state sync (`extension/popup.js`, `extension/popup.html`) |
 
-| File | Changes | LOC Added |
-|------|---------|-----------|
-| `cmd/browser-agent/tools_interact.go` | Add `draw_mode_start` case to action switch | ~10 |
-| `cmd/browser-agent/tools_analyze.go` | Add `annotations` and `annotation_detail` cases to what switch | ~15 |
-| `cmd/browser-agent/tools_schema.go` | Register draw mode parameters in interact and analyze schemas | ~20 |
-| `cmd/browser-agent/queries.go` | Add `/draw-mode-result` and `/annotation-detail-result` HTTP handlers | ~30 |
-| `extension/background/init.js` | Initialize draw-mode handler and register message listeners | ~10 |
-| `extension/manifest.json` | No new permissions needed (uses existing activeTab + scripting) | ~5 |
-| `extension/popup/popup.js` | Add Draw Mode toggle button and state sync | ~20 |
-| `extension/popup/popup.html` | Add Draw Mode toggle UI element | ~6 |
-| `cmd/browser-agent/testdata/mcp-tools-list.golden.json` | Update golden test data with new parameters | ~10 |
+### Go server
 
-### Total
-
-- **New code:** ~1,030 LOC (6 files)
-- **Modified code:** ~126 LOC (9 files)
-- **Total:** ~1,156 LOC
+| File | Purpose |
+|------|---------|
+| `cmd/browser-agent/internal/toolinteract/interact_page.go` | `HandleDrawModeStart`: queues the `draw_mode` query for the extension |
+| `cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go` | Registers `draw_mode_start` in the interact dispatch table |
+| `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go` | Routes `annotations` and `annotation_detail` analyze modes |
+| `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` | `annotations` and `annotation_detail` handlers, bounded waiting, response shaping |
+| `cmd/browser-agent/internal/mediaapi/draw_mode.go` | `HandleDrawModeComplete` for `POST /draw-mode/complete` (registered in `cmd/browser-agent/server.go`), screenshot save |
+| `internal/annotation/` | In-memory annotation storage, TTL, detail lookup, persistence, and cleanup |
+| `internal/schema/interact/actions.go`, `internal/schema/analyze.go` | Schema registration for `draw_mode_start` and the analyze modes |
+| `cmd/browser-agent/testdata/mcp-tools-list.golden.json` | Golden tool-list data |
 
 ---
 
 ## Error Codes
 
-| Code | Meaning |
-|------|---------|
-| `draw_mode_already_active` | Draw mode is already active on this tab |
-| `draw_mode_timeout` | User did not exit draw mode within 5 minutes |
-| `draw_mode_page_navigated` | Page navigated while draw mode was active |
-| `correlation_expired` | Annotation detail correlation_id has expired (10-min TTL) |
-| `no_annotations` | No annotation session found (hint provided) |
-| `element_not_found` | Selector no longer matches any element (for detail requests) |
-| `screenshot_failed` | Screenshot capture failed (tab may have been closed) |
+None of the originally proposed draw-mode-specific codes (`draw_mode_already_active`, `draw_mode_timeout`, `draw_mode_page_navigated`, `correlation_expired`) were implemented. Expired or unknown detail lookups return the standard `no_data` error ("Annotation detail not found or expired for correlation_id ..."); a wait that exceeds its budget returns an async correlation id rather than an error.
 
 ---
 
@@ -499,7 +480,7 @@ When `analyze({what: "annotations", wait: true})` is called:
 | Canvas overlay blocks page interaction | User cannot interact with page while annotating | By design -- draw mode is a modal state. Enter submits; Escape cancels. |
 | Large screenshots (>5MB base64) | Slow HTTP POST, memory pressure | Compress PNG, cap at 2MB. If exceeds, reduce quality. |
 | Element selector fragility | Selector generated at draw time may not match later | Re-query on detail request; include warning if element changed. |
-| User forgets to submit with Enter | Blocking analyze call hangs | 5-minute timeout with clear message. |
+| User forgets to submit with Enter | Blocking analyze call hangs | Bounded wait (15s default, max 10 min), then an async correlation id to poll. |
 | Dynamic page content shifts annotations | Rectangles may not align with elements after DOM changes | Annotations capture state at creation time; document this limitation. |
 
 ---

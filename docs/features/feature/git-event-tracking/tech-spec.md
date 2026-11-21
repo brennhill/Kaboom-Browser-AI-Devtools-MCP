@@ -7,7 +7,7 @@ relates-to: [product-spec.md, ../custom-event-api/tech-spec.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-git-event-tracking
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -33,20 +33,20 @@ Timeline View
 ```
 
 ### Components
-1. **Git Hook Scripts** (`cmd/kaboom-install-hooks/`)
+1. **Git Hook Scripts** (planned: new hook-installer command; not yet built)
    - Post-commit hook: Extract commit info, emit event
    - Post-checkout hook: Detect branch switch, emit event
    - Post-merge hook: Emit merge completion event
    - Post-rebase hook: Emit rebase completion event
    - Scripts are small shell/Go binaries, <10KB each
 
-2. **Git Metadata Extractor** (`server/git/extractor.go`)
+2. **Git Metadata Extractor** (planned: new git metadata package in the Go server)
    - Query `git log`, `git status`, `git branch` to extract metadata
    - Parse commit diff to get files changed, insertions, deletions
    - Extract author info from Git config
    - Handles edge cases: detached HEAD, empty commits, merges
 
-3. **Test Session Enricher** (`server/test-session.go`)
+3. **Test Session Enricher** (planned: extension of the server's test-session handling)
    - When test starts, query current Git state
    - Capture: current branch, current commit, uncommitted changes
    - Tag test session with this metadata
@@ -167,10 +167,11 @@ func handleGitEvents(req *GitEventsRequest) (*GitEventsResponse, error) {
 ```
 
 ## Code References
-- **Git hook installer:** `/Users/brenn/dev/kaboom/cmd/kaboom-install-hooks/main.go` (new)
-- **Git metadata extractor:** `/Users/brenn/dev/kaboom/server/git/extractor.go` (new)
-- **Hook shell scripts:** `/Users/brenn/dev/kaboom/scripts/hooks/` (new)
-- **Test session enricher:** `/Users/brenn/dev/kaboom/server/test-session.go` (modified)
+None of these exist yet; this feature is a proposal (reviewed 2026-11-21: no git-event code in the repo). Planned locations:
+- **Git hook installer:** planned new command under the Go `cmd` tree
+- **Git metadata extractor:** planned new package under the Go `internal` tree
+- **Hook shell scripts:** planned additions alongside the existing hook scripts
+- **Test session enricher:** planned change to the server's test-session handling
 - **Custom event API:** Used as-is (git events are regular events)
 
 ## Performance Requirements

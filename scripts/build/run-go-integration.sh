@@ -13,7 +13,8 @@ readonly INTEGRATION_BINARY="$BUILD_DIR/kaboom-test-binary"
 
 build_args=(build -cover -o "$INTEGRATION_BINARY")
 if [[ -n "${KABOOM_GO_COVERDIR:-}" ]]; then
-  build_args=(build -cover -coverpkg=./... -o "$INTEGRATION_BINARY")
+  coverpkg="${KABOOM_GO_COVERPKG:-$(scripts/build/go-coverage-packages.sh | paste -sd, -)}"
+  build_args=(build -cover -coverpkg="$coverpkg" -o "$INTEGRATION_BINARY")
 fi
 go "${build_args[@]}" ./cmd/browser-agent
 export KABOOM_INTEGRATION_BINARY="$INTEGRATION_BINARY"

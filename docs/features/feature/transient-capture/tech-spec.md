@@ -2,7 +2,7 @@
 doc_type: tech-spec
 feature_id: feature-transient-capture
 status: shipped
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -11,7 +11,8 @@ last_verified_date: 2026-03-05
 
 ## Architecture
 - Content-side detection logic: `src/lib/page/transient-capture.ts`
-- Daemon-side async wiring and retrieval: `cmd/browser-agent/tools_async_transient.go`
+- Daemon-side async result enrichment: `cmd/browser-agent/internal/asyncresult/transients.go` (`AttachTransientElements`, bounded by `MaxTransientsPerResult`)
+- Observe retrieval: `observe({what: "transients"})` via `GetTransients` in `internal/tools/observe/session/session.go`, dispatched from `cmd/browser-agent/internal/toolobserve/dispatcher.go`
 - Observe integration tests: `internal/tools/observe/session/session_transients_test.go`
 
 ## Constraints

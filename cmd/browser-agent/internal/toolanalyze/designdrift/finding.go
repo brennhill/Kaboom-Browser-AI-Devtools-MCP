@@ -149,7 +149,7 @@ type skipped struct {
 
 // Reasons a category legitimately produces no verdict.
 const (
-	reasonNoTokens          = "no_tokens_declared"
+	reasonNoTokens          = "no_tokens_declared" // #nosec G101 -- design-token reason code, not a credential
 	reasonInsufficientPeers = "insufficient_peers"
 	reasonNoElements        = "no_elements_matched"
 	// reasonNoInFlowElements distinguishes "every match is out of flow" from

@@ -53,6 +53,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/warningqueue"
@@ -367,6 +368,7 @@ func sweep(t *testing.T) *sweepResult {
 func runSweep(t *testing.T) *sweepResult {
 	t.Helper()
 	stateRoot := t.TempDir()
+	pinStateRoot(t, stateRoot)
 	result := &sweepResult{
 		shapes:   map[string]responsecontract.Shape{},
 		cases:    map[string]modeCase{},
@@ -386,6 +388,32 @@ func runSweep(t *testing.T) *sweepResult {
 	}
 	result.record(responsecontract.EnvelopeQueued, envelope)
 	return result
+}
+
+// pinStateRoot points every handler that resolves paths through internal/state
+// (screenshots, evidence, recordings, draw sessions) at the sweep's temp root
+// and seeds one draw session. Without it analyze/draw_history listed the real
+// user state dir: an empty CI runner dropped the sessions[] fields and a dev
+// machine with >200 sessions added truncated/hint, so the frozen shape depended
+// on whoever ran the freeze. KABOOM_STATE_DIR outranks XDG_STATE_HOME and HOME
+// in state.RootDir; XDG is pinned too so nothing falls through to a user
+// directory. t.Setenv forbids t.Parallel, and no test in this package is
+// parallel; the sweep runs once (sweepOnce) inside the first caller's lifetime.
+func pinStateRoot(t *testing.T, stateRoot string) {
+	t.Helper()
+	t.Setenv(state.StateDirEnv, stateRoot)
+	t.Setenv("XDG_STATE_HOME", stateRoot)
+	screenshots, err := state.ScreenshotsDir()
+	if err != nil {
+		t.Fatalf("resolve pinned screenshots directory: %v", err)
+	}
+	if err := os.MkdirAll(screenshots, 0o700); err != nil {
+		t.Fatalf("create pinned screenshots directory: %v", err)
+	}
+	session := filepath.Join(screenshots, "draw-session-fixture.json")
+	if err := os.WriteFile(session, []byte(`{"annotations":[]}`), 0o600); err != nil {
+		t.Fatalf("seed draw session: %v", err)
+	}
 }
 
 // sweepRegistry reads the dispatchable mode set and the async envelope off one

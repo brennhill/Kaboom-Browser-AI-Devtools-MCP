@@ -178,6 +178,8 @@ func TestHandleNavigateAndDocument_NoResultAfterNavigationContinues(t *testing.T
 func TestHandleNavigateAndDocument_URLChangeTimeoutUsesOwnerBoundary(t *testing.T) {
 	h, fs := newFakeWorkflowActions(t)
 	capturefixture.Track(fs.cap, 1, "https://example.test/before")
+	frozen := time.Unix(1_700_000_000, 0)
+	fs.nowFn = func() time.Time { return frozen } // budget must not shrink under -race
 	waits := 0
 	fs.waitTrackedURLFn = func(beforeURL string, timeout time.Duration) (string, bool) {
 		waits++
