@@ -917,7 +917,6 @@
         applyRecordHighlight(els);
         pendingRecordingIntent = null;
         setApprovalPendingState(els, approvalEls, state, null);
-        persist(removeLocal(StorageKey.PENDING_RECORDING), "pending-recording-clear");
         return;
       }
       pendingRecordingIntent = pending && !pending.highlight ? pending : null;
@@ -928,7 +927,6 @@
     const clearPendingRecordingIntent = () => {
       pendingRecordingIntent = null;
       setApprovalPendingState(els, approvalEls, state, null);
-      persist(removeLocal(StorageKey.PENDING_RECORDING), "pending-recording-clear");
     };
     void readLocalState({
       key: StorageKey.RECORDING,

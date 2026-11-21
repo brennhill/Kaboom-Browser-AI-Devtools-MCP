@@ -4,7 +4,7 @@ feature_id: feature-flow-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - cmd/browser-agent/internal/toolruntime/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -37,6 +37,9 @@ code_paths:
   - src/lib/daemon-http.ts
   - src/lib/storage/recovery.ts
   - src/lib/storage/validated.ts
+  - src/background/recording/rehydration.ts
+  - internal/recording/manager_store.go
+  - cmd/browser-agent/internal/screenrec/save.go
 test_paths:
   - internal/capture/httpingest/handlers_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
@@ -67,6 +70,7 @@ test_paths:
   - tests/extension/ui-controls/tracked-hover-launcher.test.js
   - tests/extension/state-recovery/state-recovery-contract.test.js
   - tests/extension/state-recovery/validated-storage.test.js
+  - tests/extension/contracts/recording-ownership-contract.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -79,6 +83,26 @@ last_verified_date: 2026-03-05
 - Tool: interact, observe, configure
 - Mode/Action: recording, playback, test-generation
 - Location: `docs/features/feature/flow-recording`
+
+## Recording Ownership
+
+Flow recording spans two lifecycles with separate owners:
+
+- **Event recording** (`configure` `event_recording_start` / `event_recording_stop`,
+  popup action-recording row). Owner: the Go `RecordingManager`
+  (`internal/recording/manager.go`), reached only through `Capture.Recordings()`
+  (`internal/capture/capture.go`) and entered via `toolrecording.Handler`. It is
+  held in memory until stop, then persisted to disk; it is not restored after a
+  daemon restart. The popup mirror `kaboom_action_recording` is reconciled
+  against the daemon when the popup opens.
+- **Live screen recording** (`interact` `screen_recording_start` / `screen_recording_stop`,
+  popup, keyboard, context menu). Owner: `src/background/recording/` plus the
+  offscreen recorder; it is the only writer of `kaboom_recording` and
+  `kaboom_pending_recording`. The saved WebM is owned by the daemon save path
+  (`cmd/browser-agent/internal/screenrec/save.go`).
+
+The full start/restore/stop/persist table, storage-key writers and failure modes
+are in [tab-recording: Recording Ownership](../tab-recording/index.md#recording-ownership).
 
 ## Specs
 
