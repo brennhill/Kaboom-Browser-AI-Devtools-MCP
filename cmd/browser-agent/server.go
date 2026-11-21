@@ -254,7 +254,7 @@ func registerPerformanceTraceRoutes(mux *http.ServeMux) {
 
 func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture.Capture) {
 	captureHTTP := httpingest.New(httpingest.Dependencies{
-		Telemetry: captured.Telemetry(), Queries: captured.Queries(), Recordings: captured.Recordings(),
+		Telemetry: captured.Telemetry(), Commands: captured.Commands(), Recordings: captured.Recordings(),
 		Performance: captured.Performance(), Circuit: captured.Circuit(),
 	})
 	mux.HandleFunc("/websocket-events", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleWebSocketEvents)))
@@ -280,7 +280,7 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 func newSyncHandler(captured *capture.Capture) *syncruntime.Handler {
 	return syncruntime.NewHandler(syncruntime.Dependencies{
 		Runtime:        captured.Extension(),
-		Queries:        captured.Queries(),
+		Commands:       captured.Commands(),
 		Lifecycle:      captured.Lifecycle(),
 		FeatureUsage:   captured.FeatureUsage(),
 		ExtensionLogs:  captured.ExtensionLogs(),

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
@@ -397,6 +398,8 @@ func TestHandleSync_StoresInProgressHeartbeat(t *testing.T) {
 func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) {
 	t.Parallel()
 	cap := newTestState()
+	clock := newManualClock(time.Now())
+	cap.clock = clock.Now
 
 	corrID := "corr-missing-heartbeat"
 	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
@@ -435,9 +438,7 @@ func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) 
 	}
 
 	// Move the deterministic reconciliation clock beyond the bounded grace.
-	mutateExtensionStateForTest(cap.Extension(), func(state *runtimeState) {
-		state.missingInProgressSince[corrID] = time.Now().Add(-missingInProgressGrace)
-	})
+	clock.Advance(browsercommand.MissingProgressGrace)
 
 	// Third sync still has no in_progress entry after the grace -> fail fast.
 	thirdReqBody := mustMarshalJSON(t, map[string]any{

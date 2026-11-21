@@ -791,7 +791,7 @@
     },
     "cmd/browser-agent/internal/toolinteract/interact_dom.go": {
       "mutable_globals": 1,
-      "exports": 7
+      "exports": 6
     },
     "cmd/browser-agent/internal/toolinteract/interact_page.go": {
       "mutable_globals": 1,
@@ -1017,6 +1017,18 @@
       "mutable_globals": 0,
       "exports": 5
     },
+    "internal/browsercommand/exchange.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
+    "internal/browsercommand/owner.go": {
+      "mutable_globals": 0,
+      "exports": 12
+    },
+    "internal/browsercommand/result.go": {
+      "mutable_globals": 0,
+      "exports": 9
+    },
     "internal/buffers/filter.go": {
       "mutable_globals": 0,
       "exports": 1
@@ -1039,7 +1051,7 @@
     },
     "internal/capture/capture.go": {
       "mutable_globals": 0,
-      "exports": 14
+      "exports": 15
     },
     "internal/capture/clientstore/owner.go": {
       "mutable_globals": 0,

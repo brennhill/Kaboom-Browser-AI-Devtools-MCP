@@ -98,5 +98,5 @@ func TestNetworkBodiesIngestsThroughCanonicalTelemetryOwner(t *testing.T) {
 }
 
 func dependencies(captured *capture.Capture) Dependencies {
-	return Dependencies{Telemetry: captured.Telemetry(), Queries: captured.Queries(), Recordings: captured.Recordings(), Performance: captured.Performance(), Circuit: captured.Circuit()}
+	return Dependencies{Telemetry: captured.Telemetry(), Commands: captured.Commands(), Recordings: captured.Recordings(), Performance: captured.Performance(), Circuit: captured.Circuit()}
 }

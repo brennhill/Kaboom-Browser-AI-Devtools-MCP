@@ -32,7 +32,6 @@ const (
 // Invariants:
 // - trackingEnabled implies trackedTabID > 0 for authoritative single-tab mode.
 // - lastSyncSeen.IsZero() means extension has never synced in this process lifecycle.
-// - missingInProgressSince tracks only commands currently pending in QueryDispatcher.
 //
 // Failure semantics:
 //   - pilotStatusKnown=false intentionally defaults effective pilot access to enabled
@@ -68,9 +67,8 @@ type runtimeState struct {
 	trackingUpdated  time.Time // When tracking status last refreshed.
 
 	// Extension-reported active command execution state from /sync heartbeats.
-	inProgress             []SyncInProgress     // Last heartbeat snapshot of active commands.
-	inProgressUpdated      time.Time            // When inProgress was last refreshed.
-	missingInProgressSince map[string]time.Time // First heartbeat that omitted a started command.
+	inProgress        []SyncInProgress // Last heartbeat snapshot of active commands.
+	inProgressUpdated time.Time        // When inProgress was last refreshed.
 
 	// CSP detection: probed after each navigation to surface restrictions proactively.
 	cspRestricted bool   // true if page CSP blocks execute_js (new Function).
@@ -97,10 +95,9 @@ func New() *Runtime {
 		connectionNotify: make(chan struct{}),
 		trackingNotify:   make(chan struct{}),
 		state: runtimeState{
-			activeTestIDs:          make(map[string]bool),
-			missingInProgressSince: make(map[string]time.Time),
-			pilotSource:            PilotSourceAssumedStartup,
-			securityMode:           SecurityModeNormal,
+			activeTestIDs: make(map[string]bool),
+			pilotSource:   PilotSourceAssumedStartup,
+			securityMode:  SecurityModeNormal,
 		},
 	}
 }
