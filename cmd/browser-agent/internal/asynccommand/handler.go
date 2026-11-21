@@ -15,7 +15,10 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asyncresult"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/commandcontract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -28,8 +31,12 @@ const a11yQueryTimeout = 30 * time.Second
 
 // Deps names the owners and cross-feature enrichment operations used by commands.
 type Deps struct {
-	Context              context.Context
-	Capture              *capture.Capture
+	Context context.Context
+	// State owners; all nil in a degraded composition without capture.
+	Commands             *browsercommand.Owner
+	Extension            *syncruntime.Runtime
+	Performance          *perfstore.Store
+	Telemetry            *telemetrystore.Store
 	DiagnosticHint       func(*mcp.StructuredError)
 	DiagnosticHintString func() string
 	AttachEvidence       func(string, map[string]any)
@@ -73,8 +80,8 @@ func New(deps Deps) *Handler {
 	waitForCommand := func(string, time.Duration) (*queries.CommandResult, bool) {
 		return nil, false
 	}
-	if deps.Capture != nil {
-		waitForCommand = deps.Capture.Commands().WaitCommand
+	if deps.Commands != nil {
+		waitForCommand = deps.Commands.WaitCommand
 	}
 	return &Handler{
 		deps: deps,
@@ -92,18 +99,18 @@ func (h *Handler) AttachTransientElements(responseData map[string]any, since tim
 	if h == nil || responseData == nil {
 		return
 	}
-	asyncresult.AttachTransientElements(responseData, h.deps.Capture.Telemetry().Actions().Snapshot().Actions, since)
+	asyncresult.AttachTransientElements(responseData, h.deps.Telemetry.Actions().Snapshot().Actions, since)
 }
 
 func (h *Handler) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
-	if h.deps.Capture.Extension().IsExtensionConnected() && h.deps.Capture.Extension().CommandContractID() != commandcontract.ID {
+	if h.deps.Extension.IsExtensionConnected() && h.deps.Extension.CommandContractID() != commandcontract.ID {
 		return mcp.Fail(req, mcp.ErrExtError,
 			"command_contract_mismatch: the loaded extension cannot safely execute this daemon's commands",
 			"Reload the Kaboom extension, then retry after System Doctor reports a matching command contract.",
 			h.deps.DiagnosticHint,
 		), true
 	}
-	_, err := h.deps.Capture.Commands().Enqueue(query, timeout, req.ClientID)
+	_, err := h.deps.Commands.Enqueue(query, timeout, req.ClientID)
 	if err == nil {
 		return mcp.JSONRPCResponse{}, false
 	}
@@ -144,13 +151,13 @@ func BuildA11yQueryParams(scope string, tags []string, frame any, forceRefresh b
 
 func (h *Handler) ExecuteA11yQuery(scope string, tags []string, frame any, forceRefresh bool) (json.RawMessage, error) {
 	paramsJSON, _ := json.Marshal(BuildA11yQueryParams(scope, tags, frame, forceRefresh))
-	queryID, err := h.deps.Capture.Commands().Enqueue(queries.PendingQuery{
+	queryID, err := h.deps.Commands.Enqueue(queries.PendingQuery{
 		Type: "a11y", Params: paramsJSON,
 	}, a11yQueryTimeout, "")
 	if err != nil {
 		return nil, err
 	}
-	return h.deps.Capture.Commands().WaitQueryResult(context.Background(), queryID, a11yQueryTimeout)
+	return h.deps.Commands.WaitQueryResult(context.Background(), queryID, a11yQueryTimeout)
 }
 
 // ExecuteStyleProbe runs one computed-style query and returns the raw payload.
@@ -171,13 +178,13 @@ func (h *Handler) ExecuteStyleProbe(selector string, maxElements int, includeCus
 	if err != nil {
 		return nil, err
 	}
-	queryID, err := h.deps.Capture.Commands().Enqueue(queries.PendingQuery{
+	queryID, err := h.deps.Commands.Enqueue(queries.PendingQuery{
 		Type: "computed_styles", Params: paramsJSON,
 	}, a11yQueryTimeout, "")
 	if err != nil {
 		return nil, err
 	}
-	return h.deps.Capture.Commands().WaitQueryResult(context.Background(), queryID, a11yQueryTimeout)
+	return h.deps.Commands.WaitQueryResult(context.Background(), queryID, a11yQueryTimeout)
 }
 
 // finalizeResponseEnrichment attaches evidence, transient elements, and retry context
@@ -271,7 +278,7 @@ func (h *Handler) formatTimeoutCommandResult(req mcp.JSONRPCRequest, cmd queries
 	responseData["error"] = mcp.ErrExtTimeout
 	responseData["message"] = fmt.Sprintf("Command %s timed out waiting for the extension to respond. Error: %s", corrID, cmd.Error)
 	retryMsg := "Extension connected but page execution timed out. This page may block content scripts (common on Google, Chrome Web Store, etc.). Try navigating to a different page: interact({what: 'navigate', url: 'https://example.com'})"
-	if !h.deps.Capture.Extension().IsExtensionConnected() {
+	if !h.deps.Extension.IsExtensionConnected() {
 		retryMsg = "Extension is disconnected. Ensure the Kaboom extension shows 'Connected' and a tab is tracked, then retry."
 	}
 	responseData["retry"] = retryMsg
@@ -355,7 +362,7 @@ func (h *Handler) formatCompletedCommand(req mcp.JSONRPCRequest, cmd queries.Com
 }
 
 func (h *Handler) attachPerfDiffIfAvailable(corrID string, responseData map[string]any) {
-	beforeSnap, ok := h.deps.Capture.Performance().TakeBefore(corrID)
+	beforeSnap, ok := h.deps.Performance.TakeBefore(corrID)
 	if !ok {
 		return
 	}
@@ -363,7 +370,7 @@ func (h *Handler) attachPerfDiffIfAvailable(corrID string, responseData map[stri
 	// Content capture publishes the post-navigation snapshot asynchronously.
 	// The store's generation channel provides a bounded, cancellation-aware wait
 	// without polling the hot path or comparing a baseline to itself.
-	afterSnap, changed := h.deps.Capture.Performance().WaitForURLSnapshotChange(
+	afterSnap, changed := h.deps.Performance.WaitForURLSnapshotChange(
 		h.deps.Context, beforeSnap.URL, beforeSnap.Timestamp, 2500*time.Millisecond,
 	)
 	if !changed {
@@ -381,8 +388,8 @@ func (h *Handler) waitForCommandWithConnectivity(correlationID string, timeout t
 	for {
 		remaining := deadline.Sub(h.Wait.Now())
 		if remaining <= 0 {
-			cmd, found := h.deps.Capture.Commands().Command(correlationID)
-			disconnected := found && cmd != nil && cmd.Status == "pending" && !h.deps.Capture.Extension().IsExtensionConnected()
+			cmd, found := h.deps.Commands.Command(correlationID)
+			disconnected := found && cmd != nil && cmd.Status == "pending" && !h.deps.Extension.IsExtensionConnected()
 			return cmd, found, disconnected, waited
 		}
 		waitStep := h.Wait.PollInterval
@@ -398,14 +405,14 @@ func (h *Handler) waitForCommandWithConnectivity(correlationID string, timeout t
 		if cmd.Status != "pending" {
 			return cmd, true, false, waited
 		}
-		if !h.deps.Capture.Extension().IsExtensionConnected() {
+		if !h.deps.Extension.IsExtensionConnected() {
 			return cmd, true, true, waited
 		}
 	}
 }
 
 func (h *Handler) finalizePendingDisconnect(req mcp.JSONRPCRequest, correlationID string) mcp.JSONRPCResponse {
-	if cmd, found := h.deps.Capture.Commands().FailDisconnected(correlationID); found && cmd != nil {
+	if cmd, found := h.deps.Commands.FailDisconnected(correlationID); found && cmd != nil {
 		return h.FormatCommandResult(req, *cmd, correlationID)
 	}
 	return mcp.Fail(req, mcp.ErrNoData,
@@ -470,15 +477,15 @@ func (h *Handler) stillProcessingResponse(req mcp.JSONRPCRequest, cmd *queries.C
 		"status": "still_processing", "lifecycle_status": "running",
 		"correlation_id": correlationID, "trace_id": correlationID,
 		"queued": false, "final": false, "elapsed_ms": cmd.ElapsedMs(),
-		"queue_depth": h.deps.Capture.Commands().QueueDepth(),
+		"queue_depth": h.deps.Commands.QueueDepth(),
 		"retry_context": map[string]any{
 			"attempts": attempts, "total_wait_ms": totalWaitMs,
-			"extension_connected": h.deps.Capture.Extension().IsExtensionConnected(),
+			"extension_connected": h.deps.Extension.IsExtensionConnected(),
 		},
 		"suggested_retry_ms": 2000,
 		"message":            "Action is taking longer than expected. Polling is now required. Use observe({what:'command_result', correlation_id:'" + correlationID + "'}) to check the result.",
 	}
-	if pos := h.deps.Capture.Commands().QueuePosition(correlationID); pos >= 0 {
+	if pos := h.deps.Commands.QueuePosition(correlationID); pos >= 0 {
 		stillProcessing["queue_position"] = pos
 	}
 	return mcp.Succeed(req, "Action still processing", stillProcessing)
@@ -498,7 +505,7 @@ func (h *Handler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID stri
 			"hint": "Use observe({what: 'command_result', correlation_id: '" + correlationID + "'}) to retrieve the result.",
 		})
 	}
-	if !h.deps.Capture.Extension().IsExtensionConnected() {
+	if !h.deps.Extension.IsExtensionConnected() {
 		return mcp.Fail(req, mcp.ErrNoData, "Extension is not connected", "Ensure the Kaboom extension shows 'Connected' and a tab is tracked.", h.deps.DiagnosticHint)
 	}
 
@@ -510,7 +517,7 @@ func (h *Handler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID stri
 	if done {
 		return resp
 	}
-	if cmd.Status == "pending" && h.deps.Capture.Extension().IsExtensionConnected() {
+	if cmd.Status == "pending" && h.deps.Extension.IsExtensionConnected() {
 		attempts = 2
 		cmd, waitedMs, resp, done = h.waitOnce(req, correlationID, retryWait, "Command not found after retry")
 		totalWaitMs += waitedMs
@@ -519,7 +526,7 @@ func (h *Handler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID stri
 		}
 	}
 	if cmd.Status == "pending" {
-		if !h.deps.Capture.Extension().IsExtensionConnected() {
+		if !h.deps.Extension.IsExtensionConnected() {
 			return h.finalizePendingDisconnect(req, correlationID)
 		}
 		return h.stillProcessingResponse(req, cmd, correlationID, attempts, totalWaitMs)

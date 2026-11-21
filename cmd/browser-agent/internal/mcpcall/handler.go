@@ -4,10 +4,11 @@ package mcpcall
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpresponse"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcptelemetry"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -15,10 +16,13 @@ import (
 
 // Backend composes tool execution with MCP transport policy and telemetry owners.
 type Backend struct {
-	Executor interface {
+	// Extension and Telemetry feed response policy and passive telemetry; nil
+	// in a degraded composition without capture.
+	Extension *syncruntime.Runtime
+	Telemetry *telemetrystore.Store
+	Executor  interface {
 		HandleToolCall(request mcp.JSONRPCRequest, name string, arguments json.RawMessage) (mcp.JSONRPCResponse, bool)
 	}
-	Capture *capture.Capture
 	Limiter interface {
 		Allow() bool
 	}

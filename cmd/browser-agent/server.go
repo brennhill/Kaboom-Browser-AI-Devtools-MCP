@@ -271,13 +271,15 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 	mux.HandleFunc("/enhanced-actions", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleEnhancedActions)))
 	mux.HandleFunc("/performance-snapshots", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandlePerformanceSnapshots)))
 	mux.HandleFunc("/sync", httpguard.CORS(httpguard.ExtensionOnly(newSyncHandler(captured).HandleSync)))
-	clientapi.Register(mux, captured, maxPostBodySize)
+	clientapi.Register(mux, captured.Clients(), maxPostBodySize)
 	mux.HandleFunc("/recordings/save", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
 		screenrec.HandleSave(w, r, captured.Commands(), server.stateRecovery)
 	})))
 	mux.HandleFunc("/recordings/storage", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleRecordingStorage)))
 	mux.HandleFunc("/recordings/reveal", httpguard.CORS(httpguard.ExtensionOnly(screenrec.HandleReveal)))
-	mux.HandleFunc("/telemetry", httpguard.CORS(telemetryapi.Handler(server.logs, captured)))
+	mux.HandleFunc("/telemetry", httpguard.CORS(telemetryapi.Handler(server.logs, telemetryapi.Sources{
+		Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs(),
+	})))
 	mux.HandleFunc("/snapshot", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Snapshot(server.logs, captured))))
 	mux.HandleFunc("/clear", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Clear(server.logs, toolruntime.NewRuntimeResetter(captured)))))
 	mux.HandleFunc("/test-boundary", httpguard.CORS(httpguard.ExtensionOnly(ciapi.TestBoundary(captured))))
@@ -367,7 +369,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	})))
 	mux.HandleFunc("/health", httpguard.CORS(operations.ServeHealth))
 
-	proxyHandler := insecureproxy.New(captured, httpapi.JSON)
+	proxyHandler := insecureproxy.New(extensionOf(captured), httpapi.JSON)
 	mux.HandleFunc("/insecure-proxy", httpguard.CORS(proxyHandler.ServeHTTP))
 	mux.HandleFunc("/doctor", httpguard.CORS(func(w http.ResponseWriter, _ *http.Request) {
 		var extraChecks []health.DoctorCheck
@@ -423,10 +425,10 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 
 func newMCPHTTPHandler(handler *toolruntime.ToolHandler) *mcphttp.Handler {
 	return mcphttp.New(mcphttp.Config{
-		Version:       version,
-		MaxBodySize:   maxPostBodySize,
-		HandleRequest: handler.HandleRequest,
-		Capture:       handler.Capture,
+		Version:        version,
+		MaxBodySize:    maxPostBodySize,
+		HandleRequest:  handler.HandleRequest,
+		DiagnosticLogs: healthOwnersOf(handler.Capture()).DiagnosticLogs,
 	})
 }
 
@@ -437,4 +439,12 @@ func healthOwnersOf(captured *capture.Capture) healthreader.Owners {
 		return healthreader.Owners{}
 	}
 	return captured.HealthOwners()
+}
+
+// extensionOf returns the extension connection owner, or nil without a capture.
+func extensionOf(captured *capture.Capture) *syncruntime.Runtime {
+	if captured == nil {
+		return nil
+	}
+	return captured.Extension()
 }

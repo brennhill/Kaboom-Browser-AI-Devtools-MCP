@@ -32,7 +32,7 @@ func TestFormatCommandResultAttachesAvailablePerformanceDiff(t *testing.T) {
 		Timing: performance.PerformanceTiming{TimeToFirstByte: 100, Load: 800},
 	}})
 	created := time.Unix(100, 0)
-	result := decodeToolResult(t, New(Deps{Capture: captured}).FormatCommandResult(
+	result := decodeToolResult(t, New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}).FormatCommandResult(
 		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
 		queries.CommandResult{CorrelationID: "perf-command", Status: "complete", Result: json.RawMessage(`{"success":true}`), CreatedAt: created, CompletedAt: created},
 		"perf-command",
@@ -49,7 +49,7 @@ func TestFormatCommandResultOmitsPerformanceDiffWithoutBaseline(t *testing.T) {
 	captured := capture.NewCapture()
 	defer captured.Close()
 	created := time.Unix(100, 0)
-	result := decodeToolResult(t, New(Deps{Capture: captured}).FormatCommandResult(
+	result := decodeToolResult(t, New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}).FormatCommandResult(
 		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
 		queries.CommandResult{CorrelationID: "no-baseline", Status: "complete", Result: json.RawMessage(`{"success":true}`), CreatedAt: created, CompletedAt: created},
 		"no-baseline",
@@ -64,7 +64,7 @@ func TestFormatCommandResultPromotesCompletedDOMSummary(t *testing.T) {
 	captured := capture.NewCapture()
 	defer captured.Close()
 	created := time.Unix(100, 0)
-	result := decodeToolResult(t, New(Deps{Capture: captured}).FormatCommandResult(
+	result := decodeToolResult(t, New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}).FormatCommandResult(
 		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
 		queries.CommandResult{
 			CorrelationID: "dom-complete", Status: "complete", CreatedAt: created, CompletedAt: created,
@@ -89,7 +89,7 @@ func TestFormatCommandResultExpiredCannotFabricateDOMEvidence(t *testing.T) {
 	t.Parallel()
 	captured := capture.NewCapture()
 	defer captured.Close()
-	result := decodeToolResult(t, New(Deps{Capture: captured}).FormatCommandResult(
+	result := decodeToolResult(t, New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}).FormatCommandResult(
 		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
 		queries.CommandResult{CorrelationID: "dom-expired", Status: "expired", Error: "extension timeout", CreatedAt: time.Unix(100, 0)},
 		"dom-expired",
@@ -117,7 +117,7 @@ func TestFormatCommandResultFailsLoudForExtensionAndEmbeddedErrors(t *testing.T)
 			captured := capture.NewCapture()
 			defer captured.Close()
 			created := time.Unix(100, 0)
-			result := decodeToolResult(t, New(Deps{Capture: captured}).FormatCommandResult(
+			result := decodeToolResult(t, New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}).FormatCommandResult(
 				mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
 				queries.CommandResult{CorrelationID: "failed", Status: testCase.status, Error: testCase.commandErr, Result: testCase.result, CreatedAt: created, CompletedAt: created},
 				"failed",
@@ -139,7 +139,7 @@ func TestFormatCommandResultExpiredIncludesDoctorHint(t *testing.T) {
 	captured := capture.NewCapture()
 	defer captured.Close()
 	result := decodeToolResult(t, New(Deps{
-		Capture: captured, DiagnosticHintString: func() string { return "pilot=ENABLED tracked_tab=42" },
+		Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry(), DiagnosticHintString: func() string { return "pilot=ENABLED tracked_tab=42" },
 	}).FormatCommandResult(
 		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
 		queries.CommandResult{CorrelationID: "expired", Status: "expired", Error: "timeout", CreatedAt: time.Unix(100, 0)},
@@ -166,7 +166,7 @@ func TestEnqueuePendingQueryFailsLoudWithoutDiscardingAcceptedCommands(t *testin
 	captured := capture.NewCapture()
 	defer captured.Close()
 	saturateQueue(t, captured)
-	handler := New(Deps{Capture: captured, DiagnosticHint: func(errorData *mcp.StructuredError) {
+	handler := New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry(), DiagnosticHint: func(errorData *mcp.StructuredError) {
 		errorData.Hint = "doctor"
 	}})
 	response, blocked := handler.EnqueuePendingQuery(
@@ -193,7 +193,7 @@ func TestEnqueuePendingQueryRejectsConnectedCommandContractSkew(t *testing.T) {
 	defer captured.Close()
 	capturefixture.ConnectWithCommandContract(captured, "sha256:stale-extension")
 
-	response, blocked := New(Deps{Capture: captured}).EnqueuePendingQuery(
+	response, blocked := New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}).EnqueuePendingQuery(
 		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
 		queries.PendingQuery{Type: "performance_trace", CorrelationID: "skewed"}, time.Second,
 	)
@@ -210,7 +210,7 @@ func TestFormatCommandResultPreservesCancellationDiagnosis(t *testing.T) {
 	retryCalls := 0
 	outcomes := make([]string, 0, 1)
 	handler := New(Deps{
-		Capture:              cap,
+		Commands: cap.Commands(), Extension: cap.Extension(), Performance: cap.Performance(), Telemetry: cap.Telemetry(),
 		DiagnosticHintString: func() string { return "doctor" },
 		AttachEvidence:       func(string, map[string]any) { evidenceCalls++ },
 		AttachRetryContext:   func(string, map[string]any, string, string) { retryCalls++ },
@@ -238,7 +238,7 @@ func TestFormatCommandResultLifecycleAndEffectiveContext(t *testing.T) {
 	cap := capture.NewCapture()
 	defer cap.Close()
 	handler := New(Deps{
-		Capture:              cap,
+		Commands: cap.Commands(), Extension: cap.Extension(), Performance: cap.Performance(), Telemetry: cap.Telemetry(),
 		DiagnosticHintString: func() string { return "doctor" },
 		AttachEvidence:       func(string, map[string]any) {},
 		AttachRetryContext:   func(string, map[string]any, string, string) {},
@@ -320,7 +320,7 @@ func TestMaybeWaitForCommandBackgroundResponseIsQueued(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
 	defer cap.Close()
-	handler := New(Deps{Capture: cap})
+	handler := New(Deps{Commands: cap.Commands(), Extension: cap.Extension(), Performance: cap.Performance(), Telemetry: cap.Telemetry()})
 	response := handler.MaybeWaitForCommand(
 		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
 		"click-1",
@@ -354,7 +354,7 @@ func TestMaybeWaitForCommandArgumentPolicy(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			captured := capture.NewCapture()
 			defer captured.Close()
-			result := decodeToolResult(t, New(Deps{Capture: captured}).MaybeWaitForCommand(
+			result := decodeToolResult(t, New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}).MaybeWaitForCommand(
 				mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, "queued-1", json.RawMessage(testCase.args), "queued",
 			))
 			data := decodeResponseData(t, result)
@@ -382,7 +382,7 @@ func TestMaybeWaitForCommandClampsAndPartitionsTimeoutBudget(t *testing.T) {
 			capturefixture.Connect(captured)
 			correlationID := "budget-" + testCase.name
 			commandtest.Register(captured.Commands(), correlationID, time.Hour)
-			handler := New(Deps{Capture: captured})
+			handler := New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()})
 			fixedNow := time.Unix(200, 0)
 			handler.Wait.Now = func() time.Time { return fixedNow }
 			handler.Wait.PollInterval = time.Hour
@@ -414,7 +414,7 @@ func TestMaybeWaitForCommandUsesCurrentConnectionAndResultEvents(t *testing.T) {
 		defer captured.Close()
 		correlationID := "disconnected"
 		commandtest.Register(captured.Commands(), correlationID, time.Hour)
-		response := New(Deps{Capture: captured}).MaybeWaitForCommand(
+		response := New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}).MaybeWaitForCommand(
 			mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, correlationID, json.RawMessage(`{}`), "queued",
 		)
 		result := decodeToolResult(t, response)
@@ -431,7 +431,7 @@ func TestMaybeWaitForCommandUsesCurrentConnectionAndResultEvents(t *testing.T) {
 		commandtest.Register(captured.Commands(), correlationID, time.Hour)
 		responses := make(chan mcp.JSONRPCResponse, 1)
 		go func() {
-			responses <- New(Deps{Capture: captured}).MaybeWaitForCommand(
+			responses <- New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}).MaybeWaitForCommand(
 				mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, correlationID, json.RawMessage(`{}`), "queued",
 			)
 		}()
@@ -450,7 +450,7 @@ func TestMaybeWaitForCommandUsesCurrentConnectionAndResultEvents(t *testing.T) {
 		commandtest.Register(captured.Commands(), correlationID, time.Hour)
 		waiting := make(chan struct{})
 		release := make(chan struct{})
-		handler := New(Deps{Capture: captured})
+		handler := New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()})
 		handler.Wait.Command = func(id string, _ time.Duration) (*queries.CommandResult, bool) {
 			if id != correlationID {
 				t.Fatalf("wait correlation ID = %q", id)
@@ -489,7 +489,7 @@ func TestFormatCommandResultIncludesExactTimingAndTraceSummary(t *testing.T) {
 		TraceTimeline: "queued -> sent -> resolved",
 		TraceEvents:   []queries.CommandTraceEvent{{Stage: "queued"}, {Stage: "resolved"}},
 	}
-	result := decodeToolResult(t, New(Deps{Capture: captured}).FormatCommandResult(
+	result := decodeToolResult(t, New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}).FormatCommandResult(
 		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, command, command.CorrelationID,
 	))
 	data := decodeResponseData(t, result)

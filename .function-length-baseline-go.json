@@ -15,7 +15,7 @@
     "browser-agent/internal/toolanalyze/visual/handler.go:DiffBaseline": 87,
     "browser-agent/internal/toolconfigure/capabilities.go:HandleDescribeCapabilities": 82,
     "browser-agent/internal/toolgenerate/annotations/visual.go:GeneratePlaywrightFromAnnotations": 88,
-    "browser-agent/internal/toolgenerate/artifacts_pr_summary_impl.go:HandlePRSummary": 86,
+    "browser-agent/internal/toolgenerate/artifacts_pr_summary_impl.go:HandlePRSummary": 85,
     "browser-agent/internal/toolinteract/interact_workflow.go:WorkflowActions.HandleNavigateAndDocument": 88,
     "browser-agent/internal/toolruntime/tools_configure.go:buildConfigureDispatcher": 123,
     "browser-agent/server.go:registerCoreRoutes": 101,

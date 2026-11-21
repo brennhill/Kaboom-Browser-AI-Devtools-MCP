@@ -25,8 +25,8 @@ func (endpointExecutor) HandleToolCall(request mcp.JSONRPCRequest, name string, 
 func TestHandlerRoutesConfiguredBackendAndNotifications(t *testing.T) {
 	captured := capture.NewCapture()
 	handler := New(Config{Version: "0.9.0", Runtime: appruntime.New("0.9.0")}, mcpcall.Backend{
-		Executor: endpointExecutor{},
-		Capture:  captured,
+		Executor:  endpointExecutor{},
+		Extension: captured.Extension(), Telemetry: captured.Telemetry(),
 		Schemas: []mcp.MCPTool{{
 			Name: "observe", InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
 		}},

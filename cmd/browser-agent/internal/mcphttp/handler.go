@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -22,7 +22,8 @@ type Config struct {
 	Version       string
 	MaxBodySize   int64
 	HandleRequest func(mcp.JSONRPCRequest) *mcp.JSONRPCResponse
-	Capture       func() *capture.Capture
+	// DiagnosticLogs records /mcp HTTP debug entries; nil disables recording.
+	DiagnosticLogs *logstore.Diagnostic
 }
 
 type Handler struct{ config Config }
@@ -54,14 +55,10 @@ func newRequestContext(request *http.Request, serverVersion string) requestConte
 }
 
 func (handler *Handler) log(ctx requestContext, requestBody string, status int, responseBody, message string) {
-	if handler.config.Capture == nil {
+	if handler.config.DiagnosticLogs == nil {
 		return
 	}
-	store := handler.config.Capture()
-	if store == nil {
-		return
-	}
-	store.DiagnosticLogs().AddHTTP(types.HTTPDebugEntry{
+	handler.config.DiagnosticLogs.AddHTTP(types.HTTPDebugEntry{
 		Timestamp: ctx.startTime, Endpoint: "/mcp", Method: http.MethodPost,
 		ExtSessionID: ctx.extSessionID, ClientID: ctx.clientID, Headers: ctx.headers,
 		RequestBody: requestBody, ResponseStatus: status, ResponseBody: responseBody,

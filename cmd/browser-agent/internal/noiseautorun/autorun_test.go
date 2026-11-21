@@ -168,7 +168,7 @@ func TestWireFirstConnectRunsOnceAndHonorsShutdown(t *testing.T) {
 			timer := make(chan time.Time, 1)
 			done := make(chan struct{})
 			calls := 0
-			wireFirstConnect(cap, shutdown, func() { calls++ }, firstConnectRuntime{
+			wireFirstConnect(cap.Lifecycle(), shutdown, func() { calls++ }, firstConnectRuntime{
 				launch: func(run func()) { go func() { defer close(done); run() }() },
 				after:  func(time.Duration) <-chan time.Time { return timer },
 			})
@@ -191,7 +191,7 @@ func TestWireFirstConnectRunsOnceAndHonorsShutdown(t *testing.T) {
 	WireFirstConnect(nil, nil, func() {})
 	unused := capture.NewCapture()
 	defer unused.Close()
-	WireFirstConnect(unused, nil, nil)
+	WireFirstConnect(unused.Lifecycle(), nil, nil)
 }
 
 func TestWireNavigationAndDetectApplyHighConfidenceRules(t *testing.T) {
@@ -199,7 +199,7 @@ func TestWireNavigationAndDetectApplyHighConfidenceRules(t *testing.T) {
 	cap := capture.NewCapture()
 	defer cap.Close()
 	called := make(chan struct{}, 1)
-	WireNavigation(cap, func() { called <- struct{}{} })
+	WireNavigation(cap.Telemetry(), func() { called <- struct{}{} })
 	cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "navigation", Timestamp: time.Now().UnixMilli()}})
 	select {
 	case <-called:
@@ -211,10 +211,10 @@ func TestWireNavigationAndDetectApplyHighConfidenceRules(t *testing.T) {
 	for index := range logs {
 		logs[index] = types.LogEntry{"message": "repeated application heartbeat"}
 	}
-	Detect(config, cap, logs)
+	Detect(config, cap.Telemetry(), logs)
 	if !config.IsConsoleNoise(types.LogEntry{"message": "repeated application heartbeat"}) {
 		t.Fatal("high-confidence repetitive message was not classified as noise")
 	}
-	Detect(nil, cap, logs)
+	Detect(nil, cap.Telemetry(), logs)
 	Detect(config, nil, logs)
 }

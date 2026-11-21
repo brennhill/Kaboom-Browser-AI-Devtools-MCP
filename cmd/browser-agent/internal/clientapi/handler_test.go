@@ -15,7 +15,7 @@ import (
 
 func testMux(captured *capture.Capture) *http.ServeMux {
 	mux := http.NewServeMux()
-	Register(mux, captured, 10<<20)
+	Register(mux, captured.Clients(), 10<<20)
 	return mux
 }
 

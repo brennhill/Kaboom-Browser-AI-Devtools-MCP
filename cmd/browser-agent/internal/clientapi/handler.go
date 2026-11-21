@@ -9,30 +9,30 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 )
 
 // Register installs the client registry routes on mux.
-func Register(mux *http.ServeMux, captured *capture.Capture, maxBodySize int64) {
+func Register(mux *http.ServeMux, owner *clientstore.Owner, maxBodySize int64) {
 	mux.HandleFunc("/clients", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, request *http.Request) {
-		handleList(w, request, captured, maxBodySize)
+		handleList(w, request, owner, maxBodySize)
 	})))
 	mux.HandleFunc("/clients/", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, request *http.Request) {
-		handleClient(w, request, captured)
+		handleClient(w, request, owner)
 	})))
 }
 
-func registry(captured *capture.Capture, w http.ResponseWriter) (*clientreg.ClientRegistry, bool) {
-	if captured == nil || captured.Clients().Registry() == nil {
+func registry(owner *clientstore.Owner, w http.ResponseWriter) (*clientreg.ClientRegistry, bool) {
+	if owner == nil || owner.Registry() == nil {
 		httpapi.JSON(w, http.StatusServiceUnavailable, map[string]string{"error": "client_registry_unavailable"})
 		return nil, false
 	}
-	return captured.Clients().Registry(), true
+	return owner.Registry(), true
 }
 
-func handleList(w http.ResponseWriter, request *http.Request, captured *capture.Capture, maxBodySize int64) {
-	clients, ok := registry(captured, w)
+func handleList(w http.ResponseWriter, request *http.Request, owner *clientstore.Owner, maxBodySize int64) {
+	clients, ok := registry(owner, w)
 	if !ok {
 		return
 	}
@@ -55,8 +55,8 @@ func handleList(w http.ResponseWriter, request *http.Request, captured *capture.
 	}
 }
 
-func handleClient(w http.ResponseWriter, request *http.Request, captured *capture.Capture) {
-	clients, ok := registry(captured, w)
+func handleClient(w http.ResponseWriter, request *http.Request, owner *clientstore.Owner) {
+	clients, ok := registry(owner, w)
 	if !ok {
 		return
 	}

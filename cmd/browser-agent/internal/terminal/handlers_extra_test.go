@@ -92,7 +92,7 @@ func TestAutoDetectCWD_NilRegistry(t *testing.T) {
 	t.Parallel()
 	// A fresh capture store has no client registry wired.
 	store := capture.NewCapture()
-	if got := AutoDetectCWD(store); got != "" {
+	if got := AutoDetectCWD(store.Clients()); got != "" {
 		t.Fatalf("expected empty CWD with nil registry, got %q", got)
 	}
 }
@@ -101,7 +101,7 @@ func TestAutoDetectCWD_EmptyClientList(t *testing.T) {
 	t.Parallel()
 	store := capture.NewCapture()
 	store.Clients().Set(clientreg.NewClientRegistry())
-	if got := AutoDetectCWD(store); got != "" {
+	if got := AutoDetectCWD(store.Clients()); got != "" {
 		t.Fatalf("expected empty CWD when no clients are registered, got %q", got)
 	}
 }
@@ -112,7 +112,7 @@ func TestAutoDetectCWD_ReturnsRegisteredClientCWD(t *testing.T) {
 	registry := clientreg.NewClientRegistry()
 	registry.Register("/registered/cwd")
 	store.Clients().Set(registry)
-	if got := AutoDetectCWD(store); got != "/registered/cwd" {
+	if got := AutoDetectCWD(store.Clients()); got != "/registered/cwd" {
 		t.Fatalf("got %q, want /registered/cwd", got)
 	}
 }
@@ -123,7 +123,7 @@ func TestAutoDetectCWD_SkipsEmptyCWD(t *testing.T) {
 	registry := clientreg.NewClientRegistry()
 	registry.Register("")
 	store.Clients().Set(registry)
-	if got := AutoDetectCWD(store); got != "" {
+	if got := AutoDetectCWD(store.Clients()); got != "" {
 		t.Fatalf("expected empty, got %q", got)
 	}
 }
@@ -246,7 +246,7 @@ func TestRegisterRoutes_DispatchesWithoutSpawning(t *testing.T) {
 	server := &fakeServerDeps{}
 
 	mux := http.NewServeMux()
-	relays := RegisterRoutes(mux, deps, server, mgr, store)
+	relays := RegisterRoutes(mux, deps, server, mgr, store.Clients())
 	if relays == nil {
 		t.Fatal("RegisterRoutes returned nil relay map")
 	}

@@ -92,7 +92,7 @@ func newHarness(t *testing.T, stateRoot string) *harness {
 	captured := capture.NewCapture()
 	fixture := &harness{
 		captured: captured,
-		async:    asynccommand.New(asynccommand.Deps{Capture: captured}),
+		async:    asynccommand.New(asynccommand.Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}),
 		request:  mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1, Method: "tools/call"},
 	}
 	state, closeState := fixtureState(t, stateRoot)

@@ -30,7 +30,7 @@ func TestInsecureProxyEndpoint_SSRFDenylist(t *testing.T) {
 
 	cap := capture.NewCapture()
 	cap.Extension().SetSecurityMode("insecure_proxy", []string{"csp_headers"})
-	handler := New(cap, testRespond)
+	handler := New(cap.Extension(), testRespond)
 
 	// Test various private/internal IP ranges.
 	tests := []struct {
@@ -71,7 +71,7 @@ func TestInsecureProxyEndpoint_StripsCSPHeaders(t *testing.T) {
 
 	cap := capture.NewCapture()
 	cap.Extension().SetSecurityMode("insecure_proxy", []string{"csp_headers"})
-	handler := New(cap, testRespond)
+	handler := New(cap.Extension(), testRespond)
 	handler.client = upstream.Client()
 
 	req := httptest.NewRequest(http.MethodGet, "/insecure-proxy?target="+url.QueryEscape(upstream.URL), nil)
@@ -100,7 +100,7 @@ func TestInsecureProxyEndpoint_RequiresInsecureMode(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
 	cap.Extension().SetSecurityMode("normal", nil)
-	handler := New(cap, testRespond)
+	handler := New(cap.Extension(), testRespond)
 
 	req := httptest.NewRequest(http.MethodGet, "/insecure-proxy?target="+url.QueryEscape("https://example.com"), nil)
 	rr := httptest.NewRecorder()
@@ -116,7 +116,7 @@ func TestInsecureProxyRejectsDeclaredOversizedResponseBeforeReadingOrCommittingS
 	read := false
 	cap := capture.NewCapture()
 	cap.Extension().SetSecurityMode("insecure_proxy", nil)
-	handler := New(cap, testRespond)
+	handler := New(cap.Extension(), testRespond)
 	handler.responseLimit = 4
 	handler.client = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 		return &http.Response{
@@ -146,7 +146,7 @@ func TestInsecureProxyRejectsChunkedOversizedResponseBeforeCommittingSuccess(t *
 	t.Parallel()
 	cap := capture.NewCapture()
 	cap.Extension().SetSecurityMode("insecure_proxy", nil)
-	handler := New(cap, testRespond)
+	handler := New(cap.Extension(), testRespond)
 	handler.responseLimit = 4
 	handler.client = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 		return &http.Response{

@@ -343,9 +343,8 @@ func initToolHandlerCore(state ServerState, captureStore *capture.Capture) *Tool
 
 // initAsyncCommandRuntime wires the pending-query/async-result engine.
 func initAsyncCommandRuntime(handler *ToolHandler) {
-	handler.asyncCommands = asynccommand.New(asynccommand.Deps{
+	asyncDeps := asynccommand.Deps{
 		Context:              handler.shutdownCtx,
-		Capture:              handler.capture,
 		DiagnosticHint:       handler.Guards.DiagnosticHint(),
 		DiagnosticHintString: handler.Guards.DiagnosticHintString,
 		AttachEvidence: func(correlationID string, responseData map[string]any) {
@@ -356,7 +355,12 @@ func initAsyncCommandRuntime(handler *ToolHandler) {
 		},
 		SummaryEnabled:     handler.summaryPrefs.Enabled,
 		RecordAsyncOutcome: handler.usageTracker.RecordAsyncOutcome,
-	})
+	}
+	if handler.capture != nil {
+		asyncDeps.Commands, asyncDeps.Extension = handler.capture.Commands(), handler.capture.Extension()
+		asyncDeps.Performance, asyncDeps.Telemetry = handler.capture.Performance(), handler.capture.Telemetry()
+	}
+	handler.asyncCommands = asynccommand.New(asyncDeps)
 }
 
 // initAnnotationAnalysis wires the draw-mode annotation store and analyzers.
@@ -392,11 +396,11 @@ func initAnnotationAnalysis(handler *ToolHandler) {
 // extension connection.
 func initNoiseAutoDetection(handler *ToolHandler) {
 	detectNoise := func() {
-		noiseautorun.Detect(handler.noiseConfig, handler.capture, handler.state.Logs.Entries())
+		noiseautorun.Detect(handler.noiseConfig, telemetryOf(handler), handler.state.Logs.Entries())
 	}
 	if handler.capture != nil {
-		noiseautorun.WireNavigation(handler.capture, detectNoise)
-		noiseautorun.WireFirstConnect(handler.capture, handler.shutdownCtx.Done(), func() {
+		noiseautorun.WireNavigation(handler.capture.Telemetry(), detectNoise)
+		noiseautorun.WireFirstConnect(handler.capture.Lifecycle(), handler.shutdownCtx.Done(), func() {
 			if handler.noiseFirstConnectFn != nil {
 				handler.noiseFirstConnectFn()
 				return
@@ -599,7 +603,7 @@ type visualAnalyzeDeps struct{ h *ToolHandler }
 
 func buildMCPToolBackend(handler *ToolHandler) mcpcall.Backend {
 	return mcpcall.Backend{
-		Executor: handler, Capture: handler.capture,
+		Executor: handler, Extension: extensionOf(handler), Telemetry: telemetryOf(handler),
 		Limiter: handler.toolCallLimiter, Redactor: handler.redactionEngine,
 		Schemas: schema.AllTools(), UsageTracker: handler.usageTracker,
 	}

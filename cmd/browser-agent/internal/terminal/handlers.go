@@ -21,7 +21,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/spawnpolicy"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/wstransport"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	ptydiag "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/diagnostics"
 	ptyupload "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/upload"
@@ -62,7 +62,7 @@ const IdleTimeout = 30 * time.Second
 
 // RegisterRoutes adds terminal-related routes to the mux.
 // NOT MCP — These are daemon-served endpoints for the in-browser terminal.
-func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Capture) *sessionrelay.Map {
+func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.Manager, clients *clientstore.Owner) *sessionrelay.Map {
 	relays := sessionrelay.NewMap()
 
 	// Route a stuck-writer write-buffer close timeout (a drain goroutine + fd leak
@@ -110,7 +110,7 @@ func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.M
 
 	// Session lifecycle.
 	mux.HandleFunc("/terminal/start", deps.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		HandleTerminalStart(w, r, deps, server, startDeps{mgr: mgr, cap: cap, relays: relays})
+		HandleTerminalStart(w, r, deps, server, startDeps{mgr: mgr, clients: clients, relays: relays})
 	}))
 	mux.HandleFunc("/terminal/stop", deps.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		HandleTerminalStop(w, r, deps, mgr, relays)
@@ -206,9 +206,9 @@ func classifyStartError(err error, sessionID, token string) (int, map[string]any
 // the HTTP request and the shared Deps: the PTY manager, capture for CWD
 // auto-detection, and the session relay map.
 type startDeps struct {
-	mgr    *pty.Manager
-	cap    *capture.Capture
-	relays *sessionrelay.Map
+	mgr     *pty.Manager
+	clients *clientstore.Owner
+	relays  *sessionrelay.Map
 }
 
 func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, server ServerDeps, sd startDeps) {
@@ -248,10 +248,10 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		activeCodebase = server.GetActiveCodebase()
 	}
 	req.Dir = resolveStartDir(req.Dir, activeCodebase, func() string {
-		if sd.cap == nil {
+		if sd.clients == nil {
 			return ""
 		}
-		return AutoDetectCWD(sd.cap)
+		return AutoDetectCWD(sd.clients)
 	})
 
 	startCfg := pty.StartConfig{
@@ -353,8 +353,8 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 }
 
 // AutoDetectCWD gets the CWD from the first registered MCP client.
-func AutoDetectCWD(cap *capture.Capture) string {
-	reg := cap.Clients().Registry()
+func AutoDetectCWD(clients *clientstore.Owner) string {
+	reg := clients.Registry()
 	if reg == nil {
 		return ""
 	}

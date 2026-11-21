@@ -22,7 +22,7 @@ func TestOwnerTracksDeltasPerClientAndHonorsModes(t *testing.T) {
 		Mode:       func() string { return mode },
 		Now:        func() time.Time { return now },
 	})
-	owner.SetCapture(captured)
+	owner.SetOwners(captured.Extension(), captured.Telemetry())
 
 	first := owner.Augment(successResponse(t), "client-a", "observe", json.RawMessage(`{"what":"logs"}`))
 	metadata := responseMetadata(t, first)

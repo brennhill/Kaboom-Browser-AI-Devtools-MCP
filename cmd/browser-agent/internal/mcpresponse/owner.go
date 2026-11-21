@@ -3,14 +3,13 @@
 package mcpresponse
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/semver"
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/semver"
 	"sort"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -29,8 +28,8 @@ type Config struct {
 
 // Owner applies all non-telemetry MCP response warnings in canonical order.
 type Owner struct {
-	config   Config
-	captured *capture.Capture
+	config    Config
+	extension *syncruntime.Runtime
 }
 
 // New constructs an MCP response policy owner.
@@ -54,8 +53,8 @@ func New(config Config) *Owner {
 }
 
 // SetCapture installs the capture source during one-time backend composition.
-func (o *Owner) SetCapture(captured *capture.Capture) {
-	o.captured = captured
+func (o *Owner) SetExtension(extension *syncruntime.Runtime) {
+	o.extension = extension
 }
 
 // WarnUnknownArguments queues stable warnings for schema-unknown tool fields.
@@ -120,10 +119,10 @@ func (o *Owner) addPendingAuditWarning(response mcp.JSONRPCResponse) mcp.JSONRPC
 }
 
 func (o *Owner) addSecurityModeWarning(response mcp.JSONRPCResponse, executorConfigured bool) mcp.JSONRPCResponse {
-	if !executorConfigured || response.Result == nil || o.captured == nil {
+	if !executorConfigured || response.Result == nil || o.extension == nil {
 		return response
 	}
-	mode, productionParity, rewrites := o.captured.Extension().GetSecurityMode()
+	mode, productionParity, rewrites := o.extension.GetSecurityMode()
 	if mode == syncruntime.SecurityModeNormal {
 		return response
 	}
@@ -139,10 +138,10 @@ func (o *Owner) addSecurityModeWarning(response mcp.JSONRPCResponse, executorCon
 }
 
 func (o *Owner) addVersionWarning(response mcp.JSONRPCResponse, executorConfigured bool) mcp.JSONRPCResponse {
-	if !executorConfigured || response.Result == nil || o.captured == nil {
+	if !executorConfigured || response.Result == nil || o.extension == nil {
 		return response
 	}
-	extensionVersion, serverVersion, mismatch := o.captured.Extension().VersionMismatch()
+	extensionVersion, serverVersion, mismatch := o.extension.VersionMismatch()
 	if !mismatch {
 		return response
 	}

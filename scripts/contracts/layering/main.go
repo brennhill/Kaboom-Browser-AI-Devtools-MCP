@@ -18,11 +18,13 @@
 //	command-owner        no production X.Queries() call, and no import of
 //	                     internal/browsercommand/internal/dispatch outside
 //	                     internal/browsercommand/** (command_owner.go)
-//	internal/tools/observe/**, cmd/browser-agent/internal/toolinteract/**
-//	                     ↛ internal/capture (observe modes and interact actions take
-//	                     their owners — syncruntime, telemetrystore, perfstore,
-//	                     logstore, browsercommand — never the whole Capture;
-//	                     observe/testsupport is exempt)
+//	capture-root         only cmd/browser-agent, its toolruntime wiring, the
+//	                     internal/capture tree and test-support packages may import
+//	                     internal/capture; every other package takes the owners it
+//	                     uses (syncruntime, telemetrystore, perfstore, logstore,
+//	                     browsercommand, healthreader.Owners, ...)
+//	test-support         production files never import test-support packages
+//	                     (observe/testsupport, capturefixture, browsercommand/commandtest)
 //	capture.NewCapture   only from cmd/browser-agent (ports are wired by the
 //	                     composition root; detection resolves import ALIASES
 //	                     and package-level var initializers, not the literal
@@ -327,13 +329,26 @@ func scanTree(root string) (*treeScan, error) {
 	return scan, nil
 }
 
-// narrowedFromCapture reports packages that must not import the whole Capture.
-func narrowedFromCapture(pkg string) bool {
-	if pkg == modulePrefix+"internal/tools/observe/testsupport" {
-		return false
+// captureCompositionPkg reports packages allowed to import the whole Capture:
+// the composition root (cmd/browser-agent and its toolruntime wiring), the
+// capture package tree itself, and test-support packages.
+func captureCompositionPkg(pkg string) bool {
+	return pkg == modulePrefix+"cmd/browser-agent" ||
+		pkg == modulePrefix+"cmd/browser-agent/internal/toolruntime" ||
+		isPkgOrSub(pkg, modulePrefix+"internal/capture") ||
+		testSupportPkg(pkg)
+}
+
+// testSupportPkg reports packages that exist only to support tests; production
+// files must not import them.
+func testSupportPkg(pkg string) bool {
+	switch pkg {
+	case modulePrefix + "internal/tools/observe/testsupport",
+		modulePrefix + "internal/capturefixture",
+		modulePrefix + "internal/browsercommand/commandtest":
+		return true
 	}
-	return isPkgOrSub(pkg, modulePrefix+"internal/tools/observe") ||
-		isPkgOrSub(pkg, modulePrefix+"cmd/browser-agent/internal/toolinteract")
+	return false
 }
 
 func isCompositionRootPkg(pkgPath string) bool {
@@ -426,8 +441,10 @@ func evaluateMatrix(scan *treeScan) []string {
 				violations = append(violations, fmt.Sprintf("internal->cmd: %s imports %s", file, imp))
 			case isPkgOrSub(srcPkg, modulePrefix+"internal/mcp") && (isPkgOrSub(internal, "internal/tools") || isPkgOrSub(internal, "internal/capture")):
 				violations = append(violations, fmt.Sprintf("mcp->domain: %s imports %s", file, imp))
-			case narrowedFromCapture(srcPkg) && internal == "internal/capture":
-				violations = append(violations, fmt.Sprintf("observe->capture: %s imports %s; depend on the read owners", file, imp))
+			case internal == "internal/capture" && !captureCompositionPkg(srcPkg):
+				violations = append(violations, fmt.Sprintf("capture-root: %s imports %s; only the composition root may hold *capture.Capture — inject the owners it uses", file, imp))
+			case testSupportPkg(modulePrefix+internal) && !testSupportPkg(srcPkg):
+				violations = append(violations, fmt.Sprintf("test-support: production file %s imports %s", file, imp))
 			case isPkgOrSub(srcPkg, modulePrefix+"internal/schema") && isPkgOrSub(internal, "internal/tools"):
 				violations = append(violations, fmt.Sprintf("schema->tools: %s imports %s", file, imp))
 			}

@@ -4,7 +4,7 @@ feature_id: feature-link-health
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-11-21
 code_paths:
   - cmd/browser-agent/internal/asynccommand/handler.go
   - cmd/browser-agent/internal/toolanalyze/navigation.go

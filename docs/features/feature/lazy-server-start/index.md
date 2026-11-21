@@ -4,7 +4,7 @@ feature_id: feature-lazy-server-start
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-08
+last_reviewed: 2026-11-21
 code_paths:
   - .github/workflows/ci.yml
   - cmd/browser-agent/internal/bridge/bridge_startup.go

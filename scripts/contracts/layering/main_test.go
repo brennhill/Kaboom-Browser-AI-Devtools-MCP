@@ -51,14 +51,14 @@ func TestDependencyMatrixRules(t *testing.T) {
 		t.Fatal(err)
 	}
 	violations := evaluateMatrix(scan)
-	if len(violations) != 6 {
-		t.Fatalf("violations = %v\nwant 6 (internal->cmd, types-leaf, mcp->domain x2, schema->tools, composition-root)", violations)
+	if len(violations) != 7 {
+		t.Fatalf("violations = %v\nwant 7 (internal->cmd, types-leaf, mcp->domain x2, schema->tools, composition-root, capture-root)", violations)
 	}
 	joined := ""
 	for _, v := range violations {
 		joined += v + "\n"
 	}
-	for _, want := range []string{"internal->cmd", "types-leaf", "mcp->domain", "composition-root"} {
+	for _, want := range []string{"internal->cmd", "types-leaf", "mcp->domain", "composition-root", "capture-root"} {
 		if !contains(joined, want) {
 			t.Errorf("violation kind %q missing from:\n%s", want, joined)
 		}
@@ -366,26 +366,34 @@ func TestCommandOwnerIsTheOnlyDispatcherPath(t *testing.T) {
 	}
 }
 
-func TestObserveModesDependOnReadOwnersNotCapture(t *testing.T) {
+func TestOnlyCompositionRootImportsCapture(t *testing.T) {
 	root := t.TempDir()
 	c := modulePrefix + "internal/capture"
 	writeTree(t, root, map[string]string{
+		// Breaches: tool, observe and other adapter packages holding the whole Capture.
 		"cmd/browser-agent/internal/toolinteract/a.go": "package toolinteract\n\nimport _ \"" + c + "\"\n",
 		"internal/tools/observe/logs/l.go":             "package logs\n\nimport _ \"" + c + "\"\n",
-		"internal/tools/observe/core/d.go":             "package core\n\nimport _ \"" + c + "/telemetrystore\"\n",
-		"internal/tools/observe/testsupport/h.go":      "package testsupport\n\nimport _ \"" + c + "\"\n",
-		"internal/tools/observe/logs/l_test.go":        "package logs\n\nimport _ \"" + c + "\"\n",
+		"cmd/browser-agent/internal/health/h.go":       "package health\n\nimport _ \"" + c + "\"\n",
+		// Breach: production code importing test support.
+		"cmd/browser-agent/internal/health/t.go": "package health\n\nimport _ \"" + modulePrefix + "internal/browsercommand/commandtest\"\n",
+		// Clean: composition root, capture tree, test support, owner subpackages, tests.
+		"cmd/browser-agent/main.go":                   "package main\n\nimport _ \"" + c + "\"\n",
+		"cmd/browser-agent/internal/toolruntime/w.go": "package toolruntime\n\nimport _ \"" + c + "\"\n",
+		"internal/capture/healthreader/r.go":          "package healthreader\n\nimport _ \"" + c + "/telemetrystore\"\n",
+		"internal/tools/observe/testsupport/h.go":     "package testsupport\n\nimport _ \"" + c + "\"\n",
+		"internal/tools/observe/core/d.go":            "package core\n\nimport _ \"" + c + "/telemetrystore\"\n",
+		"cmd/browser-agent/internal/health/h_test.go": "package health\n\nimport _ \"" + c + "\"\n",
 	})
 	scan, err := scanTree(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	violations := evaluateMatrix(scan)
-	if len(violations) != 2 {
-		t.Fatalf("violations = %v, want two observe->capture breaches", violations)
+	if len(violations) != 4 {
+		t.Fatalf("violations = %v, want 3 capture-root + 1 test-support", violations)
 	}
 	for _, v := range violations {
-		if !contains(v, "observe->capture") {
+		if !contains(v, "capture-root") && !contains(v, "test-support") {
 			t.Errorf("unexpected violation kind: %s", v)
 		}
 	}

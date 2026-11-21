@@ -7,7 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -44,10 +45,11 @@ type Config struct {
 
 // Owner retains bounded passive telemetry cursors independently per MCP client.
 type Owner struct {
-	mu       sync.Mutex
-	cursors  map[string]cursor
-	captured *capture.Capture
-	config   Config
+	mu        sync.Mutex
+	cursors   map[string]cursor
+	extension *syncruntime.Runtime
+	telemetry *telemetrystore.Store
+	config    Config
 }
 
 // New constructs a passive telemetry owner.
@@ -68,8 +70,8 @@ func New(config Config) *Owner {
 }
 
 // SetCapture installs the capture source during one-time MCP backend composition.
-func (o *Owner) SetCapture(captured *capture.Capture) {
-	o.captured = captured
+func (o *Owner) SetOwners(extension *syncruntime.Runtime, telemetry *telemetrystore.Store) {
+	o.extension, o.telemetry = extension, telemetry
 }
 
 // Augment adds telemetry metadata according to the configured or per-call mode.
@@ -113,9 +115,9 @@ func (o *Owner) buildSummary(clientID, toolName string) (map[string]any, bool) {
 		"new_actions_since_last_call": delta.actionTotal, "trigger_tool": toolName,
 		"retrieved_at": o.config.Now().UTC().Format(time.RFC3339),
 	}
-	if o.captured != nil {
-		summary["extension_connected"] = o.captured.Extension().IsExtensionConnected()
-		enabled, tabID, tabURL := o.captured.Extension().GetTrackingStatus()
+	if o.extension != nil {
+		summary["extension_connected"] = o.extension.IsExtensionConnected()
+		enabled, tabID, tabURL := o.extension.GetTrackingStatus()
 		summary["tracking_enabled"] = enabled
 		if tabID > 0 {
 			summary["tracked_tab_id"] = tabID
@@ -132,13 +134,13 @@ func (o *Owner) buildSummary(clientID, toolName string) (map[string]any, bool) {
 
 func (o *Owner) currentCursor() cursor {
 	current := cursor{errorTotal: o.config.ErrorTotal()}
-	if o.captured == nil {
+	if o.telemetry == nil {
 		return current
 	}
-	current.networkTotal = o.captured.Telemetry().NetworkBodies().Stats().TotalAdded
-	current.networkErrorTotal = o.captured.Telemetry().NetworkBodies().Stats().ErrorTotalAdded
-	current.webSocketTotal = o.captured.Telemetry().WebSockets().Stats().TotalAdded
-	current.actionTotal = o.captured.Telemetry().Actions().Stats().TotalAdded
+	current.networkTotal = o.telemetry.NetworkBodies().Stats().TotalAdded
+	current.networkErrorTotal = o.telemetry.NetworkBodies().Stats().ErrorTotalAdded
+	current.webSocketTotal = o.telemetry.WebSockets().Stats().TotalAdded
+	current.actionTotal = o.telemetry.Actions().Stats().TotalAdded
 	return current
 }
 

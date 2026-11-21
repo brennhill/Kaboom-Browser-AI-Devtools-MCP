@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"net/http"
 	"os"
 	"os/signal"
@@ -56,7 +57,7 @@ func setupTerminalMux(server *Server, manager *pty.Manager, store *capture.Captu
 	return terminal.SetupMux(deps, server.activeCodebase, terminalintent.Runtime{
 		Relays: func() terminalintent.RelayMap { return server.ptyRelays },
 		Store:  func() *terminalintent.Store { return server.intentStore },
-	}, manager, store)
+	}, manager, clientsOf(store))
 }
 
 func startTerminalServer(port int, mux *http.ServeMux) (*http.Server, <-chan struct{}, error) {
@@ -442,4 +443,12 @@ func persistTokenSavings(server *Server) {
 			diag.Printf("[Kaboom] Failed to save lifetime token stats: %v\n", err)
 		}
 	}
+}
+
+// clientsOf returns the client registry owner, or nil without a capture.
+func clientsOf(store *capture.Capture) *clientstore.Owner {
+	if store == nil {
+		return nil
+	}
+	return store.Clients()
 }

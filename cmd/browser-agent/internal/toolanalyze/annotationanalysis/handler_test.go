@@ -44,7 +44,7 @@ func createTestToolHandler(t *testing.T) *annotationTestHarness {
 	t.Cleanup(store.Close)
 	captured := capture.NewCapture()
 	commands := asynccommand.New(asynccommand.Deps{
-		Capture:            captured,
+		Commands:            captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry(),
 		AttachEvidence:     func(string, map[string]any) {},
 		AttachRetryContext: func(string, map[string]any, string, string) {},
 	})

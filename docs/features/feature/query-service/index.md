@@ -175,6 +175,17 @@ accepted unresolved command to make room for disposable history.
   `ApplySyncExchange` acknowledgment). `ports.ResultSink` lives in
   `internal/app/ports` because the ownership rule rejects a producer-owned
   interface in `browsercommand` and `queries` cannot import `browsercommand`.
+- Capture is a composition-root concern (kaboom-jdm5.5): only `cmd/browser-agent`,
+  its `toolruntime` wiring, the `internal/capture` tree and test-support packages
+  import `internal/capture` (layering rule `capture-root`; `test-support` keeps
+  production code off `observe/testsupport`, `capturefixture` and `commandtest`).
+  Every other consumer receives the owners it uses: toolguard, insecureproxy,
+  mcpresponse take `syncruntime.Runtime`; configure clear, telemetryapi,
+  mcptelemetry and noise auto-detect take the telemetry/perf/log stores; asynccommand
+  takes the command owner plus extension/perf/telemetry stores; clientapi and
+  terminal take `clientstore.Owner`; mcphttp takes the diagnostic log; health,
+  doctor, dashboard and operational diagnostics take `healthreader.Owners`, built
+  by `Capture.HealthOwners()`.
 - Command lifecycle updates accept only `pending`, `complete`, `error`, `timeout`, `expired`, or `cancelled`; noncanonical status text is treated as protocol drift and recorded as an error.
 - Synchronous result consumers may bind waits to a caller context; cancellation
   and deadlines wake the canonical query condition through event-driven
