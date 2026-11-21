@@ -238,7 +238,7 @@ describe('Tooling contracts', () => {
 
   test('active workflows pin the patched Go version declared by go.mod', () => {
     const goVersion = readFileSync('go.mod', 'utf8').match(/^go (\S+)$/m)?.[1]
-    assert.equal(goVersion, '1.25.12')
+    assert.equal(goVersion, '1.26.11')
     for (const name of readdirSync('.github/workflows').filter((file) => file.endsWith('.yml'))) {
       const workflow = readFileSync(`.github/workflows/${name}`, 'utf8')
       for (const match of workflow.matchAll(/go-version:\s*["']?([^\s"']+)/g)) {
