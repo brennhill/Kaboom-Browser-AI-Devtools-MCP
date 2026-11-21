@@ -365,3 +365,22 @@ func TestCommandOwnerIsTheOnlyDispatcherPath(t *testing.T) {
 		}
 	}
 }
+
+func TestObserveModesDependOnReadOwnersNotCapture(t *testing.T) {
+	root := t.TempDir()
+	c := modulePrefix + "internal/capture"
+	writeTree(t, root, map[string]string{
+		"internal/tools/observe/logs/l.go":        "package logs\n\nimport _ \"" + c + "\"\n",
+		"internal/tools/observe/core/d.go":        "package core\n\nimport _ \"" + c + "/telemetrystore\"\n",
+		"internal/tools/observe/testsupport/h.go": "package testsupport\n\nimport _ \"" + c + "\"\n",
+		"internal/tools/observe/logs/l_test.go":   "package logs\n\nimport _ \"" + c + "\"\n",
+	})
+	scan, err := scanTree(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	violations := evaluateMatrix(scan)
+	if len(violations) != 1 || !contains(violations[0], "observe->capture") {
+		t.Fatalf("violations = %v, want one observe->capture breach", violations)
+	}
+}

@@ -12,7 +12,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -45,13 +44,13 @@ type errorBundlesParams struct {
 func GetErrorBundles(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	params, paramHint := normalizeErrorBundlesParams(args)
 
-	_, trackedTabID, trackedTabURL := deps.Capture.Extension().GetTrackingStatus()
+	_, trackedTabID, trackedTabURL := deps.Extension.GetTrackingStatus()
 	if params.URL == "" && params.Scope == "current_page" && trackedTabURL != "" {
 		params.URL = trackedTabURL
 	}
 
 	errors, logs := collectErrorsAndLogs(deps, params.Limit, params.URL, params.Scope, trackedTabID)
-	ctx := bundleContextFromCapture(deps.Capture, params, logs)
+	ctx := bundleContextFromDeps(deps, params, logs)
 
 	bundles := buildBundles(errors, ctx)
 
@@ -61,7 +60,7 @@ func GetErrorBundles(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessag
 	}
 
 	if params.Summary {
-		summaryResp := buildErrorBundlesSummary(bundles, newestEntry, core.BuildResponseMetadata(deps.Capture, newestEntry))
+		summaryResp := buildErrorBundlesSummary(bundles, newestEntry, core.BuildResponseMetadata(deps.Extension, newestEntry))
 		attachParamHint(summaryResp, paramHint)
 		return mcp.Succeed(req, "Error bundles", summaryResp)
 	}
@@ -69,7 +68,7 @@ func GetErrorBundles(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessag
 	response := map[string]any{
 		"bundles":  bundles,
 		"count":    len(bundles),
-		"metadata": core.BuildResponseMetadata(deps.Capture, newestEntry),
+		"metadata": core.BuildResponseMetadata(deps.Extension, newestEntry),
 	}
 	attachParamHint(response, paramHint)
 	if len(bundles) == 0 {
@@ -110,17 +109,17 @@ func attachParamHint(response map[string]any, paramHint string) {
 	}
 }
 
-func bundleContextFromCapture(cap *capture.Capture, params errorBundlesParams, logs []timedEntry) bundleContext {
-	_, trackedTabID, _ := cap.Extension().GetTrackingStatus()
-	networkBodies := cap.Telemetry().NetworkBodies().Snapshot().Bodies
-	waterfallEntries := cap.Telemetry().NetworkWaterfall().Entries()
-	actions := cap.Telemetry().Actions().Snapshot().Actions
+func bundleContextFromDeps(deps core.Deps, params errorBundlesParams, logs []timedEntry) bundleContext {
+	_, trackedTabID, trackedURL := deps.Extension.GetTrackingStatus()
+	networkBodies := deps.Telemetry.NetworkBodies().Snapshot().Bodies
+	waterfallEntries := deps.Telemetry.NetworkWaterfall().Entries()
+	actions := deps.Telemetry.Actions().Snapshot().Actions
 
 	// Apply scope filtering to context buffers so bundles only include
 	// network/action entries from the tracked tab, not global state.
 	if params.Scope == "current_page" && trackedTabID != 0 {
 		networkBodies = filterNetworkBodiesByTab(networkBodies, trackedTabID)
-		waterfallEntries = filterWaterfallByTab(waterfallEntries, trackedTabID, cap)
+		waterfallEntries = filterWaterfallByURL(waterfallEntries, trackedURL)
 		actions = filterActionsByTab(actions, trackedTabID)
 	}
 
@@ -288,10 +287,9 @@ func filterNetworkBodiesByTab(bodies []types.NetworkBody, tabID int) []types.Net
 	return filtered
 }
 
-// filterWaterfallByTab returns only waterfall entries from the tracked page.
-// NetworkWaterfallEntry lacks a TabID, so we match on the tracked tab's URL via capture.
-func filterWaterfallByTab(entries []types.NetworkWaterfallEntry, tabID int, cap *capture.Capture) []types.NetworkWaterfallEntry {
-	_, _, trackedURL := cap.Extension().GetTrackingStatus()
+// filterWaterfallByURL returns only waterfall entries from the tracked page.
+// NetworkWaterfallEntry lacks a TabID, so we match on the tracked tab's URL.
+func filterWaterfallByURL(entries []types.NetworkWaterfallEntry, trackedURL string) []types.NetworkWaterfallEntry {
 	if trackedURL == "" {
 		return entries
 	}
@@ -374,7 +372,7 @@ func GetSessionTimeline(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMes
 
 	if params.Summary {
 		summary := buildTimelineSummary(entries)
-		summary["metadata"] = core.BuildResponseMetadata(deps.Capture, time.Now())
+		summary["metadata"] = core.BuildResponseMetadata(deps.Extension, time.Now())
 		return mcp.Succeed(req, "Timeline", summary)
 	}
 
@@ -385,7 +383,7 @@ func GetSessionTimeline(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMes
 	response := map[string]any{
 		"entries":  entries,
 		"count":    len(entries),
-		"metadata": core.BuildResponseMetadata(deps.Capture, time.Now()),
+		"metadata": core.BuildResponseMetadata(deps.Extension, time.Now()),
 	}
 	if len(entries) == 0 {
 		response["hint"] = hints.Timeline()
@@ -394,25 +392,23 @@ func GetSessionTimeline(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMes
 }
 
 func collectTimelineEntries(deps core.Deps, inc timelineIncludes) []timelineEntry {
-	cap := deps.Capture
 	entries := make([]timelineEntry, 0)
 	if inc.actions {
-		entries = append(entries, collectTimelineActions(cap)...)
+		entries = append(entries, collectTimelineActions(deps.Telemetry.Actions().Snapshot().Actions)...)
 	}
 	if inc.errors {
 		entries = append(entries, collectTimelineErrors(deps)...)
 	}
 	if inc.network {
-		entries = append(entries, collectTimelineNetwork(cap.Telemetry().NetworkWaterfall().Entries())...)
+		entries = append(entries, collectTimelineNetwork(deps.Telemetry.NetworkWaterfall().Entries())...)
 	}
 	if inc.ws {
-		entries = append(entries, collectTimelineWebSocket(cap.Telemetry().WebSockets().Snapshot().Events)...)
+		entries = append(entries, collectTimelineWebSocket(deps.Telemetry.WebSockets().Snapshot().Events)...)
 	}
 	return entries
 }
 
-func collectTimelineActions(cap *capture.Capture) []timelineEntry {
-	actions := cap.Telemetry().Actions().Snapshot().Actions
+func collectTimelineActions(actions []types.EnhancedAction) []timelineEntry {
 	entries := make([]timelineEntry, 0, len(actions))
 	for _, a := range actions {
 		ts := time.UnixMilli(a.Timestamp).Format(time.RFC3339Nano)

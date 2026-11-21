@@ -35,7 +35,7 @@ func GetBrowserErrors(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 	params.Limit = core.ClampLimit(params.Limit, 100)
 	paramHint := normalizeErrorsScope(&params.Scope)
 
-	_, trackedTabID, trackedTabURL := deps.Capture.Extension().GetTrackingStatus()
+	_, trackedTabID, trackedTabURL := deps.Extension.GetTrackingStatus()
 	params.URL = defaultURLFilter(params.URL, params.Scope, trackedTabURL)
 	entries, _ := deps.LogEntries()
 
@@ -43,7 +43,7 @@ func GetBrowserErrors(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 	errors := errorEntriesToMaps(matched)
 	newestTS := newestErrorTimestamp(errors)
 
-	responseMeta := core.BuildResponseMetadata(deps.Capture, newestTS)
+	responseMeta := core.BuildResponseMetadata(deps.Extension, newestTS)
 	responseMeta.NoiseSuppressed = noiseSuppressed
 
 	if params.Summary {
@@ -173,7 +173,7 @@ func GetBrowserLogs(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage
 	mcp.LenientUnmarshal(args, &params)
 	paramHint := normalizeLogsParams(&params)
 
-	_, trackedTabID, trackedTabURL := deps.Capture.Extension().GetTrackingStatus()
+	_, trackedTabID, trackedTabURL := deps.Extension.GetTrackingStatus()
 	params.Limit = core.ClampLimit(params.Limit, 100)
 	params.URL = defaultURLFilter(params.URL, params.Scope, trackedTabURL)
 
@@ -201,7 +201,7 @@ func GetBrowserLogs(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage
 
 	newestTS := newestLogTimestamp(paginated)
 	isFirstPage := params.AfterCursor == "" && params.BeforeCursor == "" && params.SinceCursor == ""
-	meta := core.BuildPaginatedMetadataWithSummary(deps.Capture, newestTS, pMeta, isFirstPage, func() map[string]any {
+	meta := core.BuildPaginatedMetadataWithSummary(deps.Extension, newestTS, pMeta, isFirstPage, func() map[string]any {
 		return quickLogsSummary(logs)
 	})
 	meta["scope"] = params.Scope
@@ -332,7 +332,7 @@ func attachExtensionLogs(response map[string]any, deps core.Deps, params browser
 		limit = params.Limit
 	}
 	limit = core.ClampLimit(limit, 100)
-	extLogs := buildExtensionLogEntries(deps.Capture.ExtensionLogs().Entries(), limit, "", params.MinLevel)
+	extLogs := buildExtensionLogEntries(deps.ExtensionLogs.Entries(), limit, "", params.MinLevel)
 	response["extension_logs"] = extLogs
 	response["extension_logs_count"] = len(extLogs)
 }
@@ -434,7 +434,7 @@ func GetExtensionLogs(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 	mcp.LenientUnmarshal(args, &params)
 	params.Limit = core.ClampLimit(params.Limit, 100)
 
-	allLogs := deps.Capture.ExtensionLogs().Entries()
+	allLogs := deps.ExtensionLogs.Entries()
 	logs := buildExtensionLogEntries(allLogs, params.Limit, params.Level, "")
 
 	var newestTS time.Time
@@ -445,7 +445,7 @@ func GetExtensionLogs(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 	return mcp.Succeed(req, "Extension logs", map[string]any{
 		"logs":     logs,
 		"count":    len(logs),
-		"metadata": core.BuildResponseMetadata(deps.Capture, newestTS),
+		"metadata": core.BuildResponseMetadata(deps.Extension, newestTS),
 	})
 }
 
@@ -457,7 +457,7 @@ func AnalyzeErrors(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mc
 	return mcp.Succeed(req, "Error clusters", map[string]any{
 		"clusters":    result,
 		"total_count": len(result),
-		"metadata":    core.BuildResponseMetadata(deps.Capture, time.Now()),
+		"metadata":    core.BuildResponseMetadata(deps.Extension, time.Now()),
 	})
 }
 

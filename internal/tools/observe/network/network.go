@@ -34,7 +34,7 @@ func GetNetworkBodies(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 	mcp.LenientUnmarshal(args, &params)
 	params.Limit = core.ClampLimit(params.Limit, 100)
 
-	allBodies := deps.Capture.Telemetry().NetworkBodies().Snapshot().Bodies
+	allBodies := deps.Telemetry.NetworkBodies().Snapshot().Bodies
 	filtered, bodyFilterErr := filterNetworkBodies(allBodies, params)
 
 	if bodyFilterErr != nil {
@@ -54,8 +54,8 @@ func GetNetworkBodies(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 		newestTS, _ = time.Parse(time.RFC3339, allBodies[len(allBodies)-1].Timestamp)
 	}
 
-	waterfallCount := len(deps.Capture.Telemetry().NetworkWaterfall().Entries())
-	responseMeta := core.BuildResponseMetadata(deps.Capture, newestTS)
+	waterfallCount := len(deps.Telemetry.NetworkWaterfall().Entries())
+	responseMeta := core.BuildResponseMetadata(deps.Extension, newestTS)
 	hintFilters := hints.NetworkBodiesFilters{
 		URL:       params.URL,
 		Method:    params.Method,
@@ -142,7 +142,7 @@ func GetWSEvents(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 
 	params.Limit = core.ClampLimit(params.Limit, 100)
 
-	allEvents := deps.Capture.Telemetry().WebSockets().Snapshot().Events
+	allEvents := deps.Telemetry.WebSockets().Snapshot().Events
 	filtered := buffers.ReverseFilterLimit(allEvents, func(evt types.WebSocketEvent) bool {
 		return wsEventMatches(evt, params)
 	}, params.Limit)
@@ -151,7 +151,7 @@ func GetWSEvents(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		newestTS, _ = time.Parse(time.RFC3339, allEvents[len(allEvents)-1].Timestamp)
 	}
 
-	responseMeta := core.BuildResponseMetadata(deps.Capture, newestTS)
+	responseMeta := core.BuildResponseMetadata(deps.Extension, newestTS)
 	if params.Summary {
 		summary := buildWSEventsSummary(filtered, responseMeta)
 		if paramHint != "" {
@@ -227,7 +227,7 @@ func GetNetworkWaterfall(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMe
 		return mcp.Succeed(req, "Network waterfall", map[string]any{
 			"entries":  entries,
 			"count":    len(entries),
-			"metadata": core.BuildResponseMetadata(deps.Capture, newestTS),
+			"metadata": core.BuildResponseMetadata(deps.Extension, newestTS),
 		})
 	}
 
@@ -235,7 +235,7 @@ func GetNetworkWaterfall(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMe
 	response := map[string]any{
 		"entries":  entries,
 		"count":    len(entries),
-		"metadata": core.BuildResponseMetadata(deps.Capture, newestTS),
+		"metadata": core.BuildResponseMetadata(deps.Extension, newestTS),
 	}
 	if len(entries) == 0 {
 		response["hint"] = hints.NetworkWaterfall(params.URLFilter)
@@ -244,12 +244,11 @@ func GetNetworkWaterfall(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMe
 }
 
 func refreshWaterfallIfStale(deps core.Deps) []types.NetworkWaterfallEntry {
-	cap := deps.Capture
 	refreshTimeout := deps.WaterfallRefreshTimeout
 	if refreshTimeout <= 0 {
 		refreshTimeout = waterfallRefreshTimeoutDefault
 	}
-	allEntries := cap.Telemetry().NetworkWaterfall().Entries()
+	allEntries := deps.Telemetry.NetworkWaterfall().Entries()
 	now := time.Now()
 	if deps.Now != nil {
 		now = deps.Now()
@@ -280,8 +279,8 @@ func refreshWaterfallIfStale(deps core.Deps) []types.NetworkWaterfallEntry {
 		PageURL string                        `json:"page_url"`
 	}
 	if err := json.Unmarshal(result, &waterfallResult); err == nil && len(waterfallResult.Entries) > 0 {
-		cap.Telemetry().NetworkWaterfall().Add(waterfallResult.Entries, waterfallResult.PageURL)
-		return cap.Telemetry().NetworkWaterfall().Entries()
+		deps.Telemetry.NetworkWaterfall().Add(waterfallResult.Entries, waterfallResult.PageURL)
+		return deps.Telemetry.NetworkWaterfall().Entries()
 	}
 	return allEntries
 }
@@ -392,8 +391,8 @@ func GetWSStatus(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		URLFilter:    arguments.URL,
 		ConnectionID: arguments.ConnectionID,
 	}
-	status := deps.Capture.Telemetry().WebSockets().Status(filter)
-	metadata := core.BuildResponseMetadata(deps.Capture, time.Now())
+	status := deps.Telemetry.WebSockets().Status(filter)
+	metadata := core.BuildResponseMetadata(deps.Extension, time.Now())
 
 	if arguments.Summary {
 		response := buildWSStatusSummary(status, metadata)

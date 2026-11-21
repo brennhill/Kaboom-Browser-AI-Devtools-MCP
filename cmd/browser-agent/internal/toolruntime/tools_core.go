@@ -708,8 +708,8 @@ func buildObserveLocalDeps(h *ToolHandler) toolobserve.Deps {
 }
 
 func buildObserveReadDeps(h *ToolHandler) observecore.Deps {
-	return observecore.Deps{
-		Capture: h.capture, Commands: queryRunner(h), Screenshots: newScreenshotService(h), PageInfo: newPageInfoService(h),
+	deps := observecore.Deps{
+		Commands: queryRunner(h), Screenshots: newScreenshotService(h), PageInfo: newPageInfoService(h),
 		Storage: newStorageService(h), A11y: newA11yService(h),
 		LogEntries: func() ([]types.LogEntry, []time.Time) {
 			return h.state.Logs.EntriesWithAddedAt()
@@ -723,6 +723,11 @@ func buildObserveReadDeps(h *ToolHandler) observecore.Deps {
 		},
 		DiagnosticHintString: h.Guards.DiagnosticHintString,
 	}
+	if h.capture != nil {
+		deps.Extension, deps.Telemetry = h.capture.Extension(), h.capture.Telemetry()
+		deps.Performance, deps.ExtensionLogs = h.capture.Performance(), h.capture.ExtensionLogs()
+	}
+	return deps
 }
 
 func buildScreenrecDeps(h *ToolHandler) screenrec.Deps {

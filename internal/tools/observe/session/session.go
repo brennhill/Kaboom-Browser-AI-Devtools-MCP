@@ -32,7 +32,7 @@ func GetEnhancedActions(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMes
 	mcp.LenientUnmarshal(args, &params)
 	params.Limit = core.ClampLimit(params.Limit, 100)
 
-	allActions := deps.Capture.Telemetry().Actions().Snapshot().Actions
+	allActions := deps.Telemetry.Actions().Snapshot().Actions
 	filtered := buffers.ReverseFilterLimit(allActions, func(a types.EnhancedAction) bool {
 		if params.Type != "" && a.Type != params.Type {
 			return false
@@ -52,7 +52,7 @@ func GetEnhancedActions(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMes
 		newestTS = time.UnixMilli(allActions[len(allActions)-1].Timestamp)
 	}
 
-	responseMeta := core.BuildResponseMetadata(deps.Capture, newestTS)
+	responseMeta := core.BuildResponseMetadata(deps.Extension, newestTS)
 	if params.Summary {
 		return mcp.Succeed(req, "Enhanced actions", buildActionsSummary(filtered, responseMeta))
 	}
@@ -93,7 +93,7 @@ func GetTransients(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 	// MVP: duration_ms is always 0 — removal tracking is not yet implemented.
 	params.Limit = core.ClampLimit(params.Limit, 50)
 
-	allActions := deps.Capture.Telemetry().Actions().Snapshot().Actions
+	allActions := deps.Telemetry.Actions().Snapshot().Actions
 	filtered := buffers.ReverseFilterLimit(allActions, func(a types.EnhancedAction) bool {
 		if a.Type != "transient" {
 			return false
@@ -112,7 +112,7 @@ func GetTransients(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 		newestTS = time.UnixMilli(filtered[0].Timestamp)
 	}
 
-	responseMeta := core.BuildResponseMetadata(deps.Capture, newestTS)
+	responseMeta := core.BuildResponseMetadata(deps.Extension, newestTS)
 	if params.Summary {
 		summaryResp := buildTransientsSummary(filtered, responseMeta)
 		if paramHint != "" {
@@ -155,9 +155,9 @@ func buildTransientsSummary(actions []types.EnhancedAction, meta core.ResponseMe
 
 // ObservePilot returns the current pilot/extension connection status.
 func ObservePilot(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	status := deps.Capture.Extension().GetPilotStatus()
+	status := deps.Extension.GetPilotStatus()
 	if statusMap, ok := status.(map[string]any); ok {
-		statusMap["metadata"] = core.BuildResponseMetadata(deps.Capture, time.Now())
+		statusMap["metadata"] = core.BuildResponseMetadata(deps.Extension, time.Now())
 	}
 	return mcp.Succeed(req, "Pilot status", status)
 }
@@ -168,12 +168,12 @@ func CheckPerformance(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 		TraceSource string `json:"trace_source"`
 	}
 	mcp.LenientUnmarshal(args, &params)
-	snapshots := deps.Capture.Performance().Entries()
+	snapshots := deps.Performance.Entries()
 	response := map[string]any{
 		"snapshots": snapshots,
 		"count":     len(snapshots),
 	}
-	waterfall := deps.Capture.Telemetry().NetworkWaterfall().Entries()
+	waterfall := deps.Telemetry.NetworkWaterfall().Entries()
 	if len(snapshots) > 0 {
 		response["critical_path"] = performance_navigation.BuildCriticalPath(snapshots[len(snapshots)-1], waterfall)
 	} else {
@@ -198,11 +198,11 @@ func AnalyzeHistory(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage
 	}
 	mcp.LenientUnmarshal(args, &params)
 
-	actions := deps.Capture.Telemetry().Actions().Snapshot().Actions
+	actions := deps.Telemetry.Actions().Snapshot().Actions
 	entries := buildHistoryEntries(actions)
 	entries = limitHistoryEntries(entries, core.ClampLimit(params.Limit, 0))
 
-	responseMeta := core.BuildResponseMetadata(deps.Capture, time.Now())
+	responseMeta := core.BuildResponseMetadata(deps.Extension, time.Now())
 	if params.Summary {
 		return mcp.Succeed(req, "History", buildHistorySummary(entries, responseMeta))
 	}
@@ -240,11 +240,11 @@ func limitHistoryEntries(entries []historyEntry, limit int) []historyEntry {
 }
 
 func GetWebVitals(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	snapshots := deps.Capture.Performance().Entries()
+	snapshots := deps.Performance.Entries()
 	vitals := buildVitalsMap(snapshots)
 	return mcp.Succeed(req, "Web vitals", map[string]any{
 		"metrics":  vitals,
-		"metadata": core.BuildResponseMetadata(deps.Capture, time.Now()),
+		"metadata": core.BuildResponseMetadata(deps.Extension, time.Now()),
 	})
 }
 
@@ -278,8 +278,7 @@ func buildVitalsMap(snapshots []performance.PerformanceSnapshot) map[string]any 
 // GetTabs returns information about tracked browser tabs.
 
 func GetTabs(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	cap := deps.Capture
-	enabled, tabID, tabURL := cap.Extension().GetTrackingStatus()
+	enabled, tabID, tabURL := deps.Extension.GetTrackingStatus()
 
 	tabs := []any{}
 	if enabled && tabID > 0 {
@@ -294,7 +293,7 @@ func GetTabs(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSON
 	return mcp.Succeed(req, "Tabs", map[string]any{
 		"tabs":            tabs,
 		"tracking_active": enabled,
-		"metadata":        core.BuildResponseMetadata(cap, time.Now()),
+		"metadata":        core.BuildResponseMetadata(deps.Extension, time.Now()),
 	})
 }
 

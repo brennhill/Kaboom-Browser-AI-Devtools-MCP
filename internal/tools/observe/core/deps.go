@@ -12,14 +12,22 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pageinfo"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pagestorage"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // Deps names the canonical read owners and operations used by observe modes.
 type Deps struct {
-	Capture *capture.Capture
+	// Read owners. Each observation module reads only the stores it needs;
+	// buffer ownership and retention stay with these stores.
+	Extension     *syncruntime.Runtime
+	Telemetry     *telemetrystore.Store
+	Performance   *perfstore.Store
+	ExtensionLogs *logstore.Extension
 	// Commands sends on-demand extension queries (storage, IndexedDB,
 	// waterfall refresh) through the browser-command owner.
 	Commands queries.QueryRunner

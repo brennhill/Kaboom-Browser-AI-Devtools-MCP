@@ -336,7 +336,7 @@ type mockA11yDeps struct {
 
 func (m *mockA11yDeps) deps() core.Deps {
 	return core.Deps{
-		Capture:              m.cap,
+		Extension: m.cap.Extension(), Telemetry: m.cap.Telemetry(), Performance: m.cap.Performance(), ExtensionLogs: m.cap.ExtensionLogs(),
 		LogEntries:           func() ([]types.LogEntry, []time.Time) { return nil, nil },
 		LogTotalAdded:        func() int64 { return 0 },
 		IsConsoleNoise:       func(types.LogEntry) bool { return false },

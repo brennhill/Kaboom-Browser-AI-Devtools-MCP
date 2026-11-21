@@ -264,6 +264,13 @@ kinds to the unchanged MCP errors and add metadata; services are composed in
 `toolruntime/usecase_wiring.go`. The combined audit
 (`toolanalyze/combinedaudit`) takes composed `Performance`/`Accessibility`
 mode handlers instead of `observecore.Deps`.
+Observe modes no longer receive the whole `*capture.Capture`: `observecore.Deps`
+carries the read owners (`Extension` = `syncruntime.Runtime`, `Telemetry`,
+`Performance`, `ExtensionLogs`), so logs/network/session/timeline read their
+stores directly with unchanged buffer ownership and retention. Response metadata
+takes a one-method `core.Connection`. The layering rule `observe->capture`
+forbids `internal/tools/observe/**` (except `testsupport`) from importing
+`internal/capture`.
 Live-page storage, IndexedDB, screenshot, and accessibility failures use the
 canonical `mcp.Fail` response boundary; queue saturation guidance is built once
 with the canonical `pending_commands` recovery call.

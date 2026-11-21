@@ -54,7 +54,7 @@ func TestPilotModeDoesNotReceiveDisconnectWarning(t *testing.T) {
 	captured := capture.NewCapture()
 	defer captured.Close()
 	dispatcher := NewDispatcher(Config{
-		Observe:              observecore.Deps{Capture: captured},
+		Observe:              observecore.Deps{Extension: captured.Extension(), Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs()},
 		IsExtensionConnected: func() bool { return false },
 		InjectSummary:        func(args json.RawMessage) json.RawMessage { return args },
 		DrainAlerts:          func() []types.Alert { return nil },
@@ -123,7 +123,7 @@ func TestServerSideCommandAndPilotResponseContracts(t *testing.T) {
 	captured := capture.NewCapture()
 	defer captured.Close()
 	dispatcher := NewDispatcher(Config{
-		Observe: observecore.Deps{Capture: captured}, Commands: commandStoreStub{},
+		Observe: observecore.Deps{Extension: captured.Extension(), Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs()}, Commands: commandStoreStub{},
 		IsExtensionConnected: func() bool { return true },
 		InjectSummary:        func(args json.RawMessage) json.RawMessage { return args },
 		DrainAlerts:          func() []types.Alert { return nil },

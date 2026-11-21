@@ -2039,7 +2039,7 @@
     },
     "internal/tools/observe/core/metadata.go": {
       "mutable_globals": 0,
-      "exports": 4
+      "exports": 5
     },
     "internal/tools/observe/errorcluster/cluster.go": {
       "mutable_globals": 0,

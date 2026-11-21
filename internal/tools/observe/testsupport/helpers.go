@@ -24,7 +24,10 @@ import (
 // Deps returns a complete deterministic dependency set for observation tests.
 func Deps(captured *capture.Capture) core.Deps {
 	return core.Deps{
-		Capture:              captured,
+		Extension:            captured.Extension(),
+		Telemetry:            captured.Telemetry(),
+		Performance:          captured.Performance(),
+		ExtensionLogs:        captured.ExtensionLogs(),
 		Commands:             commandsOf(captured),
 		Screenshots:          newScreenshots(captured),
 		PageInfo:             NewPageInfo(captured, nil),

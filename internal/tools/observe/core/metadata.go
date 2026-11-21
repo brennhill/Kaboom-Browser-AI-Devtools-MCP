@@ -7,14 +7,20 @@ package core
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination"
 )
 
 // NOTE: data_age_ms is documented in observe tech/api docs and metadata tests;
 // page_ready_for_commands and tab_status are mode-specific fields on observe(page) responses.
+
+// Connection reports whether the extension link is live (staleness signal).
+// internal/capture/syncruntime.Runtime satisfies it.
+type Connection interface {
+	IsExtensionConnected() bool
+}
 
 // ResponseMetadata provides freshness information for buffer-backed observe responses.
 type ResponseMetadata struct {
@@ -29,11 +35,11 @@ type ResponseMetadata struct {
 }
 
 // BuildResponseMetadata constructs freshness metadata for an observe response.
-func BuildResponseMetadata(cap *capture.Capture, newestEntry time.Time) ResponseMetadata {
+func BuildResponseMetadata(conn Connection, newestEntry time.Time) ResponseMetadata {
 	now := time.Now()
 	meta := ResponseMetadata{
 		RetrievedAt: now.Format(time.RFC3339),
-		IsStale:     !cap.Extension().IsExtensionConnected(),
+		IsStale:     isNilConnection(conn) || !conn.IsExtensionConnected(),
 	}
 	if !newestEntry.IsZero() {
 		age := now.Sub(newestEntry)
@@ -50,8 +56,8 @@ func BuildResponseMetadata(cap *capture.Capture, newestEntry time.Time) Response
 }
 
 // BuildPaginatedResponseMetadata merges freshness metadata with cursor pagination metadata.
-func BuildPaginatedResponseMetadata(cap *capture.Capture, newestEntry time.Time, pMeta *pagination.CursorPaginationMetadata) map[string]any {
-	base := BuildResponseMetadata(cap, newestEntry)
+func BuildPaginatedResponseMetadata(conn Connection, newestEntry time.Time, pMeta *pagination.CursorPaginationMetadata) map[string]any {
+	base := BuildResponseMetadata(conn, newestEntry)
 	meta := map[string]any{
 		"retrieved_at": base.RetrievedAt,
 		"is_stale":     base.IsStale,
@@ -81,16 +87,16 @@ func BuildPaginatedResponseMetadata(cap *capture.Capture, newestEntry time.Time,
 
 // BuildPaginatedMetadataWithSummary adds a summary block to first-page paginated responses.
 func BuildPaginatedMetadataWithSummary(
-	cap *capture.Capture, newestEntry time.Time,
+	conn Connection, newestEntry time.Time,
 	pMeta *pagination.CursorPaginationMetadata,
 	isFirstPage bool,
 	summaryFn func() map[string]any,
 ) map[string]any {
 	var meta map[string]any
-	if cap != nil {
-		meta = BuildPaginatedResponseMetadata(cap, newestEntry, pMeta)
+	if !isNilConnection(conn) {
+		meta = BuildPaginatedResponseMetadata(conn, newestEntry, pMeta)
 	} else {
-		// Nil capture — build minimal metadata for testing
+		// No extension owner — build minimal metadata for testing
 		meta = map[string]any{
 			"total":    pMeta.Total,
 			"has_more": pMeta.HasMore,
@@ -103,4 +109,14 @@ func BuildPaginatedMetadataWithSummary(
 		meta["summary"] = summaryFn()
 	}
 	return meta
+}
+
+// isNilConnection reports a missing extension owner, including a typed nil
+// pointer stored in the interface (degraded or test composition).
+func isNilConnection(conn Connection) bool {
+	if conn == nil {
+		return true
+	}
+	value := reflect.ValueOf(conn)
+	return value.Kind() == reflect.Pointer && value.IsNil()
 }

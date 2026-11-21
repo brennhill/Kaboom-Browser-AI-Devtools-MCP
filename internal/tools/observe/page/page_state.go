@@ -29,7 +29,7 @@ func GetPageInfo(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.
 		"csp_level":               info.CSPLevel,
 		"tab_status":              info.TabStatus,
 		"page_ready_for_commands": info.ReadyForCommands,
-		"metadata":                core.BuildResponseMetadata(deps.Capture, time.Now()),
+		"metadata":                core.BuildResponseMetadata(deps.Extension, time.Now()),
 	}
 	if info.TabID > 0 {
 		result["tab_id"] = info.TabID
@@ -89,7 +89,7 @@ func GetStorage(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 	if err != nil {
 		return storageFailure(deps, req, err)
 	}
-	fields["metadata"] = core.BuildResponseMetadata(deps.Capture, time.Now())
+	fields["metadata"] = core.BuildResponseMetadata(deps.Extension, time.Now())
 	return mcp.Succeed(req, "Browser storage", fields)
 }
 
@@ -162,7 +162,7 @@ func GetIndexedDB(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) 
 	fields["database"] = params.Database
 	fields["store"] = params.Store
 	fields["limit"] = params.Limit
-	fields["metadata"] = core.BuildResponseMetadata(deps.Capture, time.Now())
+	fields["metadata"] = core.BuildResponseMetadata(deps.Extension, time.Now())
 	return mcp.Succeed(req, "IndexedDB entries", fields)
 }
 

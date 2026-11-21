@@ -18,6 +18,9 @@
 //	command-owner        no production X.Queries() call, and no import of
 //	                     internal/browsercommand/internal/dispatch outside
 //	                     internal/browsercommand/** (command_owner.go)
+//	internal/tools/observe/** ↛ internal/capture (observe modes take their read
+//	                     owners — syncruntime, telemetrystore, perfstore, logstore —
+//	                     never the whole Capture; testsupport is exempt)
 //	capture.NewCapture   only from cmd/browser-agent (ports are wired by the
 //	                     composition root; detection resolves import ALIASES
 //	                     and package-level var initializers, not the literal
@@ -412,6 +415,9 @@ func evaluateMatrix(scan *treeScan) []string {
 				violations = append(violations, fmt.Sprintf("internal->cmd: %s imports %s", file, imp))
 			case isPkgOrSub(srcPkg, modulePrefix+"internal/mcp") && (isPkgOrSub(internal, "internal/tools") || isPkgOrSub(internal, "internal/capture")):
 				violations = append(violations, fmt.Sprintf("mcp->domain: %s imports %s", file, imp))
+			case isPkgOrSub(srcPkg, modulePrefix+"internal/tools/observe") && internal == "internal/capture" &&
+				srcPkg != modulePrefix+"internal/tools/observe/testsupport":
+				violations = append(violations, fmt.Sprintf("observe->capture: %s imports %s; depend on the read owners", file, imp))
 			case isPkgOrSub(srcPkg, modulePrefix+"internal/schema") && isPkgOrSub(internal, "internal/tools"):
 				violations = append(violations, fmt.Sprintf("schema->tools: %s imports %s", file, imp))
 			}
