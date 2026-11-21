@@ -7,6 +7,7 @@ package instancegov
 
 import (
 	"context"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/idlewatch"
@@ -31,7 +32,7 @@ func (r *Result) StartHeartbeat(ctx context.Context, interval time.Duration, onE
 	if interval <= 0 {
 		interval = DefaultHeartbeatInterval
 	}
-	go func() {
+	util.SafeGo(func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 		for {
@@ -44,7 +45,7 @@ func (r *Result) StartHeartbeat(ctx context.Context, interval time.Duration, onE
 				}
 			}
 		}
-	}()
+	})
 }
 
 // StartIdleWatch shuts the instance down once it has no work left, or once a test

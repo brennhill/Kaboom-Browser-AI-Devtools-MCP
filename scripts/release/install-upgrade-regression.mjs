@@ -5,6 +5,7 @@ import path from 'node:path'
 import net from 'node:net'
 import http from 'node:http'
 import { createHash } from 'node:crypto'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { spawn, spawnSync } from 'node:child_process'
 import { resolveDaemonServiceName } from './daemon-health-identity.mjs'
@@ -35,6 +36,23 @@ function info(message) {
 function fail(message, details = '') {
   const text = [`[upgrade-regression] ERROR: ${message}`, details].filter(Boolean).join('\n')
   throw new Error(text)
+}
+
+// The installs below pass --ignore-scripts so the packaged preinstall (daemon
+// kill) and skills postinstall cannot touch the CI host. That also skips the
+// postinstall step that rewires npm's Windows .bin shims to bin/*.cmd; without
+// it npm's shim follows the `#!/bin/sh` shebang and fails with "The system
+// cannot find the path specified" on a runner without sh. Run that one step
+// from the installed (packed) copy, exactly as npm would, and fail loudly.
+function wireInstalledWindowsShims(installRoot) {
+  const packageRoot = path.join(installRoot, 'node_modules', 'kaboom-agentic-browser')
+  const require = createRequire(import.meta.url)
+  const { wireWindowsShims } = require(path.join(packageRoot, 'lib', 'runtime', 'postinstall-shims.js'))
+  const result = wireWindowsShims({ packageRoot })
+  if (result.failures.length > 0) {
+    fail('could not wire Windows command shims', result.failures.map((f) => `${f.file}: ${f.error}`).join('\n'))
+  }
+  if (isWindows && result.skipped) fail('Windows command shims were not wired', result.reason || '')
 }
 
 function persistEvidence() {
@@ -261,6 +279,7 @@ function buildPackedArtifact(tmpRoot, version, browserBinary, hooksBinary, env) 
     ],
     { env }
   )
+  wireInstalledWindowsShims(installRoot)
   const wrapperName = isWindows ? 'kaboom-agentic-browser.cmd' : 'kaboom-agentic-browser'
   const wrapper = path.join(installRoot, 'node_modules', '.bin', wrapperName)
   if (binaryVersion(wrapper, env) !== version) fail('packed npm wrapper did not expose the expected embedded version')
@@ -456,6 +475,7 @@ function stageSameVersionReinstall(ctx) {
       env: ctx.envWithShims
     }
   )
+  wireInstalledWindowsShims(ctx.packed.installRoot)
   validateCandidateVersion(ctx.newBinary, ctx.version, ctx.candidateChecksum, ctx.envWithShims)
   ctx.evidence.scenarios.push({ name: 'same_version_reinstall', status: 'passed' })
 }

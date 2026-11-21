@@ -11,6 +11,7 @@
 package testowner
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 	"os"
 	"strconv"
 	"sync"
@@ -47,7 +48,7 @@ func Watch(alive func(int) bool, exit func(), interval time.Duration) (func(), b
 	var once sync.Once
 	stop := func() { once.Do(func() { close(done) }) }
 
-	go func() {
+	util.SafeGo(func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 		for {
@@ -61,7 +62,7 @@ func Watch(alive func(int) bool, exit func(), interval time.Duration) (func(), b
 				}
 			}
 		}
-	}()
+	})
 
 	return stop, true
 }
