@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-dom-fingerprinting
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -272,9 +272,11 @@ A performance guard warns (console.warn) if extraction exceeds the 30ms budget.
 
 ---
 
-## File Locations
+## File Locations (planned)
 
-- Server implementation: `cmd/browser-agent/ai_fingerprint.go`
-- Server tests: `cmd/browser-agent/ai_fingerprint_test.go`
-- Extension extraction logic: additions to `extension/inject.js`
-- Extension tests: `extension-tests/fingerprint.test.js`
+Nothing in this spec is implemented yet; no `get_dom_fingerprint` / `compare_dom_fingerprint` handler exists in the repo. Planned locations:
+
+- Server implementation: a new fingerprint handler package under `cmd/browser-agent/internal/` (exposed as an `analyze` mode, since the 5-tool limit forbids new top-level tools)
+- Server tests: alongside that package
+- Extension extraction logic: a new module under `src/inject/`, compiled into the extension bundle
+- Extension tests: a new test file under `tests/extension/`

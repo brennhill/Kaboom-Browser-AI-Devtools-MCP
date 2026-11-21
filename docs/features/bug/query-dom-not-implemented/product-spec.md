@@ -1,21 +1,23 @@
 ---
 feature: query-dom-not-implemented
-status: in-progress
-tool: generate
+status: shipped
+tool: analyze
 mode: dom
 version: 0.7.12
 doc_type: product-spec
 feature_id: bug-query-dom-not-implemented
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
 
 # Product Spec: Query DOM Not Implemented (Bug Fix)
 
+> **Resolved (reviewed 2026-11-21).** The forwarding chain is complete: `registerCommand('dom', ...)` in `src/background/commands/analyze.ts` sends `dom_query` to the tracked tab (with frame routing and a fallback when content-script messaging is unavailable), `src/content/message-handlers.ts` handles `DOM_QUERY`, and `src/inject/message-handlers.ts` calls `executeDOMQuery()` from `src/lib/analysis/dom-queries.ts`. The `not_implemented` stub no longer exists. The text below records the original bug.
+
 ## Problem Statement
 
-The MCP schema advertises a `analyze({what: "dom"})` action under the `generate` tool, but when users attempt to call it, they receive misleading empty results instead of actual DOM query data. Even universal selectors like `"*"` return 0 matches on pages that clearly contain DOM elements.
+The MCP schema advertises an `analyze({what: "dom"})` action, but when users attempt to call it, they receive misleading empty results instead of actual DOM query data. Even universal selectors like `"*"` return 0 matches on pages that clearly contain DOM elements.
 
 ### Current User Experience:
 1. User calls `analyze({what: "dom", selector: "h1"})`
@@ -139,8 +141,8 @@ Complete the message forwarding chain so that DOM queries flow from the MCP tool
 
 ## Notes
 
-- Existing implementation of `executeDOMQuery()` in `extension/lib/analysis/dom-queries.js` is complete and tested
-- Backend server query executor in `cmd/browser-agent/queries.go` already handles DOM query creation and result posting
-- Only missing piece is the message forwarding in `extension/background.js` lines 2634-2640 (currently returns 'not_implemented')
+- `executeDOMQuery()` lives in `src/lib/analysis/dom-queries.ts` (compiled to `extension/lib/analysis/dom-queries.js`)
+- Server side: `analyze(what:"dom")` is dispatched by `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go` to `HandleDOM` in `cmd/browser-agent/internal/toolanalyze/inspect/dom.go`, which creates the pending query
+- The missing piece at the time was message forwarding in the background script (then returning 'not_implemented'); it is now `src/background/commands/analyze.ts`
 - Fix should follow the same pattern as accessibility queries (which work correctly)
 - Related specs: See `docs/features/feature/query-dom/product-spec.md` for the original feature specification

@@ -3,7 +3,7 @@ feature: Enhanced CLI Configuration Management
 status: proposed
 doc_type: tech-spec
 feature_id: feature-enhanced-cli-config
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -14,7 +14,7 @@ last_verified_date: 2026-03-28
 
 ## Architecture Overview
 
-The enhancement extends **both wrappers** with the same CLI commands:
+The enhancement extends the **npm wrapper** (the only package-manager channel; the former PyPI wrapper was retired, see `docs/core/product/release.md`) with the CLI commands below:
 
 ### NPM Wrapper (`npm/kaboom-agentic-browser/bin/kaboom-agentic-browser`)
 A POSIX `sh` exec shim, not a Node entry point. Structure:
@@ -30,32 +30,23 @@ Windows launchers (no `exec()` on Windows, so `cmd.exe` remains a thin parent).
 `lib/runtime/resolve-binary.js` is the single resolver the shims mirror; see
 `tests/cli/launcher/launcher-shim.contract.test.cjs` for the enforced contract.
 
-### PyPI Wrapper (`pypi/kaboom-agentic-browser/kaboom_agentic_browser/__main__.py`)
-Python CLI entry point. Current structure:
-- **Lines 1-12**: Entry point that calls `run()` function
-- Related: `pypi/kaboom-agentic-browser/kaboom_agentic_browser/platform.py` has `get_binary_path()` and `run()` functions
-
-### New additions (both wrappers)
+### New additions (npm wrapper)
 - Shared utility functions for config file operations (JSON read/write/validate)
 - Command handlers for: `--dry-run`, `--doctor`, `--uninstall`, `--env`
 - Refactored install logic to support `--dry-run` and multi-client targeting
 - New error handling with recovery suggestions
 - Verbose logging support
-- **Feature parity**: Both wrappers must behave identically
+- **Feature parity**: npm and the manual/local installer script must behave identically
 
 ### Bundled Skill Installation Paths
 
 - **npm**:
   - `npm/kaboom-agentic-browser/lib/installation/postinstall-skills.js` installs bundled skills on package install.
   - `npm/kaboom-agentic-browser/lib/cli/cli.js` invokes `installBundledSkills()` during `--install`.
-- **PyPI**:
-  - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/platform.py` invokes `install_bundled_skills()` during `--install`.
-  - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/skills.py` implements managed write/update/legacy cleanup behavior.
-  - `pypi/kaboom-agentic-browser/pyproject.toml` includes bundled skill files as package data.
 - **Manual/local source build**:
   - `scripts/setup/install-bundled-skills.sh` installs bundled skills from `npm/kaboom-agentic-browser/skills` into target agent directories.
 
-## Implementation: NPM vs. Python
+## Implementation: NPM
 
 ### NPM (Node.js)
 - **Language**: JavaScript (Node.js stdlib)
@@ -64,34 +55,15 @@ Python CLI entry point. Current structure:
 - **File I/O**: `fs` module
 - **JSON**: Built-in `JSON.parse()` and `JSON.stringify()`
 
-### Python
-- **Language**: Python 3 (stdlib only)
-- **Location**: `pypi/kaboom-agentic-browser/kaboom_agentic_browser/__main__.py` (entry point) + new module files
-- **Modules**:
-  - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/config.py` (config utilities)
-  - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/doctor.py` (diagnostics)
-  - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/install.py` (install logic)
-  - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/uninstall.py` (uninstall logic)
-  - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/output.py` (formatters)
-  - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/errors.py` (error classes)
-- **File I/O**: `pathlib.Path` or `os`/`open()`
-- **JSON**: Built-in `json` module
-- **Entry Point**: Updated `__main__.py` to parse CLI args and route commands
-
 ### Feature Parity Requirement
-Both wrappers must:
-- Accept same command flags (`--config`, `--install`, `--doctor`, `--uninstall`, `--dry-run`, `--env`, `--verbose`, `--help`)
-- Produce identical output (same messages, same emojis, same error text)
-- Behave identically (same logic, same edge case handling)
-- Use same config file locations (hardcoded paths, not user input)
-- Apply equivalent bundled skill installation semantics during `--install`
+The npm CLI accepts the command flags (`--config`, `--install`, `--doctor`, `--uninstall`, `--dry-run`, `--env`, `--verbose`, `--help`) and uses hardcoded config file locations (not user input). The manual/local installer script (`scripts/setup/install-bundled-skills.sh`) must apply equivalent bundled skill installation semantics to `--install`.
 
 ---
 
 ## Key Components
 
 ### 1. **Client Registry & Config Utilities**
-- `CLIENT_DEFINITIONS`: Structured registry of all 5 supported clients (Claude Code, Claude Desktop, Cursor, Windsurf, VS Code)
+- `CLIENT_DEFINITIONS`: Structured registry of all 10 supported clients (Claude Code, Claude Desktop, Cursor, Windsurf, VS Code, Gemini, OpenCode, Antigravity, Zed, Codex)
 - `getDetectedClients()`: Returns array of clients whose config dir exists or CLI is on PATH
 - `getClientConfigPath(def)`: Returns platform-specific config path for a client
 - `isClientInstalled(def)`: Checks if client is present on the system

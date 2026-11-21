@@ -15,6 +15,6 @@ test('OpenAPI drift generator is exact and lockfile-pinned', () => {
   assert.equal(packageLock.packages[''].devDependencies['openapi-typescript'], '7.13.0')
   assert.equal(packageLock.packages['node_modules/openapi-typescript'].version, '7.13.0')
   assert.equal(packageJSON.overrides['openapi-typescript'].typescript, '$typescript')
-  assert.equal(packageJSON.overrides['js-yaml'], '4.3.1')
-  assert.equal(packageLock.packages['node_modules/js-yaml'].version, '4.3.1')
+  assert.equal(packageJSON.overrides['js-yaml'], '4.3.2')
+  assert.equal(packageLock.packages['node_modules/js-yaml'].version, '4.3.2')
 })

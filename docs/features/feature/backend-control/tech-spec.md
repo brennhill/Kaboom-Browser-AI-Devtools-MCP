@@ -7,7 +7,7 @@ relates-to: [product-spec.md, ../backend-log-streaming/tech-spec.md, ../../core/
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-backend-control
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -39,7 +39,7 @@ last_verified_date: 2026-03-05
 │  │ Audit & Correlation Logger                    │  │
 │  │ - Log all operations with timestamps          │  │
 │  │ - Index by correlation_id                     │  │
-│  │ - Expose for observe({what: 'audit_log'})     │  │
+│  │ - Expose for configure({what:'audit_log'})    │  │
 │  └───────────────────────────────────────────────┘  │
 │  ↓                                                   │
 │  ┌───────────────────────────────────────────────┐  │
@@ -100,7 +100,7 @@ last_verified_date: 2026-03-05
 4. **Audit Logger**
    - Log all operations to `.kaboom/audit.jsonl`
    - Index by correlation_id for fast lookup
-   - Expose via `observe({what: 'audit_log'})`
+   - Expose via the existing `configure({what: 'audit_log'})` query (extended with control entries)
 
 ### Phase 2: Service Integration (Week 2)
 1. **Service Discovery**
@@ -250,7 +250,7 @@ observe({
   }
 
 // Audit log
-observe({
+configure({
   what: "audit_log",
   correlation_id: "test-001",
   limit: 50
@@ -269,18 +269,17 @@ observe({
 
 ## Code References
 
-### New files to create:
-- `cmd/server/control/router.go` — Control command router
-- `cmd/server/control/snapshot.go` — Snapshot manager
-- `cmd/server/control/audit.go` — Audit logger
-- `cmd/server/control/discovery.go` — Service discovery
-- `cmd/server/control/protocol.go` — Control protocol types
-- `extension/src/mcp-tools/backend-control.ts` — Chrome extension MCP tool
+Not yet built (reviewed 2026-11-21). The originally listed cmd/server/control/*, cmd/server/mcp/* and extension/src/mcp-tools/* paths never existed; the server lives in `cmd/browser-agent/` with tool handlers in `cmd/browser-agent/internal/tool*` packages and shared logic in `internal/`. Planned work mapped onto that layout:
 
-### Existing files to modify:
-- `cmd/server/mcp/server.go` — Add control action handler to interact()
-- `cmd/server/mcp/observe.go` — Add audit_log and backend_state modes
-- `cmd/server/mcp/configure.go` — Add snapshot action
+### New code (planned):
+- A new backend-control package under `internal/` (command router, snapshot manager, service discovery, control protocol types)
+- Control operation auditing on top of the existing audit trail in `internal/audit/` (which today records MCP tool calls and is exposed as `configure({what: "audit_log"})` via `cmd/browser-agent/internal/toolconfigure/auditlog/handler.go`)
+- No extension-side tool is needed: MCP tools are served by the Go server only
+
+### Existing code to modify (planned):
+- `cmd/browser-agent/internal/toolinteract/` and `internal/schema/interact/actions.go` — add a control action to `interact`
+- `cmd/browser-agent/internal/toolobserve/registry.go` and `internal/schema/observe.go` — add a `backend_state` mode
+- `cmd/browser-agent/internal/toolconfigure/dispatcher.go` and `internal/schema/configure/` — add a snapshot action
 
 ## Performance Requirements
 - Control operation execution: <50ms for reads, <200ms for writes

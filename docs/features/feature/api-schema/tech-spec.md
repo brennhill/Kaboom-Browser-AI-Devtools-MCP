@@ -1,5 +1,5 @@
 ---
-status: shipped
+status: superseded
 scope: feature/api-schema/implementation
 ai-priority: high
 tags: [implementation, architecture]
@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-api-schema
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -17,6 +17,8 @@ last_verified_date: 2026-03-05
 > See also: [Product Spec](product-spec.md) and [Api Schema Review](./index.md).
 
 # Technical Spec: API Schema Inference
+
+> **Superseded (reviewed 2026-11-21).** Schema inference was never wired to an MCP surface (no `get_api_schema` tool exists) and its dead package was removed on 2026-07-26; see [index.md](./index.md). The live, related capability is API *contract* checking (`analyze({what: "api_validation"})`) in `internal/analysis/apicontract/` (shape learning in `internal/analysis/apicontract/learning.go`, endpoint normalization in `internal/analysis/apicontract/endpoint.go`, runtime adapter in `internal/analysis/apicontract/runtime/handler.go`). The rest of this document is the original design and does not describe running code.
 
 ## Purpose
 
@@ -210,4 +212,4 @@ The observation function is called from the existing `AddNetworkBodies` method. 
 
 ## File Location
 
-Implementation goes in `cmd/browser-agent/ai_schema.go` with tests in `cmd/browser-agent/ai_schema_test.go`.
+Never landed under the originally planned path (a flat `ai_schema.go` in the server package). The schema-inference code that did exist was unreachable and has been removed. Related live code: `internal/analysis/apicontract/` with tests such as `internal/analysis/apicontract/contract_test.go`.

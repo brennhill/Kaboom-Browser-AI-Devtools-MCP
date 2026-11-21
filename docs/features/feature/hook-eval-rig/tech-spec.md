@@ -3,17 +3,15 @@ doc_type: tech-spec
 feature_id: feature-hook-eval-rig
 status: proposed
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
   - internal/hook/eval/
   - cmd/hooks/main.go
-  - scripts/eval/
 test_paths:
   - internal/hook/eval/eval_test.go
-  - cmd/hooks/eval_test.go
 ---
 
 # Hook Eval Rig Tech Spec

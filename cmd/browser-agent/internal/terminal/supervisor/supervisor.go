@@ -66,15 +66,16 @@ func (supervisor *Supervisor) Start() {
 func (supervisor *Supervisor) supervise(done <-chan struct{}) {
 	defer close(supervisor.loopDone)
 	for {
+		// Wake on either signal, then decide with one stop check. When stop and
+		// done are both ready the select picks randomly; routing both wakeups
+		// through the same check keeps shutdown precedence (and coverage)
+		// independent of that choice.
 		select {
 		case <-supervisor.stop:
-			return
 		case <-done:
-			select {
-			case <-supervisor.stop:
-				return
-			default:
-			}
+		}
+		if supervisor.stopping() {
+			return
 		}
 
 		supervisor.deps.SetPort(0)
@@ -86,6 +87,15 @@ func (supervisor *Supervisor) supervise(done <-chan struct{}) {
 			return
 		}
 		done = restarted
+	}
+}
+
+func (supervisor *Supervisor) stopping() bool {
+	select {
+	case <-supervisor.stop:
+		return true
+	default:
+		return false
 	}
 }
 

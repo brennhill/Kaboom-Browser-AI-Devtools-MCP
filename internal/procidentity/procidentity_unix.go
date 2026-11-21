@@ -8,6 +8,8 @@
 package procidentity
 
 import (
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -16,8 +18,28 @@ import (
 // emits under LC_ALL=C, e.g. "Thu Aug 27 18:58:54 2026".
 const lstartFieldCount = 5
 
-func listProcesses() (string, error) {
-	return runProcessLister("ps", "-eo", "pid=,lstart=,comm=")
+func snapshotProcesses() (map[int]Info, error) {
+	cmd := exec.Command("ps", "-eo", "pid=,lstart=,comm=") // #nosec G204 -- fixed argv, no caller input
+	// Force the C locale so the start-time rendering is stable across machines;
+	// the value is only ever compared to itself, never parsed.
+	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	return parseSnapshot(string(out)), nil
+}
+
+func parseSnapshot(output string) map[int]Info {
+	snap := make(map[int]Info)
+	for _, line := range strings.Split(output, "\n") {
+		pid, info, ok := parseProcessLine(line)
+		if !ok {
+			continue
+		}
+		snap[pid] = info
+	}
+	return snap
 }
 
 // parseProcessLine splits "<pid> <lstart(5 fields)> <comm...>". comm may itself

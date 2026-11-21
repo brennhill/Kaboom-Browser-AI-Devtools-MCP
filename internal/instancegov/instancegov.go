@@ -45,7 +45,7 @@ const (
 	// registers and writes its payload, so an instance that loses by microseconds
 	// reads an empty lock file. Waiting briefly turns "a daemon is already serving"
 	// into a message that names the pid, ports, and version an operator can act on.
-	incumbentPublishWait = 500 * time.Millisecond
+	incumbentPublishWait  = 500 * time.Millisecond
 	incumbentPollInterval = 25 * time.Millisecond
 )
 

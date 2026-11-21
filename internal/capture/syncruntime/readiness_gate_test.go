@@ -65,6 +65,24 @@ func TestWaitForExtensionConnected_ConnectsPartway(t *testing.T) {
 	requireReadinessResult(t, result, true)
 }
 
+// The goroutine-based tests above race the connect against the waiter: when
+// the connect lands first the waiter returns from its initial snapshot and the
+// generation-wake path never runs, which made coverage swing between runs.
+// This drives the wake path deterministically from a pre-connect generation.
+func TestWaitForExtensionConnected_WakesFromCapturedGeneration(t *testing.T) {
+	t.Parallel()
+	c := newTestState()
+	t.Cleanup(c.Close)
+	connected, notify := c.Extension().connectionReadinessSnapshot()
+	if connected {
+		t.Fatal("fresh extension runtime started connected")
+	}
+	connectForTest(c)
+	if !c.Extension().waitConnectedFrom(context.Background(), time.Second, notify) {
+		t.Fatal("waiter on a pre-connect generation did not observe the connection")
+	}
+}
+
 func TestWaitForExtensionConnected_ZeroTimeout(t *testing.T) {
 	t.Parallel()
 	c := newTestState()

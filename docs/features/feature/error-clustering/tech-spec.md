@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: shipped
 scope: feature/error-clustering/implementation
 ai-priority: high
 tags: [implementation, architecture]
@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-error-clustering
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -79,7 +79,7 @@ A cluster is considered "resolved" and removed when no new instances arrive for 
 Error clusters are exposed through the existing `analyze` composite tool:
 
 ```
-analyze(target: "errors")
+analyze({what: "error_clusters"})
 ```
 
 Response:
@@ -202,7 +202,7 @@ Framework frames are identified by path patterns: `node_modules/react`, `node_mo
 11. Cluster expires after 5 minutes of inactivity
 12. Instance cap at 20 (count continues incrementing)
 13. Active cluster cap at 50 (oldest evicted)
-14. `analyze(target: "errors")` returns all clusters
+14. `analyze({what: "error_clusters"})` returns all clusters
 15. Unclustered errors counted separately
 16. Message normalization replaces UUIDs, IDs, URLs
 17. High error rate doesn't cause memory exhaustion
@@ -210,8 +210,19 @@ Framework frames are identified by path patterns: `node_modules/react`, `node_mo
 
 ---
 
+## Implementation Status
+
+A simplified version of this design shipped. The rest of this spec (multi-signal matching, root-cause frame inference, persistent cluster lifecycle with expiry, compound alerts, `id`/`root_cause` fields) remains a proposal.
+
+What shipped:
+
+- `analyze({what: "error_clusters"})` is dispatched in `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go` to `AnalyzeErrors` in `internal/tools/observe/logs/logs.go`.
+- Clustering is **stateless**: each call groups the current error-level log entries; nothing is kept between calls, so there is no expiry, eviction or cluster alert.
+- The only signal is **message similarity**: `normalizeErrorMessage` replaces UUIDs, URLs, ISO-8601 timestamps and numeric IDs (3+ digits) with placeholders; the normalized form (capped at 100 bytes) is the cluster key. Stack-frame similarity and temporal proximity are not used.
+- Response: `{clusters, total_count, metadata}`; each cluster has `message`, `count`, `first_seen`, `last_seen`, `urls` and `stack_trace`, ordered by count (largest first), ties broken by pattern.
+
 ## File Locations
 
-Server implementation: `cmd/browser-agent/clustering.go` (cluster formation, matching, lifecycle, MCP tool handler).
+Server implementation: `internal/tools/observe/errorcluster/cluster.go` (cluster formation and response rendering) and `internal/tools/observe/errorcluster/normalize.go` (message normalization). MCP handler: `AnalyzeErrors` in `internal/tools/observe/logs/logs.go`.
 
-Tests: `cmd/browser-agent/clustering_test.go`.
+Tests: `internal/tools/observe/errorcluster/cluster_test.go` and `internal/tools/observe/errorcluster/normalize_test.go`.

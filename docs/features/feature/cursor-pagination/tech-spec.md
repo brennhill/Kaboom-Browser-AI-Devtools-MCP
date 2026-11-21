@@ -8,7 +8,7 @@ relates-to: [feature-proposal.md, qa-plan.md, product-spec.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-cursor-pagination
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 # Technical Specification: Cursor-Based Pagination
 
 **Status:** SHIPPED in v5.3
-**Canonical Reference:** Codebase (cmd/browser-agent/tools_core.go)
+**Canonical Reference:** Codebase (`internal/pagination/pagination.go`, `internal/tools/observe/logs/logs.go`)
 **Last Verified:** 2026-01-30
 
 ---
@@ -28,37 +28,34 @@ Cursor-based pagination was implemented in v5.3 to solve token limit problems. T
 ### Core Implementation Details
 
 #### Where it lives:
-- Go implementation: `cmd/browser-agent/tools_core.go` (paginate utilities and observe handlers)
-- Test file: `cmd/browser-agent/composite_tools_test.go`
+- Pagination engine: `internal/pagination/pagination.go` (`ApplyCursorPagination`, `ParseCursor`, `BuildCursor`, eviction handling) and `internal/pagination/entries.go` (per-stream sequence enrichment and wrappers)
+- Observe handler wired to it: `GetBrowserLogs` in `internal/tools/observe/logs/logs.go`
+- Response metadata (`cursor`, `cursor_restarted`, `original_cursor`): `internal/tools/observe/core/metadata.go`
+- Tests: `internal/pagination/pagination_test.go`, `internal/pagination/cursor_test.go`, `internal/tools/observe/logs/logs_edge_test.go`
 
 #### Supported data streams:
-- `errors` (logs with pagination)
-- `logs` (console logs with cursor support)
-- `network_waterfall` (HTTP requests)
-- `network_bodies` (request/response bodies)
-- `websocket_events` (WebSocket messages)
-- `actions` (user interactions)
+- `logs` — fully wired: cursor params are parsed and applied at runtime.
+- `network_waterfall`, `network_bodies`, `websocket_events`, `actions` — the mode specs (`internal/tools/configure/capabilities/modespecs_observe.go`) advertise `after_cursor` / `before_cursor` / `since_cursor` / `restart_on_eviction`, and `internal/pagination/entries.go` has WebSocket and action helpers (`ApplyWebSocketCursorPagination`, `ApplyActionCursorPagination`), but the handlers in `internal/tools/observe/network/network.go` and `internal/tools/observe/session/session.go` do not currently apply them; these modes honor `limit` only.
+- `errors` — not paginated (limit only).
 
 ### Key Parameters
 
-```go
-type ObserveRequest struct {
-  What string
-  // Pagination
-  After_cursor string   // Return entries older than cursor
-  Before_cursor string  // Return entries newer than cursor
-  Since_cursor string   // Return all entries since cursor (no limit)
+MCP arguments (snake_case): `after_cursor`, `before_cursor`, `since_cursor`, `limit`, `restart_on_eviction`. Internally they map to:
 
-  // Filtering & limiting
-  Limit int             // Max entries to return
-  Offset int            // Skip N entries before applying limit
-  Head_limit int        // Max entries (alternative to limit)
-  // ... other params
+```go
+type CursorParams struct {
+  AfterCursor       string // entries older than cursor
+  BeforeCursor      string // entries newer than cursor
+  SinceCursor       string // all entries at or after cursor (no limit)
+  Limit             int
+  RestartOnEviction bool
 }
 
-// Cursor format: "timestamp:sequence"
+// Cursor format: "timestamp:sequence" (or ":sequence" when no timestamp)
 // Example: "2026-01-30T10:15:23.456Z:1234"
 ```
+
+If more than one cursor is supplied, precedence is `after` > `before` > `since`.
 
 ### Cursor Format & Stability
 
@@ -90,19 +87,13 @@ type ObserveRequest struct {
 
 ### Buffer Management
 
-Each data stream has its own circular buffer:
-- **logs buffer:** ~500 entries
-- **network_waterfall:** ~300 requests
-- **websocket_events:** ~200 messages
-- **actions:** ~1000 interactions
-
-When buffer is full, oldest entries are evicted. Cursors for evicted entries become invalid.
+Each data stream has its own bounded ring buffer (the log buffer defaults to `MaxLogEntries` = 1000 in `internal/serverdefaults/defaults.go`). Entries carry a monotonically increasing sequence derived from the buffer's total-added counter. When the buffer is full, the oldest entries are evicted; a cursor whose sequence is older than the oldest retained entry is expired and returns an error unless `restart_on_eviction=true`, in which case pagination restarts from the oldest entry and the metadata carries a warning with the lost sequence range.
 
 ### Performance Characteristics
 
-- Pagination: O(n) where n = entries returned (not scanned)
-- Cursor lookup: O(log n) with binary search optimization
-- Memory overhead: ~200 bytes per cursor position
+- Pagination: O(n) over the filtered buffer — `filterByCursor` is a linear scan comparing each entry's timestamp/sequence to the cursor, then the limit is applied
+- Cursors are stateless strings; the server stores no per-cursor state
+- Benchmarks: `internal/pagination/pagination_bench_test.go`
 
 ---
 
@@ -117,8 +108,9 @@ When buffer is full, oldest entries are evicted. Cursors for evicted entries bec
 ## Testing
 
 All pagination scenarios are covered in:
-- **Core test:** `cmd/browser-agent/composite_tools_test.go`
-- **UAT scenarios:** `docs/core/quality/uat-v5.3-checklist.md`
+- **Core tests:** `internal/pagination/pagination_test.go`, `internal/pagination/cursor_test.go`, `internal/pagination/pagination_bench_test.go`
+- **Handler tests:** `internal/tools/observe/logs/logs_edge_test.go`
+- **UAT scenarios:** the v5.3 UAT checklist was retired; see `docs/core/quality/comprehensive-uat-plan.md`
 
 Tested:
 - ✓ Basic pagination with after_cursor
@@ -134,8 +126,7 @@ Tested:
 
 - **product-spec.md** — Feature requirements
 - **feature-proposal.md** — Original proposal
-- **../../../core/quality/uat-v5.3-checklist.md** — Comprehensive UAT tests
-- **ADR-cursor-pagination.md** — Architecture decision record
+- **../../../core/quality/comprehensive-uat-plan.md** — Comprehensive UAT plan
 
 ---
 

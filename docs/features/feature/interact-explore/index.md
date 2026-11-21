@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - src/content/provenance/collect.ts
   - src/lib/provenance/classify.ts

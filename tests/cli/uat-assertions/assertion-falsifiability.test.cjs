@@ -12,7 +12,7 @@
 
 const assert = require('node:assert/strict')
 const { readFileSync } = require('node:fs')
-const { globSync } = require('node:fs')
+const { repoGlobSync: globSync } = require('./repo-glob.cjs')
 const { describe, test } = require('node:test')
 
 const CATEGORY_SCRIPTS = globSync('scripts/tests/*/cat-*.sh').sort()

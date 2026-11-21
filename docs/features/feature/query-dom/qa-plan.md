@@ -7,7 +7,7 @@ relates-to: [product-spec.md, tech-spec.md, ../../core/protocol/mcp-command-opti
 last-verified: 2026-03-05
 doc_type: qa-plan
 feature_id: feature-query-dom
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 
 ## Automated Coverage
 - `cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go`
-- `cmd/browser-agent/tools_analyze_route_test.go`
+- `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher_test.go`
 
 ## Required Scenarios
 1. Request validation

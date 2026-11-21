@@ -11,8 +11,6 @@ package procidentity
 
 import (
 	"os"
-	"os/exec"
-	"strings"
 )
 
 // Info is the identity of a running process beyond its pid. Start is whatever the
@@ -43,11 +41,7 @@ func matches(recorded, observed Info) bool {
 // Snapshot returns the identity of every visible process in ONE process listing,
 // so pruning N registry records costs one lookup instead of N.
 func Snapshot() (map[int]Info, error) {
-	output, err := listProcesses()
-	if err != nil {
-		return nil, err
-	}
-	return parseSnapshot(output), nil
+	return snapshotProcesses()
 }
 
 // lookup returns the identity of a single pid. It is a Snapshot filter rather than
@@ -89,28 +83,4 @@ func AliveIn(snap map[int]Info, pid int, recorded Info) bool {
 		return false
 	}
 	return matches(recorded, observed)
-}
-
-func runProcessLister(name string, args ...string) (string, error) {
-	cmd := exec.Command(name, args...) // #nosec G204 -- fixed argv, no caller input
-	// Force the C locale so the platform's start-time rendering is stable across
-	// machines; the value is only ever compared to itself, never parsed.
-	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C")
-	out, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	return string(out), nil
-}
-
-func parseSnapshot(output string) map[int]Info {
-	snap := make(map[int]Info)
-	for _, line := range strings.Split(output, "\n") {
-		pid, info, ok := parseProcessLine(line)
-		if !ok {
-			continue
-		}
-		snap[pid] = info
-	}
-	return snap
 }

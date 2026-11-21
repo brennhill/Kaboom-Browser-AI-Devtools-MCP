@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: implemented
 scope: feature/sarif-export/implementation
 ai-priority: high
 tags: [implementation, architecture]
@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-sarif-export
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -88,6 +88,8 @@ The most valuable SARIF feature is source location — pointing to the exact fil
 3. **Fallback**: If no source location is determinable, the SARIF result uses a logical location with the CSS selector path: `html > body > main > div.card > img`. This still appears in the SARIF viewer but can't create an inline code annotation.
 
 ### MCP Tool: `export_sarif`
+
+> **Implementation status (2026-11-21):** shipped as `generate({format: "sarif"})`, not a standalone `export_sarif` tool. Shipped parameters are `scope`, `include_passes`, and `save_to` (the file path; there is no `output_path` or `tags` parameter). The response is the SARIF log itself. Locations use the failing element's CSS selector as the artifact URI and its HTML as the snippet; the component-attribution and source-map heuristics below are not implemented. The design text below is kept as the original proposal.
 
 **Parameters**:
 - `scope` (optional): CSS selector to scope the audit (same as `run_accessibility_audit`)
@@ -223,6 +225,8 @@ The agent can do this as part of the PR creation workflow (see workflow integrat
 
 ## File Locations
 
-Server implementation: `cmd/browser-agent/export_sarif.go` (SARIF generation, MCP tool handler).
+MCP handler: `cmd/browser-agent/internal/toolgenerate/artifacts_sarif_impl.go` (`HandleExportSARIF`, dispatched from `generate({format: "sarif"})`).
 
-Tests: `cmd/browser-agent/export_sarif_test.go`.
+SARIF conversion and file writing: `internal/export/sarif/export.go` (`ExportSARIF`), `internal/export/sarif/conversion.go`, `internal/export/sarif/types.go`, `internal/export/sarif/file.go` (save-path validation).
+
+Tests: `internal/export/sarif/export_test.go`, `internal/export/sarif/unit_test.go`, `internal/export/sarif/golden_test.go`, `internal/export/sarif/file_test.go`.

@@ -10,6 +10,7 @@ package retentionsweep
 
 import (
 	"context"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/retention"
@@ -65,7 +66,7 @@ type LogLifecycle func(event string, port int, fields map[string]any)
 // immediately at startup so a daemon that has been down while disk accumulated
 // does not wait an hour to reclaim it.
 func Start(ctx context.Context, logLifecycle LogLifecycle, port int) {
-	go func() {
+	util.SafeGo(func() {
 		Sweep(logLifecycle, port)
 		ticker := time.NewTicker(retentionSweepInterval)
 		defer ticker.Stop()
@@ -77,7 +78,7 @@ func Start(ctx context.Context, logLifecycle LogLifecycle, port int) {
 				Sweep(logLifecycle, port)
 			}
 		}
-	}()
+	})
 }
 
 // Sweep applies every budget once and reports what it reclaimed.

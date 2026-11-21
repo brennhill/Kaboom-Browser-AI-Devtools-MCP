@@ -30,9 +30,15 @@ describe('comprehensive UAT runner accounting', () => {
       // growth per category; a missing source makes every `if ! assert_*` see
       // "command not found" (exit 127), which `!` inverts into a reported leak
       // for every category — the fake project must ship the census too.
-      copyFileSync(
-        'scripts/tests/framework/process-census.sh',
-        join(testsDir, 'framework', 'process-census.sh')
+      // The real census snapshots the WHOLE machine with `ps`. On a CI shard other
+      // tests start kaboom daemons concurrently, so the census saw "growth" that
+      // this fake runner never caused and the run exited 1 (flaked on PR #706).
+      // Keep the real census logic but pin its process snapshot to empty: this
+      // test is about result accounting, not process hygiene.
+      writeFileSync(
+        join(testsDir, 'framework', 'process-census.sh'),
+        readFileSync('scripts/tests/framework/process-census.sh', 'utf8') +
+          '\n# Test override: deterministic, machine-independent snapshot.\n_census_ps() { :; }\n'
       )
       const wrapper = join(root, 'kaboom-agentic-browser')
       writeFileSync(wrapper, '#!/bin/sh\nexit 0\n')
@@ -99,11 +105,11 @@ describe('comprehensive UAT runner accounting', () => {
     }
 
     const missing = run(makeProject(false))
-    assert.equal(missing.status, 1)
+    assert.equal(missing.status, 1, `runner output:\n${missing.stdout}\n${missing.stderr}`)
     assert.match(missing.stderr, /missing result file for category 01/)
 
     const complete = run(makeProject(true))
-    assert.equal(complete.status, 0)
+    assert.equal(complete.status, 0, `runner output:\n${complete.stdout}\n${complete.stderr}`)
     assert.match(complete.stdout, /TOTAL\s+\|\s+23\s+\|\s+0\s+\|\s+23\s+\|\s+46/)
     assert.match(complete.stdout, /ALL 23 TESTS PASSED \(23 skipped\)/)
     const report = JSON.parse(readFileSync(join(complete.artifactDir, 'uat-results.json'), 'utf8'))

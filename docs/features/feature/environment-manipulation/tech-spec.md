@@ -7,7 +7,7 @@ relates-to: [product-spec.md, ../backend-control/tech-spec.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-environment-manipulation
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -313,20 +313,24 @@ observe({
 
 ## Code References
 
-### New files to create:
-- `cmd/server/env/discovery.go` — Service and config discovery
-- `cmd/server/env/inspector.go` — Environment variable inspection
-- `cmd/server/env/modifier.go` — Environment modification
-- `cmd/server/env/config.go` — Config file management (.env, JSON, YAML)
-- `cmd/server/env/redaction.go` — Secret redaction logic
-- `cmd/server/env/snapshot.go` — Environment snapshots
-- `cmd/server/env/restart.go` — Service restart management
-- `cmd/server/env/audit.go` — Audit logger
+Nothing in this spec is implemented; no `environment_*` interact actions, environment snapshot configure mode, or `environment_audit` observe mode exist. (The shipped `interact` actions `pin_environment` / `unpin_environment` are unrelated: they pin a browser tab, not service env vars.)
 
-### Existing files to modify:
-- `cmd/server/mcp/server.go` — Add environment_* action handlers
-- `cmd/server/mcp/configure.go` — Add environment snapshot support
-- `cmd/server/mcp/observe.go` — Add environment_audit mode
+### Planned new package
+A new environment package under `cmd/browser-agent/internal/` (the cmd/server tree referenced in earlier drafts never existed) covering:
+- Service and config discovery
+- Environment variable inspection
+- Environment modification
+- Config file management (.env, JSON, YAML)
+- Secret redaction logic
+- Environment snapshots
+- Service restart management
+- Audit logger
+
+### Existing files to modify (planned):
+- `cmd/browser-agent/internal/toolinteract/action_owners.go` (action owner registry) — Add environment_* action handlers
+- `cmd/browser-agent/internal/toolconfigure/dispatcher.go` — Add environment snapshot support
+- `cmd/browser-agent/internal/toolobserve/dispatcher.go` — Add environment_audit mode
+- `internal/schema/` — Declare the new modes/parameters in the tool schemas
 
 ## Performance Requirements
 - Service discovery: <100ms

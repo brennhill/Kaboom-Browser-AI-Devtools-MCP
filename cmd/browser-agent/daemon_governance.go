@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 	"os"
 	"syscall"
 	"time"
@@ -174,7 +175,7 @@ func startClientReaper(ctx context.Context, server *Server, port int, reapIdleCl
 	if server == nil || reapIdleClients == nil {
 		return
 	}
-	go func() {
+	util.SafeGo(func() {
 		ticker := time.NewTicker(clientReapInterval)
 		defer ticker.Stop()
 		for {
@@ -187,7 +188,7 @@ func startClientReaper(ctx context.Context, server *Server, port int, reapIdleCl
 				}
 			}
 		}
-	}()
+	})
 }
 
 // daemonBusyInputs binds the daemon's real work signals. Every probe is a closure

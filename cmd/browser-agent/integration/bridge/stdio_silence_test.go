@@ -20,7 +20,9 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/instancereg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
 func waitForProcessExit(t *testing.T, command *exec.Cmd, timeout time.Duration) {
@@ -33,6 +35,21 @@ func waitForProcessExit(t *testing.T, command *exec.Cmd, timeout time.Duration) 
 		_ = command.Process.Kill()
 		t.Fatalf("process %d did not exit within %s", command.Process.Pid, timeout)
 	}
+}
+
+// startIsolatedBridge returns a bridge command whose spawned daemon is hermetic:
+// it shares the test's state dir (so the harness --stop cleanup targets it and
+// waits for it before t.TempDir removal) and a private instance registry.
+// Callers must append to cmd.Env, never replace it, or the daemon loses the
+// owner PID / registry isolation and leaks into the temp dir after the test.
+func startIsolatedBridge(t *testing.T, binary string, port int, stateDir string) *exec.Cmd {
+	t.Helper()
+	if err := os.MkdirAll(stateDir, 0o755); err != nil {
+		t.Fatalf("create state dir: %v", err)
+	}
+	t.Setenv(statecfg.StateDirEnv, stateDir)
+	t.Setenv(instancereg.DirEnv, "")
+	return testprocess.StartServer(t, binary, "--bridge", "--port", strconv.Itoa(port), "--state-dir", stateDir)
 }
 
 // contentLengthFrame wraps a JSON payload in Content-Length framing.
@@ -121,8 +138,8 @@ func TestStdioIsolation_StartupNoiseDoesNotPolluteMCPTransport(t *testing.T) {
 		t.Fatalf("Failed to create cover dir: %v", err)
 	}
 
-	cmd := testprocess.StartServer(t, binary, "--bridge", "--port", strconv.Itoa(port), "--state-dir", stateDir)
-	cmd.Env = append(os.Environ(), "KABOOM_TEST_BRIDGE_NOISE=1", "GOCOVERDIR="+coverDir)
+	cmd := startIsolatedBridge(t, binary, port, stateDir)
+	cmd.Env = append(cmd.Env, "KABOOM_TEST_BRIDGE_NOISE=1", "GOCOVERDIR="+coverDir)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -182,8 +199,8 @@ func TestStdioIsolation_ContentLengthFramingNotPollutedByStartupNoise(t *testing
 		t.Fatalf("Failed to create cover dir: %v", err)
 	}
 
-	cmd := testprocess.StartServer(t, binary, "--bridge", "--port", strconv.Itoa(port), "--state-dir", stateDir)
-	cmd.Env = append(os.Environ(), "KABOOM_TEST_BRIDGE_NOISE=1", "GOCOVERDIR="+coverDir)
+	cmd := startIsolatedBridge(t, binary, port, stateDir)
+	cmd.Env = append(cmd.Env, "KABOOM_TEST_BRIDGE_NOISE=1", "GOCOVERDIR="+coverDir)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -245,8 +262,8 @@ func TestStdioIsolation_BridgeExitsAfterStdinEOF(t *testing.T) {
 		t.Fatalf("Failed to create cover dir: %v", err)
 	}
 
-	cmd := testprocess.StartServer(t, binary, "--bridge", "--port", strconv.Itoa(port), "--state-dir", stateDir)
-	cmd.Env = append(os.Environ(), "GOCOVERDIR="+coverDir)
+	cmd := startIsolatedBridge(t, binary, port, stateDir)
+	cmd.Env = append(cmd.Env, "GOCOVERDIR="+coverDir)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

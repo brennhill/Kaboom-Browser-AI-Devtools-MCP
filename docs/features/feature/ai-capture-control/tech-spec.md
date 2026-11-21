@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-ai-capture-control
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -220,8 +220,11 @@ The `/settings` endpoint response adds a `capture_overrides` field. The extensio
 
 ## File Locations
 
-Server implementation: `cmd/browser-agent/capture_control.go` (override storage, settings endpoint enhancement, audit logger).
+Not yet built (reviewed 2026-11-21). No `configure(what: "capture")` handler, override store, rate limiter, or capture-override audit log exists. The only implemented piece of the transport is the `capture_overrides` field of the extension sync response, which today carries only security-mode state (`security_mode`, `production_parity`, `insecure_rewrites_applied`).
 
-Extension integration: `extension/background.js` (settings poll response handling, override application).
+Where the planned work would land in the current layout:
 
-Tests: `cmd/browser-agent/capture_control_test.go`, `extension-tests/capture-control.test.js`.
+- Server: the `capture_overrides` payload is built by `buildCaptureOverrides()` in `internal/capture/syncruntime/handler.go` (wire type `SyncResponse.CaptureOverrides` in `internal/capture/syncruntime/wire_sync.go`, TS counterpart `src/types/wire/wire-sync.ts`). AI-set overrides would be merged there; the extension now receives settings over `POST /sync`, not a `GET /settings` poll.
+- Configure handler: a new `capture` action in the configure tool package (`cmd/browser-agent/internal/toolconfigure/`) with schema registration under `internal/schema/`.
+- Extension: overrides are already applied via `applyCaptureOverrides` in `src/background/sync/sync-manager.ts`; the new settings keys would be handled there.
+- Tests: alongside the above packages (planned; no tests exist yet).

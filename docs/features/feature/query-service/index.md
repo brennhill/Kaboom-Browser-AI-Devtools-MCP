@@ -4,7 +4,7 @@ feature_id: feature-query-service
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-11-21
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go

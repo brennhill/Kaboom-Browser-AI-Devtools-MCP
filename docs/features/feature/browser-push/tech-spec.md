@@ -1,13 +1,15 @@
 ---
 doc_type: tech_spec
 feature_id: browser-push
-status: proposed
-last_reviewed: 2026-07-05
+status: implemented
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
 
 # Browser Push — Tech Spec
+
+> Implemented. Sections below keep the original design rationale; where shipped code differs, the text notes it. See [Implementation Map](#implementation-map) for current file locations.
 
 ## Overview
 
@@ -43,7 +45,7 @@ Additionally, change `wait: true` on annotations from immediate-return-then-poll
 │                                       │                      │
 │                                       ▼                      │
 │                              observe({what:"inbox"})         │
-│                              or _pending_push piggyback      │
+│                              or response piggyback           │
 └──────────────────────────────────────────────────────────────┘
                        │ MCP (stdio/HTTP)
                        ▼
@@ -94,7 +96,7 @@ sequenceDiagram
     D->>D: Queue in inbox
     Note over C: AI makes any Kaboom tool call
     C->>D: observe({what: "errors"})
-    D-->>C: {errors: [...], _pending_push: [{type: "annotations", ...}]}
+    D-->>C: {errors: [...]} + appended push content blocks
     Note over C: AI sees piggybacked push and responds
 ```
 
@@ -109,11 +111,10 @@ sequenceDiagram
 
     U->>E: Press Alt+Shift+S
     E->>E: captureVisibleTab()
-    E->>E: Show toast: "Add a note? (3s)"
-    U->>E: Types "button is wrong color" (optional)
-    E->>D: POST /push/screenshot {screenshot, note}
+    E->>D: GET /push/capabilities
+    E->>D: POST /push/screenshot {screenshot, note: ""}
     D->>C: sampling/createMessage {content: [image, text]}
-    Note over C: AI sees screenshot + note, responds
+    Note over C: AI sees screenshot, responds
 ```
 
 ## Data Model
@@ -253,6 +254,8 @@ AI ──observe({what:"command_result", correlation_id:"ann_xyz"})──▶ Dae
 
 ### Implementation
 
+Shipped as `Handler.getAnonymousAnnotations(req, wait, waitTimeout, urlFilter)` in `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` (default wait `annotationBlockingWaitDefault` = 15s, caller-overridable timeout, optional URL filter), backed by `Store.WaitForSession` in `internal/annotation/store_sessions.go`. The sketch below is the original design:
+
 ```go
 func (h *ToolHandler) getAnonymousAnnotations(req JSONRPCRequest, wait bool) JSONRPCResponse {
     // Check if annotations are already available
@@ -294,7 +297,7 @@ The `WaitForSession` method returns a channel that receives the session when `/d
 
 ### POST /push/screenshot (new)
 
-Receives a screenshot push from the extension.
+Receives a screenshot push from the extension. The hotkey path currently sends an empty `note`; the field is accepted for callers that supply one.
 
 ```json
 {
@@ -365,7 +368,7 @@ The daemon inspects:
 - `params.clientInfo.name` — for client-specific behavior
 - Notifications are assumed available for all stdio clients (part of base MCP spec)
 
-**Current state**: The daemon already handles `initialize` in `tools_mcp.go`. Add capability extraction there.
+**Shipped**: the bridge fast path handles `initialize` (`Runner.handleFastPath` in `cmd/browser-agent/internal/bridge/bridge_fastpath.go`) and stores capabilities via the protocol layer; parsing lives in `ExtractClientCapabilities` (`cmd/browser-agent/internal/pushapi/runtime.go`). The extension can query them through `GET /push/capabilities`.
 
 ## observe({what: "inbox"}) — New Mode
 
@@ -394,20 +397,9 @@ Returns and clears queued push events.
 
 Empty inbox returns `{"events": [], "count": 0}`.
 
-## _pending_push Piggyback
+## Response Piggyback
 
-When the inbox is non-empty, any Kaboom tool response includes a `_pending_push` field:
-
-```json
-{
-    "content": [
-        {"type": "text", "text": "3 errors found..."},
-        {"type": "text", "text": "\n\n---\n⚡ BROWSER PUSH: The user pushed 1 annotation from the browser. Call observe({what: 'inbox'}) to view."}
-    ]
-}
-```
-
-The piggyback is a text hint only (no images) to keep normal tool responses fast. The AI calls `observe({what: "inbox"})` to get full content including screenshots.
+Shipped behavior differs from the original `_pending_push` text-hint design. After every tool call, `toolobserve.AppendPushPiggyback` (`cmd/browser-agent/internal/toolobserve/inbox.go`, invoked from `cmd/browser-agent/internal/toolruntime/tools_core.go`) drains the inbox and appends the events directly to the tool result as content blocks. Non-screenshot events are appended as text; only the most recent screenshot is attached as an image content block (with a count of any older screenshots). There is no `_pending_push` field. `observe({what: "inbox"})` remains available to drain explicitly.
 
 ## Extension Changes
 
@@ -429,7 +421,7 @@ The piggyback is a text hint only (no images) to keep normal tool responses fast
 }
 ```
 
-**push-handler.js** (new, ~120 LOC) — background script:
+**push-handler** (`src/background/push-handler.ts`) — background script. The shipped version first checks `GET /push/capabilities` (showing an "unavailable" toast if push is disabled), captures the visible tab, and POSTs directly to `/push/screenshot` with `kaboom_action_toast` status toasts; the note-prompt content script from the original design below was not built. A sibling `push_chat` command (Alt+Shift+C) toggles an in-page chat widget. Original sketch:
 ```javascript
 export function installPushCommandListener() {
     chrome.commands.onCommand.addListener(async (command) => {
@@ -473,40 +465,22 @@ export function installPushCommandListener() {
 | 9 | Extension not connected | `/push/screenshot` endpoint returns 503. Toast shows error in browser. |
 | 10 | User pushes from incognito tab | Same behavior. No special handling for incognito. |
 
-## File Plan
+## Implementation Map
 
-### New Files
-
-| File | LOC | Purpose |
-|------|-----|---------|
-| `internal/push/inbox.go` | ~80 | PushInbox queue (bounded FIFO) |
-| `internal/push/inbox_test.go` | ~100 | Queue tests (enqueue, drain, overflow, concurrency) |
-| `internal/push/router.go` | ~120 | Push router (sampling → notification → inbox) |
-| `internal/push/router_test.go` | ~150 | Router tests (capability detection, fallback chain) |
-| `internal/push/sampling.go` | ~100 | MCP sampling request builder and sender |
-| `internal/push/sampling_test.go` | ~80 | Sampling message format tests |
-| `cmd/browser-agent/tools_observe_inbox.go` | ~60 | observe({what: "inbox"}) handler |
-| `extension/background/push-handler.js` | ~120 | Screenshot push hotkey handler |
-| `extension/content/push-note.js` | ~80 | Toast input UI for screenshot notes |
-
-**Total new: ~890 LOC**
-
-### Modified Files
-
-| File | Changes | LOC Delta |
-|------|---------|-----------|
-| `cmd/browser-agent/tools_mcp.go` | Extract client capabilities from initialize handshake | +20 |
-| `cmd/browser-agent/tools_observe.go` | Route `what: "inbox"` to handler | +5 |
-| `cmd/browser-agent/tool_handler.go` | Add PushInbox + PushRouter to ToolHandler struct | +10 |
-| `cmd/browser-agent/tools_analyze_annotations.go` | After annotation store, also call push router | +15 |
-| `cmd/browser-agent/http_routes.go` | Add `/push/screenshot` endpoint | +20 |
-| `cmd/browser-agent/response_builder.go` | Add `_pending_push` piggyback to all tool responses | +25 |
-| `extension/manifest.json` | Add `push_screenshot` command | +6 |
-| `extension/background/init.js` | Call `installPushCommandListener()` | +2 |
-
-**Total modified: ~103 LOC delta**
-
-**Grand total: ~993 LOC**
+| Concern | Location |
+|---------|----------|
+| Inbox queue (bounded FIFO) | `internal/push/inbox.go` (tests: `internal/push/inbox_test.go`) |
+| Push router (sampling → notification → inbox) | `internal/push/router.go` (tests: `internal/push/router_test.go`) |
+| MCP sampling request builder | `internal/push/sampling.go` (tests: `internal/push/sampling_test.go`) |
+| Push types | `internal/push/types.go` |
+| Client capability parsing | `cmd/browser-agent/internal/pushapi/runtime.go` (`ExtractClientCapabilities`) |
+| HTTP handlers (`/push/screenshot`, `/push/message`, `/push/capabilities`), annotation delivery | `cmd/browser-agent/internal/pushapi/handler.go` (`DeliverAnnotations`) |
+| Route registration (incl. `/push/drain`) and router wiring | `cmd/browser-agent/server.go` |
+| Bridge-side push drain relay | `cmd/browser-agent/internal/bridge/pushrelay/relay.go` |
+| Draw-mode completion → push | `cmd/browser-agent/internal/mediaapi/draw_mode.go` |
+| `observe({what: "inbox"})` and response piggyback | `cmd/browser-agent/internal/toolobserve/inbox.go`, routed in `cmd/browser-agent/internal/toolobserve/dispatcher.go` |
+| Blocking annotation wait | `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` |
+| Extension hotkeys (`push_screenshot`, `push_chat`) | `src/background/push-handler.ts`, installed from `src/background/init.ts`; commands in `extension/manifest.json` |
 
 ## Performance Targets
 
@@ -516,7 +490,7 @@ export function installPushCommandListener() {
 | Sampling request construction | < 5ms | JSON marshal + base64 encode |
 | Sampling delivery (localhost) | < 50ms | JSON-RPC over stdio |
 | Inbox drain | < 1ms | Slice copy + clear |
-| Piggyback check | < 0.1ms | `inbox.Len() > 0` check on every response |
+| Piggyback check | < 0.1ms | `DrainAll()` on every tool response; no-op when empty |
 | Screenshot capture (extension) | < 200ms | `captureVisibleTab()` — Chrome API |
 | Blocking wait (goroutine hold) | ≤ 15s | Channel receive, ~4KB stack cost per waiter |
 | Blocking wait delivery | < 5ms | Channel send after `/draw-mode/complete` POST |
@@ -537,4 +511,4 @@ export function installPushCommandListener() {
 | 2 | Base64 screenshots bloat MCP messages | Slow sampling, high memory | JPEG compression, 5MB cap, viewport-only crop |
 | 3 | AI sees duplicate annotations (wait + push) | Confusing double response | Document in edge cases. Idempotent — AI handles gracefully. |
 | 4 | Hotkey conflicts with browser shortcuts | Push doesn't fire | Use `Alt+Shift+S` (uncommon). User can remap in `chrome://extensions/shortcuts`. |
-| 5 | Inbox piggyback makes all responses larger | Extra tokens on every call | Piggyback is text-only hint (~50 tokens). Full content requires explicit `observe({what: "inbox"})`. |
+| 5 | Inbox piggyback makes all responses larger | Extra tokens on the call that drains | Piggyback only fires when events are pending and drains them once; only the latest screenshot is inlined. |

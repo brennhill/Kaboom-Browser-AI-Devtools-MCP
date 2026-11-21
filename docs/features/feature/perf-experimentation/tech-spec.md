@@ -1,11 +1,11 @@
 ---
-status: proposed
+status: implemented
 scope: feature/rich-action-results
 ai-priority: critical
 tags: [performance, dom-diffing, interaction, closed-loop, extension]
 doc_type: tech-spec
 feature_id: feature-perf-experimentation
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -317,7 +317,7 @@ Surfaced through the existing perf snapshot POST to the daemon. No new endpoints
 
 ### Navigation perf diff
 
-Computed in the extension (before sending async result) or in the daemon (on the perf snapshot POST). Extension-side is faster for the iteration loop.
+Computed in the daemon: `internal/performance/diff.go` (`ComputePerfDiff`, `SnapshotToPageLoadMetrics`) with summary text in `internal/performance/diff_summary.go`. The async command handler attaches it as `perf_diff` (`attachPerfDiffIfAvailable` in `cmd/browser-agent/internal/asynccommand/handler.go`). The TypeScript sketch below shows the shape; the shipped implementation is Go.
 
 ```typescript
 function computePerfDiff(before: PageLoadMetrics, after: PageLoadMetrics): PerfDiff {
@@ -386,61 +386,40 @@ Rules:
 
 ### Extension (TypeScript)
 
-#### 1. `src/background/perf-tracking.ts` (NEW, ~150 lines)
+#### 1. DOM primitives (`src/background/dom/primitives/dom-primitives-pointer.ts`, `src/background/dom/primitives/dom-primitives-form.ts`)
 
-- `PerfState` — holds previous/current `PageLoadMetrics`
-- `collectPageMetrics()` — injected function that gathers timing, resources, vitals
-- `waitForMetrics()` — LCP readiness strategy (500ms timeout)
-- `computePerfDiff()` — structured diff between two load snapshots
-- `computeResourceDiff()` — added/removed/resized resources
-- `generateSummary()` — human-readable analysis string
+- Action execution wraps a MutationObserver and returns `timing_ms` + `dom_summary`; with `analyze: true` adds `timing`, `dom_changes` and `analysis`
+- Settle/stability helpers live in `src/background/dom/primitives/dom-primitives-stability.ts`
 
-#### 2. `src/background/dom/primitives/dom-primitives.ts` (MODIFIED, ~100 lines added)
+#### 2. `src/background/pending-queries.ts`
 
-Inside the `domPrimitive` mega-function:
+- Routes `browser_action` refresh/navigate and `dom_action` queries (passing `analyze` through)
 
-- `observeAndExecute(action, element, options, analyze)` wrapper:
-  - Always: record `performance.now()`, start MutationObserver, execute, settle, collect
-  - With `analyze`: also start PerformanceObserver for longtask + layout-shift, collect network
-- `collapseMutations(records)` — deduplicate, skip children of added/removed parents, cap
-- `getCompactSelector(el)` — id > data-testid > tag.class > tag
-- Return `timing_ms` + `dom_summary` always, full breakdown when `analyze: true`
+#### 3. `src/lib/analysis/perf-snapshot.ts`
 
-#### 3. `src/background/pending-queries.ts` (MODIFIED, ~20 lines)
+- Captures user timing (`mark`/`measure`, last 50 each) into the perf snapshot as `user_timing`; wire shape in `src/types/wire/wire-performance-snapshot.ts`
 
-- For `browser_action` refresh/navigate: call `perfState.snapshotBeforeNavigation()`, listen for `webNavigation.onCompleted`, collect metrics, diff, include in result
-- For `dom_action`: pass `analyze` flag through to `executeDOMAction`
+#### 4. `src/types/runtime/queries.ts`
 
-#### 4. `src/inject/performance-observers.ts` (MODIFIED, ~20 lines)
-
-- Add `mark` and `measure` to PerformanceObserver entry types
-- Include captured user timing in perf snapshot POST payload
-
-#### 5. `src/types/runtime/queries.ts` (MODIFIED, ~5 lines)
-
-- Add `analyze?: boolean` to dom_action query params
+- `analyze?: boolean` on dom_action query params
 
 ### Go (daemon)
 
-#### 6. `internal/schema/analyze.go` (MODIFIED, ~5 lines)
+#### 5. `internal/schema/interact/actions.go`
 
-- Add `analyze` boolean param to interact tool:
+- `analyze` is an optional param on navigate, refresh, click and other DOM actions
 
-  ```json
-  "analyze": { "type": "boolean", "description": "Include detailed performance analysis (timing breakdown, network, long tasks, DOM changes) in the action result. Use for profiling interactions." }
-  ```
+#### 6. `internal/performance/diff.go`, `internal/performance/diff_summary.go`
 
-#### 7. `cmd/browser-agent/tools_interact.go` (MODIFIED, ~3 lines)
+- `ComputePerfDiff` — metric + resource diff between before/after page loads, verdict and summary
 
-- Pass `analyze` param through to pending query
+#### 7. `cmd/browser-agent/internal/asynccommand/handler.go`
 
-#### 8. `cmd/browser-agent/tools_observe_analysis.go` (MODIFIED, ~10 lines)
+- `attachPerfDiffIfAvailable` adds `perf_diff` to refresh/navigate command results
 
-- Include `user_timing` (marks + measures) in performance snapshot response
+#### 8. `internal/performance/types.go`, `internal/performance/wire_performance.go`
 
-### No new Go files needed
-
-The diff computation happens extension-side. The daemon just passes through the enriched results via the existing async command result mechanism.
+- `user_timing` carried in the performance snapshot response
 
 ## What actions get what
 

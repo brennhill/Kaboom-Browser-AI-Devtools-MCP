@@ -127,6 +127,12 @@ describe('Tooling contracts', () => {
       'coverage must discard nested subprocess profiles before each run instead of accumulating gigabytes'
     )
     assert.doesNotMatch(workflow, /70% minimum|COVERAGE < 70|coverprofile=coverage\.out/)
+    // node_modules/flatted ships a Go package without its own go.mod, so ./...
+    // pulls npm-install-dependent code into the denominator (~0.5% swing).
+    assert.doesNotMatch(coverageRunner, /-coverpkg=\.\/\.\.\./, 'coverage must not measure ./... (includes node_modules Go code)')
+    assert.match(coverageRunner, /go-coverage-packages\.sh/)
+    assert.doesNotMatch(readFileSync('scripts/build/run-go-integration.sh', 'utf8'), /-coverpkg=\.\/\.\.\./)
+    assert.match(readFileSync('scripts/build/go-coverage-packages.sh', 'utf8'), /grep -v '\/node_modules\/'/)
   })
 
   test('security CI scans all Go code and enforces bounded dependency policy', () => {
@@ -238,7 +244,7 @@ describe('Tooling contracts', () => {
 
   test('active workflows pin the patched Go version declared by go.mod', () => {
     const goVersion = readFileSync('go.mod', 'utf8').match(/^go (\S+)$/m)?.[1]
-    assert.equal(goVersion, '1.25.12')
+    assert.equal(goVersion, '1.26.11')
     for (const name of readdirSync('.github/workflows').filter((file) => file.endsWith('.yml'))) {
       const workflow = readFileSync(`.github/workflows/${name}`, 'utf8')
       for (const match of workflow.matchAll(/go-version:\s*["']?([^\s"']+)/g)) {

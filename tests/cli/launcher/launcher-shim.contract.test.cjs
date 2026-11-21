@@ -101,9 +101,18 @@ describe('no launcher process outlives its child', () => {
 
     const child = spawn(join(pkg, 'bin', 'kaboom-agentic-browser'), [], { stdio: ['pipe', 'inherit', 'inherit'] })
     try {
-      await new Promise((r) => setTimeout(r, 1500))
-      assert.ok(existsSync(pidFile), 'stub binary never ran')
-      const reported = readFileSync(pidFile, 'utf8').trim()
+      // Poll with a deadline instead of a fixed sleep: under sharded CI load the
+      // stub can take longer than any fixed delay to write its PID.
+      const deadline = Date.now() + 10_000
+      let reported = ''
+      while (Date.now() < deadline) {
+        if (existsSync(pidFile)) {
+          reported = readFileSync(pidFile, 'utf8').trim()
+          if (reported) break
+        }
+        await new Promise((r) => setTimeout(r, 25))
+      }
+      assert.ok(reported, 'stub binary never ran')
 
       // The PID we spawned IS the binary: exec replaced the shell's image, so no
       // launcher sits between the client and the server.

@@ -28,6 +28,27 @@ const EXPECTED_DOCTOR_EXIT = BINARY_OK ? 0 : 1
 const SANDBOX_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-cli-it-'))
 fs.mkdirSync(path.join(SANDBOX_HOME, '.cursor'), { recursive: true })
 fs.writeFileSync(path.join(SANDBOX_HOME, '.cursor', 'mcp.json'), '{}')
+// --config / --install write the ABSOLUTE server binary path into each client
+// config, so they hard-fail (exit 1, BinaryNotFoundError) when no platform binary
+// resolves. Locally a stale dist/ build masks that; CI's JavaScript Checks job
+// builds no Go binary at all. These are CLI routing/config tests, not binary
+// tests, so point the resolver's explicit override at a sandboxed stub instead
+// of depending on whatever happens to be in dist/ or node_modules. The stub is
+// as strict as the real binary about flags (only --version succeeds), so the
+// MCP-mode "unknown flag" tests below still see a failing exec.
+const STUB_BINARY = path.join(SANDBOX_HOME, 'bin', 'kaboom-agentic-browser')
+fs.mkdirSync(path.dirname(STUB_BINARY), { recursive: true })
+fs.writeFileSync(
+  STUB_BINARY,
+  [
+    '#!/bin/sh',
+    'if [ "$#" -eq 1 ] && [ "$1" = "--version" ]; then echo "kaboom-agentic-browser 0.0.0-stub"; exit 0; fi',
+    'echo "Unknown command: $*" >&2',
+    'exit 2',
+    '',
+  ].join('\n'),
+  { mode: 0o755 }
+)
 process.on('exit', () => {
   try {
     fs.rmSync(SANDBOX_HOME, { recursive: true, force: true })
@@ -54,6 +75,7 @@ const HERMETIC_ENV = {
   // Pinning the port means that if one does escape, it lands somewhere
   // harmless and can be found and killed by a known number.
   KABOOM_PORT: String(INTEGRATION_TEST_PORT),
+  KABOOM_BINARY_PATH: STUB_BINARY,
 }
 
 // Shut down anything this suite left on the integration port. Killing by port
@@ -76,10 +98,10 @@ process.on('exit', () => {
     // guessing at pids.
   }
 })
-function runCommand(args) {
+function runCommand(args, env = HERMETIC_ENV) {
   try {
     const cmd = `npm/kaboom-agentic-browser/bin/kaboom-agentic-browser ${args}`.trim()
-    const output = execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], env: HERMETIC_ENV })
+    const output = execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], env })
     return { success: true, output, exitCode: 0 }
   } catch (e) {
     return { success: false, output: e.stdout || '', error: e.stderr || '', exitCode: e.status || 1 }
@@ -110,6 +132,21 @@ test('kaboom-agentic-browser --config shows configuration', () => {
 
   assert.strictEqual(result.exitCode, 0, 'Config should exit with 0')
   assert.ok(result.output.includes('Configuration') || result.output.includes('mcpServers'), 'Should show config info')
+})
+
+test('kaboom-agentic-browser --config embeds the resolved absolute binary path', () => {
+  const result = runCommand('--config')
+
+  assert.strictEqual(result.exitCode, 0, 'Config should exit with 0')
+  assert.ok(result.output.includes(STUB_BINARY), 'Config should reference the resolved binary path')
+})
+
+test('kaboom-agentic-browser --config fails loudly when the binary override points nowhere', () => {
+  const missing = path.join(SANDBOX_HOME, 'no-such-dir', 'kaboom-agentic-browser')
+  const result = runCommand('--config', { ...HERMETIC_ENV, KABOOM_BINARY_PATH: missing })
+
+  assert.notStrictEqual(result.exitCode, 0, 'A missing binary is an install fault, not a silent success')
+  assert.ok(`${result.output}${result.error}`.includes('KABOOM_BINARY_PATH'), 'Error should name the override')
 })
 
 test('kaboom-agentic-browser -c shows configuration', () => {

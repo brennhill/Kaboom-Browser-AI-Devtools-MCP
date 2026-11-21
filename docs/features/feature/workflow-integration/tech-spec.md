@@ -1,5 +1,5 @@
 ---
-status: shipped
+status: proposed
 scope: feature/workflow-integration/implementation
 ai-priority: high
 tags: [implementation, architecture]
@@ -7,7 +7,7 @@ relates-to: [product-spec.md, qa-plan.md]
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-workflow-integration
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -17,6 +17,8 @@ last_verified_date: 2026-03-05
 > See also: [Product Spec](product-spec.md) and [Workflow Integration Review](./index.md).
 
 # Technical Spec: Workflow Integration
+
+> **Implementation status (reviewed 2026-11-21):** only a reduced form of Level 2 ships, as `generate({format: "pr_summary"})` (`HandlePRSummary` in `cmd/browser-agent/internal/toolgenerate/artifacts_pr_summary_impl.go`). It produces a markdown activity summary (page, action counts, completed/failed commands, console and network error counts), not performance deltas, and accepts `save_to`. Level 1 (session summary on shutdown, `.kaboom/sessions/` archive, `load_session_context`, `end_session`), the `GET /v4/session-summary` endpoint and Level 3 git-hook integration were never built; the original server file this spec named never existed. The rest of this document is the proposal.
 
 ## Purpose
 
@@ -199,8 +201,6 @@ Agent: Here's the PR with the performance impact included.
 
 ## File Locations
 
-Server implementation: `cmd/browser-agent/workflow.go` (summary generation, HTTP endpoint, MCP tool).
+Shipped: `cmd/browser-agent/internal/toolgenerate/artifacts_pr_summary_impl.go` (`generate({format: "pr_summary"})`), dispatched from `cmd/browser-agent/internal/toolgenerate/dispatcher.go`; covered by `cmd/browser-agent/internal/toolgenerate/toolgenerate_test.go`.
 
-Persistent storage: `.kaboom/sessions/latest.json` and `.kaboom/sessions/archive/<timestamp>.json`.
-
-Tests: `cmd/browser-agent/workflow_test.go`.
+Planned (not yet created): session summary generation, HTTP endpoint, persistent storage at `.kaboom/sessions/latest.json` and `.kaboom/sessions/archive/<timestamp>.json`, and their tests.

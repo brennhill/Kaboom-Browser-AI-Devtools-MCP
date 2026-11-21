@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - .github/workflows/ci.yml
   - scripts/tests/browser/mode-content-expectations.sh
@@ -78,6 +78,7 @@ code_paths:
 test_paths:
   - scripts/contracts/uatcoverage/main_test.go
   - cmd/browser-agent/internal/responsegate/drift_test.go
+  - cmd/browser-agent/internal/responsegate/harness_test.go
   - scripts/contracts/responsecontract/cat33_test.go
   - scripts/contracts/responsecontract/ratchet_test.go
   - scripts/quality/affected/affected-tests.test.mjs
@@ -96,6 +97,7 @@ test_paths:
   - tests/cli/contracts/uat-harness-regressions.test.cjs
   - tests/cli/uat-runner/uat-runner-accounting.test.cjs
   - tests/cli/uat-assertions/assertion-falsifiability.test.cjs
+  - tests/cli/uat-assertions/repo-glob.cjs
   - cmd/browser-agent/internal/testowner/testowner_test.go
   - cmd/browser-agent/integration/runtime/orphan_reaping_test.go
   - tests/cli/uat-assertions/test-daemon-cleanup.test.cjs

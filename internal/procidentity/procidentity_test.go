@@ -81,3 +81,34 @@ func TestLookupReturnsSelf(t *testing.T) {
 		t.Fatalf("Lookup() returned incomplete identity: %+v", info)
 	}
 }
+
+// Regression: Windows identity came from `wmic`, which windows-2025 images no
+// longer ship, so every daemon failed to register. The Win32 path builds Info from
+// numeric creation ticks; it must yield a stable, complete identity and reject
+// values that could later match spuriously.
+func TestBuildInfoFromCreationTicks(t *testing.T) {
+	info, ok := procidentity.BuildInfoForTest(4242, 134079321234567890, "kaboom.exe")
+	if !ok {
+		t.Fatal("BuildInfo() rejected a valid process")
+	}
+	if info.Start != "134079321234567890" || info.Command != "kaboom.exe" {
+		t.Fatalf("BuildInfo() = %+v", info)
+	}
+	again, _ := procidentity.BuildInfoForTest(4242, 134079321234567890, "kaboom.exe")
+	if !procidentity.MatchesForTest(info, again) {
+		t.Error("BuildInfo() is not stable for the same process")
+	}
+	later, _ := procidentity.BuildInfoForTest(4242, 134079321234567891, "kaboom.exe")
+	if procidentity.MatchesForTest(info, later) {
+		t.Error("a recycled pid with a later creation time matched")
+	}
+	for _, tc := range []struct {
+		pid   int
+		ticks int64
+		cmd   string
+	}{{0, 1, "x"}, {-1, 1, "x"}, {1, 0, "x"}, {1, -5, "x"}, {1, 1, ""}} {
+		if _, ok := procidentity.BuildInfoForTest(tc.pid, tc.ticks, tc.cmd); ok {
+			t.Errorf("BuildInfo(%d, %d, %q) accepted invalid input", tc.pid, tc.ticks, tc.cmd)
+		}
+	}
+}

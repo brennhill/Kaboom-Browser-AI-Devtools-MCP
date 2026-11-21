@@ -7,12 +7,14 @@ relates-to: [product-spec.md, ../backend-log-streaming/tech-spec.md, ../backend-
 last-verified: 2026-03-05
 doc_type: tech-spec
 feature_id: feature-timeline-search
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
 
 # Timeline & Search — Technical Specification
+
+> **Status: proposed (reviewed 2026-11-21).** The correlation-id query engine, causality analyzer, `timeline_search`/`timeline_stats` modes and `timeline_export` action described here are not built. What ships today is narrower: `observe({what: "timeline"})` (a merged, time-ordered view of actions, errors, network and WebSocket events, with `include`, `limit` and `summary`) and `observe({what: "error_bundles"})`, both implemented in `internal/tools/observe/timeline/correlation.go` and dispatched from `cmd/browser-agent/internal/toolobserve/dispatcher.go`.
 
 ## Architecture
 
@@ -258,18 +260,15 @@ observe({
 
 ## Code References
 
-### New files to create:
-- `cmd/server/timeline/query.go` — Query parser and executor
-- `cmd/server/timeline/indexer.go` — Event indexer
-- `cmd/server/timeline/merger.go` — Event merging and sorting
-- `cmd/server/timeline/causality.go` — Causality analyzer
-- `cmd/server/timeline/export.go` — Export manager
-- `cmd/server/timeline/events.go` — Event normalization types
+### Existing implementation to extend:
+- `internal/tools/observe/timeline/correlation.go` — current `timeline` and `error_bundles` modes (merging and sorting across buffers)
+- `cmd/browser-agent/internal/toolobserve/dispatcher.go` — observe mode dispatch
+- `internal/schema/observe.go` — observe `what` enum
 
-### Existing files to modify:
-- `cmd/server/mcp/observe.go` — Add timeline, timeline_search, timeline_stats modes
-- `cmd/server/mcp/server.go` — Add timeline_export action to interact()
-- All event sources — Ensure correlation_id propagated to all events
+### Planned (not yet created):
+- Query parser and executor, event indexer, causality analyzer, export manager and event normalization types, most likely as additions to the `internal/tools/observe/timeline` package
+- New `timeline_search` and `timeline_stats` observe modes and a `timeline_export` action
+- All event sources — ensure correlation_id propagated to all events
 
 ## Performance Requirements
 - Timeline query: <200ms for 1-hour window (10K events)

@@ -3,7 +3,7 @@ feature: deployment-watchdog
 status: proposed
 doc_type: tech-spec
 feature_id: feature-deployment-watchdog
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 
 Deployment Watchdog is a **time-bounded monitoring session** implemented as a new action under the existing `configure` MCP tool and a new mode under the `observe` tool. It captures a pre-deployment baseline, then continuously compares incoming telemetry against that baseline for a configurable duration (1-60 minutes). If regressions are detected, alerts are surfaced via the existing `observe({what: "changes"})` polling mechanism.
 
-The watchdog is server-side state (in-memory session) with no extension changes required. It composes three existing Kaboom primitives: session snapshots (`diff_sessions`), behavioral baselines (`save_baseline`/`compare_baseline`), and push regression alerts (`observe({what: "changes"})`).
+The watchdog is server-side state (in-memory session) with no extension changes required. It builds on the existing session snapshot primitive (`configure({what: "diff_sessions"})`). Behavioral baselines (`save_baseline`/`compare_baseline`) and an `observe({what: "changes"})` alert stream do not exist today and would have to be built first (or replaced by status polling).
 
 ## Key Components
 
@@ -24,7 +24,7 @@ The watchdog is server-side state (in-memory session) with no extension changes 
 
 **Baseline Capture**: When watchdog starts, captures current browser state using same mechanism as `diff_sessions({session_action: "capture"})`. Baseline includes: console error fingerprints (so pre-existing errors not flagged as regressions), network endpoint status codes and latencies, performance metrics (load time, LCP, FCP, CLS, TTFB), WebSocket connection state.
 
-If a named behavioral baseline exists for the URL scope, watchdog also loads it for richer comparison (API response shapes, per-endpoint timing tolerances, WebSocket state expectations).
+If a named behavioral baseline feature is built later (no `save_baseline`/`compare_baseline` exists today), watchdog could also load it for richer comparison (API response shapes, per-endpoint timing tolerances, WebSocket state expectations).
 
 **Regression Checker**: Background goroutine that evaluates incoming telemetry against baseline every 30 seconds during monitoring window. Checks four dimensions:
 
@@ -37,7 +37,7 @@ If a named behavioral baseline exists for the URL scope, watchdog also loads it 
 
 **Alert Delivery**: Alerts delivered through two channels:
 1. **Active polling**: Agent calls `configure({what: "watchdog", watchdog_action: "status"})` to get current state including pending alerts.
-2. **Passive embedding**: Alerts embedded in `observe({what: "changes"})` response under `deployment_alerts` key. Alert appears once when first detected, not repeated on subsequent polls (same pattern as push regression alerts).
+2. **Passive embedding** (requires a new `observe({what: "changes"})` mode): Alerts embedded in that response under `deployment_alerts` key. Alert appears once when first detected, not repeated on subsequent polls.
 
 ## Data Flows
 
@@ -70,12 +70,12 @@ AI polls deployment status
   OR
   -> observe({what: "deployment_status"})
   OR
-  -> observe({what: "changes"}) [includes deployment_alerts]
+  -> observe({what: "changes"}) [planned mode; includes deployment_alerts]
   |
   v
 On alert detection, AI investigates
   -> observe({what: "errors"}) for full error context
-  -> observe({what: "performance"}) for detailed metrics
+  -> observe({what: "vitals"}) / analyze({what: "performance"}) for detailed metrics
   -> Decides: rollback or accept
   |
   v
@@ -87,24 +87,24 @@ AI stops watchdog (or duration elapses)
 
 ## Implementation Strategy
 
-**Server changes** (files affected):
+**Server changes** (planned; none of this exists yet):
 
-`cmd/browser-agent/types.go`:
+Shared types (planned, in a new watchdog package under `cmd/browser-agent/internal/`):
 - Add `WatchdogSession` struct containing session state
 - Add `WatchdogAlert` struct containing alert details
 - Add `WatchdogThresholds` struct containing configurable thresholds
 
-`cmd/browser-agent/configure.go`:
-- Add handler for `action: "watchdog"` with sub-actions: `start`, `status`, `stop`
+Configure dispatch (`cmd/browser-agent/internal/toolconfigure/dispatcher.go`, with the mode registered in `cmd/browser-agent/internal/toolruntime/tools_configure.go`):
+- Add a new `what: "watchdog"` mode with sub-actions: `start`, `status`, `stop`
 - Start creates session, captures baseline, spawns checker goroutine
 - Status returns current session state with alerts
 - Stop terminates session, generates summary
 
-`cmd/browser-agent/observe.go`:
-- Add handler for `what: "deployment_status"` returning active watchdogs and recent completions
-- Modify `what: "changes"` to include `deployment_alerts` field from active watchdogs
+Observe dispatch (`cmd/browser-agent/internal/toolobserve/dispatcher.go`):
+- Add a new `what: "deployment_status"` mode returning active watchdogs and recent completions
+- Optionally add a new `what: "changes"` mode (does not exist today) to carry a `deployment_alerts` field
 
-`cmd/browser-agent/watchdog.go` (new file):
+Planned watchdog manager (new file in the watchdog package):
 - `WatchdogManager` struct with mutex-protected map of active sessions
 - `captureBaseline()` function: captures current telemetry snapshot
 - `regressionChecker()` goroutine: evaluates telemetry every 30s
@@ -177,14 +177,13 @@ AI stops watchdog (or duration elapses)
 ## Dependencies
 
 ### Depends on:
-- `diff_sessions` (shipped): Snapshot capture and comparison primitives.
-- `observe({what: "changes"})` (shipped): Alert delivery through changes polling stream.
-- Push regression alerts (shipped): Alert delivery pattern and suppression coordination.
+- `configure({what: "diff_sessions"})` (shipped): Snapshot capture and comparison primitives.
+- `observe({what: "changes"})` (not built): Alert delivery through a changes polling stream; must be added or replaced by status polling.
 - Web vitals (shipped): CLS, LCP, FCP metrics.
 - Performance data capture (shipped): Load time, TTFB metrics.
 
 ### Optionally composes with:
-- Behavioral baselines (in-progress): Richer comparison with API shape and per-endpoint tolerances.
+- Behavioral baselines (not built): Richer comparison with API shape and per-endpoint tolerances.
 - Performance budget (shipped): Budget thresholds as additional regression signals.
 
 ### Depended on by:

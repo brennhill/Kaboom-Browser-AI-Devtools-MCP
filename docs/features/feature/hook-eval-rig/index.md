@@ -4,7 +4,7 @@ feature_id: feature-hook-eval-rig
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-11-21
 code_paths:
   - internal/hook/eval/eval.go
   - internal/hook/eval/testdata/

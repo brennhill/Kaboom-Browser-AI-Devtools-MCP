@@ -2,7 +2,7 @@
 feature: Enhanced CLI Configuration Management
 doc_type: qa-plan
 feature_id: feature-enhanced-cli-config
-last_reviewed: 2026-07-05
+last_reviewed: 2026-11-21
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -47,15 +47,14 @@ last_verified_date: 2026-03-28
 - [ ] `executeInstall()` creates config file if it doesn't exist (file-type clients)
 - [ ] `executeInstall()` idempotent: running twice produces same result
 - [ ] npm `--install` reports bundled skill install summary (created/updated/unchanged/skipped/errors)
-- [ ] PyPI `--install` reports bundled skill install summary with same semantics
-- [ ] `KABOOM_SKIP_SKILL_INSTALL=1` skips skill installation in both wrappers
+- [ ] `KABOOM_SKIP_SKILL_INSTALL=1` skips skill installation (npm wrapper)
 
 #### Unit Tests: Bundled Skills
 
-- [ ] PyPI `install_bundled_skills()` writes managed skills to codex/claude/gemini roots
+- [ ] npm `installBundledSkills()` writes managed skills to codex/claude/gemini roots
 - [ ] Existing user-owned skill files are not overwritten
 - [ ] Legacy managed `kaboom-*`, `gasoline-*`, and `strum-*` skill IDs are removed on successful install
-- [ ] Packaged `skills.json` and `skills/*/SKILL.md` are present in wheel/sdist
+- [ ] Packaged `skills.json` and `skills/*/SKILL.md` are present in the npm package tarball
 
 #### Unit Tests: Doctor Flow
 
@@ -375,7 +374,7 @@ last_verified_date: 2026-03-28
 
 - [ ] Run `kaboom-agentic-browser --help`
   - **Expected**: Help shows all commands including new features
-  - **Verification**: 5 supported clients listed
+  - **Verification**: all supported clients listed
 
 **Result**: ✅ PASS (backward compatible)
 
@@ -437,7 +436,7 @@ last_verified_date: 2026-03-28
 
 ## Performance/Load Testing
 
-- [ ] Doctor completes in < 1 second (5 clients)
+- [ ] Doctor completes in < 1 second (all defined clients)
 - [ ] Install completes in < 1 second (all detected clients)
 - [ ] Doctor with --verbose doesn't add significant time
 - [ ] Uninstall completes in < 1 second (all detected clients)
@@ -447,14 +446,12 @@ last_verified_date: 2026-03-28
 ## Test Files
 
 ### npm (`npm/kaboom-agentic-browser/lib/`)
-- `config.test.js` — Client registry, detection, path resolution (23 tests)
-- `install.test.js` — Install flow for CLI + file-type clients (11 tests)
-- `uninstall.test.js` — Uninstall flow for CLI + file-type clients (7 tests)
+- `config/config.test.js` — Client registry, detection, path resolution
+- `installation/install.test.js` — Install flow for CLI + file-type clients
+- `installation/uninstall.test.js` — Uninstall flow for CLI + file-type clients
+- `installation/skills.test.js` — Bundled skill installation
 
-### Python (`pypi/kaboom-agentic-browser/tests/`)
-- `test_config.py` — Client registry, detection, path resolution (23 tests)
-- `test_install.py` — Install flow (9 tests)
-- `test_uninstall.py` — Uninstall flow (6 tests)
+(The former Python/PyPI test suite was removed with the retired PyPI channel.)
 
-### Shared (`tests/cli/`)
+### Shared (`tests/cli/runtime/`)
 - `errors.test.cjs` — Error classes and formatting
