@@ -213,7 +213,13 @@ const (
 // about a pending or failed entry — the two a caller most needs to recognise.
 func (h *harness) seedCommandLifecycle() {
 	commands := h.captured.Commands()
-	commandtest.Register(commands, seededCorrelationID, time.Minute)
+	// Enqueued (not registered locally) so the completed command carries a
+	// query_id, matching what an extension-delivered command reports.
+	if _, err := commands.Enqueue(queries.PendingQuery{
+		Type: "dom", Params: json.RawMessage(`{"selector":"div"}`), CorrelationID: seededCorrelationID,
+	}, time.Minute, ""); err != nil {
+		panic("seed completed command: " + err.Error())
+	}
 	commandtest.Complete(commands,
 		seededCorrelationID, "complete", json.RawMessage(`{"elements":[{"tag":"div"}],"count":1}`), "")
 

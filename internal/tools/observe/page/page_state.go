@@ -50,11 +50,9 @@ func GetPageInfo(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.
 	return mcp.Succeed(req, "Page info", result)
 }
 
-// storageParams holds parsed parameters for storage queries.
-type storageParams = pagestorage.StorageOptions
-
-func parseStorageParams(args json.RawMessage) storageParams {
-	p := storageParams{Summary: true}
+// parseStorageParams reads observe(what="storage") arguments; summary defaults to true.
+func parseStorageParams(args json.RawMessage) pagestorage.StorageOptions {
+	p := pagestorage.StorageOptions{Summary: true}
 	if len(args) == 0 {
 		return p
 	}

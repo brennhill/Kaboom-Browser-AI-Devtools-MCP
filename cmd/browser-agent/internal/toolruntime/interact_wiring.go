@@ -84,25 +84,31 @@ func initializeInteractActionOwners(h *ToolHandler) {
 	})
 	h.workflowActions = toolinteract.NewWorkflowActions(
 		h.interactRuntime, h.domActions, h.browserActions, h.pageActions,
-		toolinteract.WorkflowDeps{
-			TrackingStatus: trackingStatus,
-			AuditA11y: func(scope string) (a11yaudit.Result, error) {
-				return newA11yService(h).Audit(a11yaudit.Options{Scope: scope})
-			},
-			A11yFailure: func(req mcp.JSONRPCRequest, err error) mcp.JSONRPCResponse {
-				return observepage.A11yFailure(req, err, h.Guards.DiagnosticHintString())
-			},
-			ExportSARIF: func(a11yResult json.RawMessage, scope, saveTo string) (map[string]any, error) {
-				return toolgenerate.BuildSARIF(h.state.Version, a11yResult, scope, saveTo, false)
-			},
-			Now: time.Now,
-			WaitForTrackedURLChange: func(beforeURL string, timeout time.Duration) (string, bool) {
-				return h.capture.Extension().WaitForTrackedURLChange(h.shutdownCtx, beforeURL, timeout)
-			},
-		},
+		buildWorkflowDeps(h, trackingStatus),
 	)
 	h.batchActions = interactbatch.New(interactbatch.Deps{
 		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension, WaitCommand: waitCommand,
 		RecordAIAction: h.actionRecorder.Record, Interact: h.toolInteract, ReplayMu: &h.replayMu,
 	})
+}
+
+// buildWorkflowDeps wires workflow actions to typed use cases (a11y audit,
+// SARIF export) and tracked-tab state rather than MCP-shaped tool handlers.
+func buildWorkflowDeps(h *ToolHandler, trackingStatus func() (bool, int, string)) toolinteract.WorkflowDeps {
+	return toolinteract.WorkflowDeps{
+		TrackingStatus: trackingStatus,
+		AuditA11y: func(scope string) (a11yaudit.Result, error) {
+			return newA11yService(h).Audit(a11yaudit.Options{Scope: scope})
+		},
+		A11yFailure: func(req mcp.JSONRPCRequest, err error) mcp.JSONRPCResponse {
+			return observepage.A11yFailure(req, err, h.Guards.DiagnosticHintString())
+		},
+		ExportSARIF: func(a11yResult json.RawMessage, scope, saveTo string) (map[string]any, error) {
+			return toolgenerate.BuildSARIF(h.state.Version, a11yResult, scope, saveTo, false)
+		},
+		Now: time.Now,
+		WaitForTrackedURLChange: func(beforeURL string, timeout time.Duration) (string, bool) {
+			return h.capture.Extension().WaitForTrackedURLChange(h.shutdownCtx, beforeURL, timeout)
+		},
+	}
 }
