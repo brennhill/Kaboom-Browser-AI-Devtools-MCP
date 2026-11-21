@@ -291,7 +291,7 @@ By default, only `on_error` is true (screenshots on errors are the highest-value
 
 ## File Locations
 
-Server implementation: `cmd/browser-agent/testgen.go` (enhanced script generation, fixture derivation, bug report).
+Server implementation: `cmd/browser-agent/internal/testgenhandler/generate.go` (enhanced script generation, fixture derivation, bug report).
 
 Extension implementation: `extension/background.js` (screenshot capture, auto-capture configuration).
 

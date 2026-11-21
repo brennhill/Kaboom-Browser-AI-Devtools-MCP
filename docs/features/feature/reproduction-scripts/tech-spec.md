@@ -13,7 +13,7 @@ last_verified_date: 2026-03-05
 
 ## Overview
 
-Replace the `toolGetReproductionScript()` stub in [internal/toolgenerate/dispatcher.go](cmd/browser-agent/internal/toolgenerate/dispatcher.go) with a complete implementation that generates reproduction scripts from captured `EnhancedAction` data. Two output formats: Playwright (test code) and Kaboom (natural language).
+Replace the `toolGetReproductionScript()` stub in [internal/toolgenerate/dispatcher.go](../../../../cmd/browser-agent/internal/toolgenerate/dispatcher.go) with a complete implementation that generates reproduction scripts from captured `EnhancedAction` data. Two output formats: Playwright (test code) and Kaboom (natural language).
 
 The daemon-side logic lives with the generate boundary in `cmd/browser-agent/internal/toolgenerate/dispatcher.go`.
 

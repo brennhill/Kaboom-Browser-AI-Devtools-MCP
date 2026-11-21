@@ -10,20 +10,15 @@ links:
   product: ./product-spec.md
   qa: ./qa-plan.md
 code_paths:
-  - cmd/browser-agent/internal/bridge/bridge_startup_orchestration.go
   - cmd/browser-agent/internal/bridge/bridge_startup.go
   - cmd/browser-agent/internal/bridge/bridge_startup_state.go
-  - cmd/browser-agent/internal/bridge/bridge_startup_status.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath.go
-  - cmd/browser-agent/internal/bridge/bridge_forward.go
   - cmd/browser-agent/internal/daemonlife/lifecycle.go
   - cmd/browser-agent/internal/launchmode/launch_mode.go
   - cmd/browser-agent/internal/toolguard/guards.go
 test_paths:
-  - cmd/browser-agent/internal/bridge/lazy_server_start_test.go
-  - cmd/browser-agent/internal/bridge/bridge_spawn_race_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
-  - cmd/browser-agent/internal/bridge/bridge_startup_contention_test.go
+  - cmd/browser-agent/internal/bridge/bridge_startup_test.go
   - cmd/browser-agent/internal/launchmode/launch_mode_test.go
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go

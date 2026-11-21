@@ -943,7 +943,7 @@ func (c *RedactionCache) Invalidate() {
 | `cmd/browser-agent/redaction_config.go` | New: Pattern configuration management |
 | `cmd/browser-agent/redaction_test.go` | Existing tests (extend) |
 | `cmd/browser-agent/redaction_config_test.go` | New: Configuration tests |
-| `cmd/browser-agent/tools_core.go` | Add `configure_redaction` tool registration |
+| `cmd/browser-agent/internal/toolruntime/tools_core.go` | Add `configure_redaction` tool registration |
 
 ---
 

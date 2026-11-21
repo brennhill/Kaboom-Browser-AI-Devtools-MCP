@@ -370,9 +370,9 @@ observe({what: 'logs', test_boundary: 'variation-coupon-summer2026'})
 
 ### Extension Recording (JavaScript)
 
-**Files:** `extension/background/recording.js` (new), modify `extension/inject/recording.ts` (new)
+**Files:** `extension/background/recording/index.js` (new), modify `extension/inject/recording.ts` (new)
 
-#### Server-Side Storage (`extension/background/recording.js`):
+#### Server-Side Storage (`extension/background/recording/index.js`):
 - Manage recording lifecycle (start/stop)
 - Buffer actions in memory
 - Persist recording to server via POST /query
@@ -735,7 +735,7 @@ configure({what: 'test_boundary_end', test_id: 'replay-1'})
 
 | File | Purpose | Size |
 |------|---------|------|
-| `extension/background/recording.js` | Recording lifecycle + metadata + server communication | ~150 LOC |
+| `extension/background/recording/index.js` | Recording lifecycle + metadata + server communication | ~150 LOC |
 | `extension/inject/recording.ts` | Extend action capture with recording metadata | ~150 LOC |
 | `extension/background/ws.js` | WebSocket client + fallback to polling | ~150 LOC |
 | `cmd/browser-agent/recording.go` | Store + query recordings (disk I/O, file management) | ~250 LOC |
@@ -749,7 +749,7 @@ configure({what: 'test_boundary_end', test_id: 'replay-1'})
 
 | File | Changes | Impact |
 |------|---------|--------|
-| `cmd/browser-agent/tools_core.go` | Add recording_start, recording_stop, playback actions | ~50 LOC |
+| `cmd/browser-agent/internal/toolruntime/tools_core.go` | Add recording_start, recording_stop, playback actions | ~50 LOC |
 | `cmd/browser-agent/queries.go` | Add handlers for recordings, recording_actions, WebSocket upgrade | ~60 LOC |
 | `cmd/browser-agent/main.go` | Initialize WebSocket router | ~20 LOC |
 | `extension/inject/action-capture.ts` | Extend with recording metadata (selector, x/y, screenshots) | ~30 LOC |

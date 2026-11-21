@@ -12,7 +12,7 @@ last_verified_date: 2026-03-05
 ## Architecture
 - Interact upload sub-handler: `cmd/browser-agent/tools_interact_upload_handler.go`
 - Upload action implementation: `cmd/browser-agent/tools_interact_upload.go`
-- Validation/security layer: `internal/upload/security*.go`, `internal/upload/validators.go`
+- Validation/security layer: `internal/upload/security*.go`, `internal/upload/uploadsec/input.go`
 - OS automation: `internal/upload/os_automation*.go`
 - Form submit follow-up: `internal/upload/form_submit*.go`
 

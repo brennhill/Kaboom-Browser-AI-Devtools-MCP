@@ -485,7 +485,7 @@ These are deliberate scope boundaries, not bugs. Each is documented so the LLM c
 ### Internal
 - **PendingQuery system** (`internal/capture/query_dispatcher.go`) — dispatches commands to extension
 - **interact tool** (`cmd/browser-agent/tools_interact.go`) — existing action primitives
-- **configure tool** (`cmd/browser-agent/tools_configure.go`) — playback start entry point
+- **configure tool** (`cmd/browser-agent/internal/toolruntime/tools_configure.go`) — playback start entry point
 - **observe tool** (`cmd/browser-agent/tools_observe.go`) — playback results query
 - **Recording types** (`internal/recording/types.go`) — `RecordingAction` struct
 - **Test boundaries** (`internal/capture/test_boundary.go`) — log correlation

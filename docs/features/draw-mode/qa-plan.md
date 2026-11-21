@@ -25,7 +25,7 @@ last_verified_date: 2026-03-05
 ### Test Locations
 
 - **Extension:** `tests/extension/draw-mode/draw-mode.test.js`, `tests/extension/draw-mode-export.test.js`
-- **Go Server:** `cmd/browser-agent/draw_mode_test.go`, `cmd/browser-agent/annotation_store_test.go`
+- **Go Server:** `cmd/browser-agent/draw_mode_test.go`, `cmd/browser-agent/internal/mediaapi/annotation_store_test.go`
 - **Integration:** `tests/integration/draw_mode_test.go`
 
 ---
@@ -199,7 +199,7 @@ last_verified_date: 2026-03-05
 
 ## Unit Tests: Go Server -- Annotation Store
 
-**Location:** `cmd/browser-agent/annotation_store_test.go`
+**Location:** `cmd/browser-agent/internal/mediaapi/annotation_store_test.go`
 
 ### 1. Storage and Retrieval
 

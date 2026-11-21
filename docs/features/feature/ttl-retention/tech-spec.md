@@ -608,7 +608,7 @@ New capabilities are additive:
 | `cmd/browser-agent/ttl.go` | TTL types, parsing, resolution logic |
 | `cmd/browser-agent/ttl_test.go` | TTL tests |
 | `cmd/browser-agent/types.go` | TTLConfig struct definition |
-| `cmd/browser-agent/tools_core.go` | MCP tool schema update |
+| `cmd/browser-agent/internal/toolruntime/tools_core.go` | MCP tool schema update |
 | `cmd/browser-agent/configure.go` | TTL action handler |
 | `cmd/browser-agent/health.go` | Health endpoint TTL section |
 | `cmd/browser-agent/main.go` | CLI flag parsing |

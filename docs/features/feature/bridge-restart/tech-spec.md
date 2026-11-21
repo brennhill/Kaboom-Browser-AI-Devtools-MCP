@@ -89,8 +89,8 @@ Reference implementation:
 
 - `cmd/browser-agent/bridge_startup_orchestration.go`
 - `cmd/browser-agent/bridge_startup_lock.go`
-- `cmd/browser-agent/bridge_startup_state.go`
-- `cmd/browser-agent/bridge.go`
+- `cmd/browser-agent/internal/bridge/bridge_startup_state.go`
+- `cmd/browser-agent/internal/bridge/bridge.go`
 
 ## Response Format
 

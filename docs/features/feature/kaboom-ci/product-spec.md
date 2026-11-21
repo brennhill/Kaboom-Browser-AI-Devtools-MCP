@@ -298,7 +298,7 @@ Three HTTP endpoints registered on the existing Kaboom server (already implement
 - `POST /clear` (also `DELETE /clear`) -- Atomically resets all buffers (logs, network bodies, WebSocket events, enhanced actions, test ID).
 - `POST /test-boundary` -- Sets or clears the current test ID for correlation. Accepts `{ test_id, action: "start"|"end" }`.
 
-These endpoints are already implemented and tested (`cmd/browser-agent/ci.go`, `cmd/browser-agent/ci_test.go`).
+These endpoints are already implemented and tested (`cmd/browser-agent/ci.go`, `cmd/browser-agent/internal/ciapi/compute_test.go`).
 
 ### Component 3: Playwright Fixture (`@anthropic/kaboom-playwright`)
 
