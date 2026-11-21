@@ -13,7 +13,6 @@
 import { StorageKey } from '../../lib/constants.js'
 import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js'
 import { onStorageChanged } from '../../lib/storage/changes.js'
-import { persist } from '../../lib/storage/io.js'
 import { removeLocal } from '../../lib/storage/local.js'
 import { readLocalState } from '../../lib/storage/validated.js'
 import { reportStateRecovery, resolveStateRecovery } from '../../lib/storage/recovery.js'
@@ -288,7 +287,6 @@ export function setupRecordingUI(): void {
       applyRecordHighlight(els)
       pendingRecordingIntent = null
       setApprovalPendingState(els, approvalEls, state, null)
-      persist(removeLocal(StorageKey.PENDING_RECORDING), 'pending-recording-clear')
       return
     }
     pendingRecordingIntent = pending && !pending.highlight ? pending : null
@@ -296,10 +294,11 @@ export function setupRecordingUI(): void {
     setApprovalPendingState(els, approvalEls, state, pendingRecordingIntent)
   }
 
+  // The background recording owner clears StorageKey.PENDING_RECORDING once the
+  // gesture decision resolves its waiter; the popup only hides the card locally.
   const clearPendingRecordingIntent = (): void => {
     pendingRecordingIntent = null
     setApprovalPendingState(els, approvalEls, state, null)
-    persist(removeLocal(StorageKey.PENDING_RECORDING), 'pending-recording-clear')
   }
 
   // Row is visible immediately with default "not recording" state.

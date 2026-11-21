@@ -50,6 +50,20 @@ describe('Recording Initial State', () => {
     })
     assert.ok(clearedRecording, 'initRecording should clear stale recording state from storage')
   })
+
+  test('initRecording clears a stale pending recording intent (background is its only writer)', async () => {
+    // A SW restart kills any in-flight gesture waiter, so a persisted pending
+    // intent can never be resolved. The background owner clears it on startup;
+    // the popup only reads it (kaboom-jdm5.6).
+    globalThis.chrome.storage.local.remove.mock.resetCalls()
+    await initRecording()
+    const removeCalls = globalThis.chrome.storage.local.remove.mock.calls
+    const clearedPending = removeCalls.some((call) => {
+      const arg = call.arguments[0]
+      return arg === 'kaboom_pending_recording' || (Array.isArray(arg) && arg.includes('kaboom_pending_recording'))
+    })
+    assert.ok(clearedPending, 'initRecording should clear stale pending recording intent')
+  })
 })
 
 // =============================================================================
