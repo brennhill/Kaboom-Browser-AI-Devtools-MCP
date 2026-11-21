@@ -20,6 +20,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testowner"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/instancereg"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
@@ -185,6 +186,24 @@ func BuildBinary(t *testing.T) string {
 	return binaryCache.path
 }
 
+// isolatedRegistry returns the instance-registry directory a test daemon uses.
+// An explicit KABOOM_REGISTRY_DIR (a test that shares one registry on purpose)
+// wins; otherwise each daemon gets a private one under its state directory.
+// Inheriting the real ~/.kaboom/registry put every integration daemon under the
+// machine-wide admission cap alongside parallel packages and the developer's
+// own daemon, and the cap evicted them mid-test.
+func isolatedRegistry(t *testing.T, stateDirectory string) string {
+	t.Helper()
+	if explicit := strings.TrimSpace(os.Getenv(instancereg.DirEnv)); explicit != "" {
+		return explicit
+	}
+	directory, err := os.MkdirTemp(stateDirectory, "registry-")
+	if err != nil {
+		t.Fatalf("create isolated instance registry: %v", err)
+	}
+	return directory
+}
+
 // StartServer returns a configured command and registers bounded daemon cleanup.
 func StartServer(t *testing.T, binary string, args ...string) *exec.Cmd {
 	t.Helper()
@@ -201,9 +220,10 @@ func StartServer(t *testing.T, binary string, args ...string) *exec.Cmd {
 			}
 		})
 	}
+	registry := isolatedRegistry(t, stateDirectory)
 	port := parsePort(args)
 	if port > 0 {
-		t.Cleanup(func() { stopServer(t, binary, port, stateDirectory) })
+		t.Cleanup(func() { stopServer(t, binary, port, stateDirectory, registry) })
 	}
 	command := exec.Command(binary, args...) // #nosec G204 -- test-owned binary and arguments
 	// The daemon exits on its own once this test process is gone. t.Cleanup
@@ -213,6 +233,7 @@ func StartServer(t *testing.T, binary string, args ...string) *exec.Cmd {
 	command.Env = append(os.Environ(),
 		statecfg.StateDirEnv+"="+stateDirectory,
 		testowner.OwnerPIDEnv+"="+strconv.Itoa(os.Getpid()),
+		instancereg.DirEnv+"="+registry,
 	)
 	if root := os.Getenv("KABOOM_GO_COVERDIR"); root != "" {
 		coverageDirectory, err := os.MkdirTemp(root, "browser-")
@@ -256,12 +277,12 @@ func parsePort(args []string) int {
 	return 0
 }
 
-func stopServer(t *testing.T, binary string, port int, stateDirectory string) {
+func stopServer(t *testing.T, binary string, port int, stateDirectory, registry string) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	command := exec.CommandContext(ctx, binary, "--stop", "--port", strconv.Itoa(port)) // #nosec G204 -- test-owned binary
-	command.Env = append(os.Environ(), statecfg.StateDirEnv+"="+stateDirectory)
+	command.Env = append(os.Environ(), statecfg.StateDirEnv+"="+stateDirectory, instancereg.DirEnv+"="+registry)
 	command.Stdout, command.Stderr = io.Discard, io.Discard
 	if err := command.Run(); err != nil && ctx.Err() == nil {
 		t.Logf("graceful test daemon cleanup on port %d: %v", port, err)

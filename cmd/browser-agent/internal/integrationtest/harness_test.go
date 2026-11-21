@@ -5,12 +5,14 @@ package integrationtest
 import (
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/instancereg"
 )
 
 func TestBuildArgsCoverAllProductionPackagesOnlyWhenRequested(t *testing.T) {
@@ -119,6 +121,32 @@ func TestFreePortFallsBackWhenTheBandIsExhausted(t *testing.T) {
 	}
 	if got := FreePort(t); got <= 0 {
 		t.Fatalf("FreePort must always return a usable port, got %d", got)
+	}
+}
+
+// Every daemon registers in the machine-wide instance registry and the
+// admission cap evicts the oldest daemons when it is exceeded. Integration
+// daemons that inherit the real ~/.kaboom/registry share that cap with every
+// parallel integration package (and the developer's own daemon), so they evict
+// each other mid-test: "server did not start on port N" with nothing left on
+// the port. StartServer must give each daemon a private registry.
+func TestStartServerIsolatesTheInstanceRegistry(t *testing.T) {
+	t.Setenv(instancereg.DirEnv, "")
+	command := StartServer(t, "kaboom-test-binary")
+	registry := ""
+	for _, entry := range command.Env {
+		if value, found := strings.CutPrefix(entry, instancereg.DirEnv+"="); found {
+			registry = value
+		}
+	}
+	if registry == "" {
+		t.Fatalf("StartServer did not set %s; the daemon would join the real user registry", instancereg.DirEnv)
+	}
+	if info, err := os.Stat(registry); err != nil || !info.IsDir() {
+		t.Fatalf("registry %q is not an existing directory: %v", registry, err)
+	}
+	if home, err := os.UserHomeDir(); err == nil && registry == filepath.Join(home, ".kaboom", "registry") {
+		t.Fatalf("registry %q is the real user registry", registry)
 	}
 }
 
