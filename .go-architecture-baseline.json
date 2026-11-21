@@ -327,7 +327,7 @@
     },
     "cmd/browser-agent/internal/mediaapi/handler.go": {
       "mutable_globals": 0,
-      "exports": 3
+      "exports": 4
     },
     "cmd/browser-agent/internal/mediaapi/screenshots.go": {
       "mutable_globals": 0,
@@ -431,7 +431,7 @@
     },
     "cmd/browser-agent/internal/screenrec/save.go": {
       "mutable_globals": 0,
-      "exports": 1
+      "exports": 2
     },
     "cmd/browser-agent/internal/screenrec/types.go": {
       "mutable_globals": 1,
@@ -571,7 +571,7 @@
     },
     "cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go": {
       "mutable_globals": 0,
-      "exports": 4
+      "exports": 5
     },
     "cmd/browser-agent/internal/toolanalyze/annotations_projects.go": {
       "mutable_globals": 0,
@@ -767,7 +767,7 @@
     },
     "cmd/browser-agent/internal/toolinteract/action_owners.go": {
       "mutable_globals": 0,
-      "exports": 22
+      "exports": 23
     },
     "cmd/browser-agent/internal/toolinteract/action_runtime.go": {
       "mutable_globals": 1,
@@ -989,6 +989,10 @@
       "mutable_globals": 0,
       "exports": 6
     },
+    "internal/app/pageinfo/pageinfo.go": {
+      "mutable_globals": 0,
+      "exports": 6
+    },
     "internal/app/screenshot/screenshot.go": {
       "mutable_globals": 0,
       "exports": 20
@@ -1036,6 +1040,10 @@
     "internal/browsercommand/result.go": {
       "mutable_globals": 0,
       "exports": 9
+    },
+    "internal/browsercommand/views.go": {
+      "mutable_globals": 0,
+      "exports": 6
     },
     "internal/buffers/filter.go": {
       "mutable_globals": 0,
@@ -1119,7 +1127,7 @@
     },
     "internal/capture/waterfallstore/store.go": {
       "mutable_globals": 0,
-      "exports": 7
+      "exports": 8
     },
     "internal/capture/wsconn/status.go": {
       "mutable_globals": 0,
@@ -1507,7 +1515,7 @@
     },
     "internal/queries/types.go": {
       "mutable_globals": 0,
-      "exports": 7
+      "exports": 8
     },
     "internal/reaper/census.go": {
       "mutable_globals": 0,
@@ -2055,7 +2063,7 @@
     },
     "internal/tools/observe/testsupport/helpers.go": {
       "mutable_globals": 0,
-      "exports": 3
+      "exports": 4
     },
     "internal/tools/observe/timeline/correlation.go": {
       "mutable_globals": 0,
