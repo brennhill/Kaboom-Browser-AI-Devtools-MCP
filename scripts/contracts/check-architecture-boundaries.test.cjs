@@ -123,3 +123,37 @@ test('rejects canonical contract declarations outside their owner module', () =>
   assert.equal(result.status, 1)
   assert.match(result.stderr, /TrackingState must be declared only by src\/types\/runtime\/tracking\.ts/)
 })
+
+test('rejects cross-context imports that bypass a bounded context public entry point', () => {
+  const contexts = {
+    context_entry_points: {
+      'src/background/recording/': { context: 'Screen Recording', public: ['index.ts'] }
+    }
+  }
+  const files = {
+    'src/background/recording/index.ts': "import { start } from './capture.js'\nexport const begin = start\n",
+    'src/background/recording/capture.ts': 'export const start = 1\n'
+  }
+  const accepted = check(
+    fixture(
+      { ...files, 'src/background/init.ts': "import { begin } from './recording/index.js'\nexport const i = begin\n" },
+      contexts
+    )
+  )
+  assert.equal(accepted.status, 0, accepted.stderr)
+
+  const rejected = check(
+    fixture(
+      {
+        ...files,
+        'src/background/init.ts': "import { start } from './recording/capture.js'\nexport const i = start\n"
+      },
+      contexts
+    )
+  )
+  assert.equal(rejected.status, 1)
+  assert.match(
+    rejected.stderr,
+    /src\/background\/init\.ts: Screen Recording internals must be reached through its public entry points \(index\.ts\), not src\/background\/recording\/capture\.ts/
+  )
+})

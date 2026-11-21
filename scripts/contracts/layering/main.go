@@ -25,6 +25,9 @@
 //	                     browsercommand, healthreader.Owners, ...)
 //	test-support         production files never import test-support packages
 //	                     (observe/testsupport, capturefixture, browsercommand/commandtest)
+//	bounded contexts     Observation Capture, Event Recording, Connection & Sync and
+//	                     Extension Ingestion never import their upstream contexts
+//	                     (contexts.go; names match GLOSSARY.md)
 //	capture.NewCapture   only from cmd/browser-agent (ports are wired by the
 //	                     composition root; detection resolves import ALIASES
 //	                     and package-level var initializers, not the literal
@@ -457,6 +460,7 @@ func evaluateMatrix(scan *treeScan) []string {
 		violations = append(violations, fmt.Sprintf("composition-root: %s constructs capture.NewCapture", file))
 	}
 	violations = append(violations, scan.commandOwnerBreaches...)
+	violations = append(violations, contextViolations(scan)...)
 	sort.Strings(violations)
 	return violations
 }

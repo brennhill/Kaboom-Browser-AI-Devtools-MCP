@@ -479,6 +479,7 @@ lint-circular:
 	@bash scripts/quality/contracts/check-circular-deps.sh
 
 lint-boundaries:
+	@node --test scripts/contracts/check-architecture-boundaries.test.cjs
 	@node scripts/contracts/check-architecture-boundaries.cjs
 
 lint-silent-catches:

@@ -131,7 +131,8 @@ satisfied. (Flow maps are no longer required — do not create or update them.)
 | Feature specs         | `docs/features/<name>/`                          |
 | Test plans            | `docs/features/<name>/{name}-test-plan.md`       |
 | Test plan template    | `docs/features/_template/template-test-plan.md`  |
-| Architecture          | `.claude/refs/architecture.md`                   |
+| Glossary (domain terms, bounded contexts) | `GLOSSARY.md`                |
+| Architecture (context map, operation owners) | `docs/core/architecture/server-architecture.md`, `docs/core/architecture/extension-architecture.md` |
 | Known issues          | `docs/core/quality/known-issues.md`                      |
 | All features          | `docs/features/feature-navigation.md`            |
 

@@ -12,6 +12,11 @@ addition to the 800-line and 10-file limits.
 - Cross-context communication uses the canonical runtime-message and wire
   contracts, while shared computation moves completely into `lib`.
 
+Within the background worker, bounded contexts (see
+[GLOSSARY.md](../../../GLOSSARY.md)) expose public entry points; the
+`context_entry_points` policy rejects imports of their private files.
+Go-side context rules live in `scripts/contracts/layering/contexts.go`.
+
 The executable policy lives in `.architecture-boundaries.json`. A forbidden
 direction must be removed through a complete caller migration; compatibility
 facades and pass-through re-exports are not exceptions.

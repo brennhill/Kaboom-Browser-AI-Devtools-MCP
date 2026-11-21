@@ -1,158 +1,147 @@
 # Extension Architecture
 
+Last reviewed: 2026-11-21
+
 ## Overview
 
-The Kaboom Chrome extension (MV3) captures browser telemetry (console logs, network requests, WebSocket events, user actions, performance data) and relays it to a local Go server over HTTP. It also receives commands from the server (DOM queries, JS execution, navigation) and executes them in the page. The extension operates across three execution contexts that communicate via two message channels: `chrome.runtime` messages and `window.postMessage`.
+The Kaboom Chrome extension (MV3) captures browser observations (console logs,
+network requests, WebSocket events, user actions, performance data) and sends
+them to the local Go daemon over HTTP. It also receives **browser commands**
+from the daemon over `/sync` and executes them in the tracked tab.
 
-## Execution Contexts
+Domain terms in **bold** are defined in [GLOSSARY.md](../../../GLOSSARY.md).
+For the daemon half, see [server-architecture.md](server-architecture.md).
 
-**Background Service Worker** (`src/background/`) -- The orchestration layer. Manages server connection via a unified `/sync` endpoint, batches captured data before sending, dispatches incoming commands to target tabs, and owns all persistent state (settings, connection status, circuit breakers). Cannot access the DOM.
+## Runtime contexts
 
-**Content Script** (`src/content/`) -- The message relay. Bridges background and inject contexts. Also renders UI overlays (toasts, subtitles, draw-mode). Runs in an isolated world per tab -- can access the DOM but not page JavaScript globals.
+These are Chrome execution environments, not bounded contexts. They are sibling
+roots under `src/`, and `.architecture-boundaries.json` (`forbidden_imports`)
+forbids any of them from importing another. They talk only through
+`src/types/runtime-messages.ts` messages and `window.postMessage`.
 
-**Inject Script** (`src/inject/`) -- Page instrumentation. Runs in the MAIN world with full access to page JS globals. Monkey-patches `fetch`, `XMLHttpRequest`, `console.*`, `WebSocket`, and `addEventListener` to capture telemetry. Executes JS commands and DOM queries. Bundled via esbuild into `inject.bundled.js`.
+| Runtime context | Entry | Role |
+| --- | --- | --- |
+| Background service worker | `src/background.ts`, `src/background/init.ts` | Owns connection, commands, tracking, Pilot and screen-recording lifecycle. No DOM |
+| Content script | `src/content.ts`, `src/content/` | Relays between background and inject. Renders overlays. Reports content readiness |
+| Inject script (MAIN world) | `src/inject.ts`, `src/inject/` | Instruments page globals and runs page-world queries. Bundled |
+| Offscreen document | `src/offscreen/recording-worker.ts` | Encodes screen recordings and uploads saved video |
+| Popup and side panel | `src/popup.ts`, `src/popup/`, `src/sidepanel.ts` | User controls |
+| Shared library | `src/lib/` | Pure shared code. It cannot import any runtime context |
 
-## Message Flow
+## Bounded contexts
 
-```
-                    CAPTURE (upstream)
-  +-----------+   window.postMessage   +---------+   chrome.runtime   +------------+   HTTP POST
-  |  Inject   | ---------------------> | Content | -----------------> | Background | -----------> Go Server
-  |  (MAIN)   |                        | (isolated)                   |  (SW)      |   /logs
-  +-----------+                        +---------+                    +------------+   /ws-events
-       |                                    |                              |            /actions
-       | captures: console, fetch,          | forwards: log, ws,          | batches    /network-bodies
-       | XHR, WebSocket, actions,           | action, network, perf       | & sends    /perf-snapshots
-       | performance, exceptions            | messages to background       |
-       |                                    |                              |
-       |                                    |                              |
-                    COMMANDS (downstream)                                   |
-  +-----------+   window.postMessage   +---------+   chrome.runtime   +------------+   /sync
-  |  Inject   | <--------------------- | Content | <----------------- | Background | <----------- Go Server
-  |  (MAIN)   |                        | (isolated)                   |  (SW)      |   (long-poll)
-  +-----------+                        +---------+                    +------------+
-       |                                    |                              |
-       | executes: JS, DOM queries,         | relays: execute_js,         | dispatches via
-       | a11y audits, settings,             | dom_query, a11y_query,      | command registry
-       | state capture/restore,             | highlight, settings,        | (Map-based)
-       | highlight, link health             | state commands              |
-```
+| Context | Owned state | Code | Public interface | May depend on |
+| --- | --- | --- | --- | --- |
+| **Connection & Sync** (extension half) | Sync loop state, the mirrored **connection generation**, connection status, batch delivery and circuit breaking | `src/background/sync/`, `src/background/runtime-state/connection-generation.ts`, `src/background/runtime-state/connection-state.ts`, `src/background/orchestration/connection-monitor.ts` | `src/background/sync/sync-client.ts:SyncClient`, `src/background/sync/sync-manager.ts:startSyncClient`, `src/background/sync/sync-manager.ts:resetSyncClientConnection`, wire `src/types/wire/wire-sync.ts` | Browser Command Execution (`handlePendingQuery`) |
+| **Browser Command Execution** | In-flight command execution and progress reporting | `src/background/commands/`, `src/background/pending-queries.ts`, `src/background/exec/`, `src/background/dom/` | `src/background/commands/registry.ts:registerCommand`, `src/background/commands/registry.ts:dispatch`, `src/background/commands/helpers.ts` (target resolution, result senders), `src/background/pending-queries.ts:handlePendingQuery` | Tab Tracking & Pilot, Screen Recording (`index.ts`), Connection & Sync (`SyncClient` for results) |
+| **Tab Tracking & Pilot** | The **tracked tab** (authoritative in `chrome.storage`), **tracking continuity**, **content readiness**, **Pilot** intent | `src/lib/tabs/`, `src/background/runtime-state/tracking-continuity.ts`, `src/background/runtime-state/content-readiness.ts`, `src/background/runtime-state/pilot-state.ts`, `src/background/event-listeners.ts` (Chrome adapters), `src/types/runtime/tracking.ts` | `src/lib/tabs/tracked-tab-storage.ts:readTrackedTab`, `src/lib/tabs/tracked-tab-storage.ts:setTrackedTab`, `src/lib/tabs/tab-tracking-core.ts:trackTab`, `src/background/runtime-state/tracking-continuity.ts:trackingContinuity`, `src/background/runtime-state/content-readiness.ts:contentReadiness`, `src/background/runtime-state/pilot-state.ts:isAiWebPilotEnabled` | `src/lib/` |
+| **Observation Capture** (extension half) | Page hooks and per-type batchers | `src/inject/`, `src/lib/net/`, `src/lib/page/`, `src/content/page-telemetry.ts`, `src/background/sync/batcher-instances.ts` | `src/background/sync/batcher-instances.ts:createBatcherInstances`, the capture runtime messages | Connection & Sync (delivery) |
+| **Screen Recording** | Live recording state, its persisted mirror (`StorageKey.RECORDING`), and the offscreen encoder | `src/background/recording/`, `src/offscreen/recording-worker.ts`, `src/popup/recording/recording.ts` | `src/background/recording/index.ts:startRecording`, `src/background/recording/index.ts:stopRecording`, `src/background/recording/index.ts:initRecording`, `src/background/recording/utils.ts`, offscreen messages in `src/types/runtime-messages.ts` | Tab Tracking & Pilot |
+| **Event Recording** (UI only) | None. The daemon owns event recordings | `src/popup/recording/action-recording.ts` | Daemon HTTP via `src/lib/daemon-http.ts:postDaemonJSON` | — |
+| **Composition** | Wiring only | `src/background/init.ts`, `src/background.ts` | `src/background/init.ts:initializeExtension` | Everything in background |
 
-Security: Content-to-inject messages are authenticated with a per-page-load cryptographic nonce. Background validates sender origin on all incoming `chrome.runtime` messages.
-
-## Directory Map
+### Context map
 
 ```
-src/
-  background/              Service worker modules
-    index.ts               State container, exports, batchers, connection management
-    message-handlers.ts    chrome.runtime.onMessage routing (DI-based)
-    sync-client.ts         Unified /sync endpoint client (replaces individual polling)
-    sync-manager.ts        Sync client lifecycle (start/stop/reset)
-    batcher-instances.ts   Factory for debounced batchers (logs, ws, actions, network, perf)
-    server.ts              Daemon HTTP transport and badge updates
-    batchers.ts            Buffered delivery and retry policy
-    circuit-breaker.ts     Failure isolation
-    log-processing.ts      Log normalization and filtering
-    screenshot.ts          Screenshot capture and upload
-    dom/primitives/        Self-contained DOM functions grouped by action family
-    dom-dispatch.ts        Dispatches dom-primitives to target tabs
-    pending-queries.ts     Legacy command dispatch (being replaced by commands/)
-    server.ts              Server URL and request header management
-    init.ts                Extension initialization sequence
-    commands/              Async command registry (Map-based dispatch)
-      registry.ts          registerCommand() / dispatch() entry point
-      helpers.ts           Target tab resolution, result wrapping
-      interact.ts          Browser interaction commands (click, type, navigate...)
-      analyze.ts           DOM/a11y query commands
-      observe.ts           Observation commands (screenshot, etc.)
-
-  content/                 Content script (isolated world)
-    runtime-message-listener.ts  chrome.runtime message routing from background
-    window-message-listener.ts   window.postMessage routing from inject
-    message-handlers.ts          Background message delegation and inject forwarding
-    script-injection.ts          Injects inject.bundled.js, generates per-page nonce
-    message-forwarding.ts        Maps inject message types to background message types
-    request-tracking.ts          Pending request/response correlation maps
-    tab-tracking.ts              Tab isolation (only forward from tracked tab)
-    ui/
-      toast.ts                   Action toast overlay
-      subtitle.ts                Subtitle and recording watermark overlay
-
-  inject/                  MAIN world page instrumentation (bundled)
-    index.ts               Entry point, installs all capture hooks
-    message-handlers.ts    Dispatches messages from content script
-    settings.ts            Handles capture toggle messages
-    execute-js.ts          JS execution sandbox (Function constructor + timeout)
-    state.ts               Browser state capture/restore
-    observers.ts           MutationObserver and interception deferral
-    api.ts                 Public API exposed on window (if needed)
-
-  lib/                     Shared utilities (used by inject via bundling)
-    network.ts             fetch/XHR monkey-patching, waterfall capture
-    console.ts             console.* monkey-patching
-    exceptions.ts          Global error/unhandledrejection capture
-    websocket.ts           WebSocket monkey-patching
-    actions.ts             User action capture (click, input, scroll, navigation)
-    performance.ts         Performance marks/measures capture
-    perf-snapshot.ts       Performance snapshot (timing, memory, resources)
-    dom-queries.ts         DOM query execution engine
-    link-health.ts         Link health checker
-    constants.ts           Shared constants (limits, sensitive headers, timeouts)
-    serialize.ts           Safe serialization utilities
-
-  types/                   TypeScript type definitions
-    index.ts               Canonical public type exports from focused modules
-    runtime-messages.ts    Message type discriminated unions (rule 20 contract)
-    utils.ts               Generic type helpers and type guards
-    global.d.ts            Ambient globals (KaboomAPI, axe, Performance)
-    wire/                  Wire types (generated from Go, CI-enforced)
-    capture/               Shapes of page-derived telemetry
-      telemetry.ts, network.ts, websocket.ts, performance.ts,
-      actions.ts, accessibility.ts, ai-context.ts, dom.ts, sourcemap.ts
-    runtime/               The extension's own runtime state
-      chrome.ts, debug.ts, queries.ts, state.ts
+           daemon /sync (wire-sync.ts)          daemon POST uploads
+                 ^      |                         ^
+     heartbeat,  |      | commands (+generation)  | /recordings/save, ingestion endpoints
+     results     |      v                         |
+   +-------------------------+   handlePendingQuery   +-----------------------------+
+   | Connection & Sync       |----------------------->| Browser Command Execution   |
+   | SyncClient, generation  |<-----------------------| registry, exec, dom         |
+   +-------------------------+   queueCommandResult   +-----------------------------+
+          ^ batches                                      |            |
+          |                         persistTrackedTab,   |            | startRecording /
+   +-------------------------+      requireAiWebPilot,   |            | stopRecording
+   | Observation Capture     |      contentReadiness     v            v
+   | inject, content, lib    |                 +----------------+  +------------------+
+   +-------------------------+                 | Tab Tracking & |  | Screen Recording |
+                                               | Pilot          |  | background +     |
+            Chrome tabs/storage events  -----> | (owner)        |  | offscreen worker |
+                                               +----------------+  +------------------+
 ```
 
-## Key Patterns
+## Composition root
 
-- **Dependency injection** -- `MessageHandlerDependencies` interface in `message-handlers.ts` decouples the handler logic from module-level state, enabling isolated unit testing.
-- **Command registry** -- `commands/registry.ts` uses a `Map<string, CommandHandler>` for async command dispatch. Each command file calls `registerCommand()` at import time. The `CommandContext` bundles query, sync client, target tab, and wrapped result senders.
-- **Batcher pattern** -- `batcher-instances.ts` creates debounced batchers (one per data type) that accumulate entries and flush to the server on a timer. Each batcher is wrapped in a shared circuit breaker to back off on server failures.
-- **Sync client** -- A single `/sync` long-poll endpoint replaces individual POST endpoints for extension-to-server communication. The sync loop sends settings + extension logs upstream and receives commands downstream.
-- **Wire types** -- `src/types/wire/wire-*.ts` are generated from `internal/types/wire_*.go`. CI runs `make check-wire-drift` to ensure they stay in sync. These define the exact HTTP payload shapes.
-- **Nonce validation** -- Content script generates a cryptographic nonce per page load, passes it to inject via a `data-kaboom-nonce` attribute on the script element. All `window.postMessage` calls from content include the nonce; inject validates it before processing.
-- **Tab isolation** -- Content script's `window-message-listener.ts` filters captured data so only the tracked tab's telemetry is forwarded to background.
+`src/background/init.ts:initializeExtension` wires the background contexts.
+It installs the Chrome lifecycle adapters
+(`src/background/event-listeners.ts:handleTrackedTabUrlChange`,
+`src/background/event-listeners.ts:handleTrackedTabClosed`), subscribes to
+`trackingContinuity`, restores the tracked tab, starts the sync client, and
+calls `initRecording` to restore any screen recording after a service-worker
+restart.
+
+## Operation owners and handoffs
+
+Rows describe the extension side. The daemon side of each operation is in
+[server-architecture.md](server-architecture.md#operation-owners-and-handoffs).
+
+| Operation | Owner | Flow and handoff contracts |
+| --- | --- | --- |
+| Heartbeat and delivery | Connection & Sync | `SyncClient` sends `SyncRequest` (settings, tracked tab, Pilot, results, in-progress list) and receives commands. Each command carries `connection_generation` (`src/types/wire/wire-sync.ts`) |
+| Command execution | Browser Command Execution | `src/background/sync/sync-manager.ts` → `handlePendingQuery` → `dispatch` → the handler registered with `registerCommand`. `rejectSupersededCommand` drops commands from an older generation |
+| Progress and results | Browser Command Execution, delivered by Connection & Sync | `SyncClient.updateCommandProgress` and `SyncClient.queueCommandResult`. Results ride the next heartbeat and are stamped with the generation they were issued under |
+| Reconnect | Connection & Sync (daemon owns the generation) | A sync response with a new generation → `setConnectionGeneration`. `resetSyncClientConnection` restarts the loop. Work from the old generation is rejected on both sides |
+| Tab switch (synchronous) | Tab Tracking & Pilot | `switch_tab` → `src/background/exec/browser-actions.ts:executeSwitchTabAction` → `persistTrackedTab` writes storage before the result returns. The daemon then applies the command-confirmed observation |
+| Tab switch (asynchronous) | Tab Tracking & Pilot | User pick (popup), navigation or close → `trackTab` or Chrome adapters → `chrome.storage` and `trackingContinuity` → the next heartbeat carries the new tab |
+| Content readiness | Tab Tracking & Pilot | Document-changing actions call `contentReadiness.begin`. The content script answers with `TrackingContentReadyMessage` (`src/types/runtime/tracking.ts`). Commands for which `requiresContentReadiness` is true wait on the barrier in `src/background/commands/registry.ts` |
+| Pilot gating | Tab Tracking & Pilot | The popup toggle (`src/popup/ai-web-pilot.ts`) sends `set_ai_web_pilot_enabled` to the background, the single writer (`src/background/message-routing/pilot-handler.ts`), which persists `StorageKey.AI_WEB_PILOT_ENABLED`. `isAiWebPilotEnabled` caches it. `requireAiWebPilot` gates execution. The heartbeat reports it so the daemon can gate too |
+| Screen recording start | Screen Recording | Command `screen_recording_start` (`src/background/commands/interact.ts`) → `startRecording` → persists `StorageKey.RECORDING` → `OffscreenStartRecordingMessage` to `src/offscreen/recording-worker.ts` |
+| Screen recording restore | Screen Recording | `initRecording` → `src/background/recording/rehydration.ts:resolveRecordingRehydration` reconciles the persisted mirror with the offscreen document (`OffscreenGetRecordingStateMessage`) |
+| Screen recording stop and save | Screen Recording | `stopRecording` → `OffscreenStopRecordingMessage` → the worker uploads `POST /recordings/save` (a **saved video**). The daemon's save handler completes the command |
+| Event recording (popup) | Event Recording (daemon) | `src/popup/recording/action-recording.ts` calls the daemon over HTTP. The extension keeps no event-recording state beyond UI |
+| Observation capture | Observation Capture | inject hooks → `window.postMessage` → content → runtime messages → `createBatcherInstances` batchers → daemon ingestion endpoints. Extension logs ride the heartbeat |
+
+### Current behavior and target
+
+- **Gap (kaboom-jdm5.7):** the popup (`src/popup/recording/recording.ts`) gates
+  its recording UI on the `StorageKey.RECORDING` storage mirror. It should
+  reconcile with the background owner (CLAUDE.md rule 18), because the mirror
+  goes stale if the service worker dies without clearing it.
+- **Target:** keep the Chrome lifecycle adapters thin. They report to
+  `trackingContinuity` and the tracked-tab storage helpers, and never write
+  tracking keys directly.
+
+## Enforcement
+
+`make lint-boundaries` (`scripts/contracts/check-architecture-boundaries.cjs`,
+tests in `scripts/contracts/check-architecture-boundaries.test.cjs`) enforces:
+
+- runtime-context isolation (`forbidden_imports`);
+- canonical type owners and no re-exports or aggregate files;
+- **bounded-context public entry points** (`context_entry_points`): files
+  outside `src/background/recording/` may import only `index.ts` and
+  `utils.ts` from it, and files outside `src/background/commands/` may import
+  only `registry.ts` and `helpers.ts`. Per-family command modules and
+  recording internals stay private.
 
 ## Constraints
 
-- **DOM action primitives must be self-contained** -- Each function under `dom/primitives/` is serialized by `chrome.scripting.executeScript({ func })`. It cannot reference closures, imports, or external variables. The generated pointer, form, and read modules share one authored template but retain only their own handlers.
-- **Content and inject scripts must be bundled** -- MV3 content scripts cannot use ES module imports at runtime. `inject.bundled.js` and `content.bundled.js` are built by esbuild. Source changes in `src/inject/` or `src/lib/` used by inject require `make compile-ts`.
-- **No dynamic imports in background service worker** -- MV3 service workers do not support `import()`. All background modules must be statically imported. (Content script can use dynamic import for lazy-loaded modules like `draw-mode.js`.)
-- **lib/ code used by inject must go through esbuild** -- Anything in `src/lib/` that inject uses gets bundled into `inject.bundled.js`. Adding a new lib dependency requires `make compile-ts` to take effect.
+- **DOM action primitives must be self-contained.** Each function under
+  `src/background/dom/primitives/` is serialized by
+  `chrome.scripting.executeScript({ func })`. It cannot reference closures or
+  imports.
+- **Content and inject scripts must be bundled.** Run `make compile-ts` after
+  any `src/` change.
+- **No dynamic imports in the background service worker.**
+- **Shared storage keys go through their owner's helpers** (CLAUDE.md rule
+  18). Tracked-tab keys go through `src/lib/tabs/tracked-tab-storage.ts`.
 
-## "Change X, Edit Y" Lookup
+## "Change X, edit Y" lookup
 
-| Want to...                          | Edit these files                                                                                            |
-|-------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| Add a new capture type              | `src/lib/<capture>.ts`, `src/inject/index.ts` (install hook), `src/types/` (types), `src/background/sync/batcher-instances.ts` (new batcher) |
-| Add a new capture toggle            | `src/lib/constants.ts`, `src/types/runtime-messages.ts`, `src/inject/settings.ts`, `src/content/message-handlers.ts` (TOGGLE_MESSAGES set) |
-| Add a new async command             | `src/background/commands/<name>.ts` (handler + registerCommand), `src/background/commands/helpers.ts` (if new helper needed) |
-| Add a new DOM action                | Its change-coupled module under `src/background/dom/primitives/`, `scripts/templates/dom-primitives.ts.tpl` when it shares the generated selector engine, and `src/background/dom/dom-dispatch.ts` |
-| Change server communication         | `src/background/sync/sync-client.ts`, `src/background/sync/server.ts`                                                |
-| Add UI overlay                      | `src/content/ui/<name>.ts`, `src/content/runtime-message-listener.ts` (add message handler)                 |
-| Add page instrumentation            | `src/inject/` + `src/lib/`, then `make compile-ts`                                                         |
-| Add a wire type                     | `internal/types/wire_*.go` (Go source of truth), run `make generate-wire-types`, verify with `make check-wire-drift` |
-| Add a background message handler    | `src/background/message-handlers.ts` (add case in handleMessage), update `MessageHandlerDependencies` if new deps needed |
-| Add a content-to-inject message     | `src/content/message-handlers.ts` (postToInject), `src/inject/message-handlers.ts` (dispatch case), `src/content/window-message-listener.ts` (response handler) |
-| Add extension test                  | `tests/extension/<name>.test.js` (Node.js test runner, factory-based mocks)                                |
+| Want to... | Edit |
+| --- | --- |
+| Add a browser command | `src/background/commands/<family>.ts` (`registerCommand`). The command contract ID regenerates |
+| Change server communication | `src/background/sync/sync-client.ts`, `src/background/sync/server.ts`, and the wire pair |
+| Add a runtime message | `src/types/runtime-messages.ts` first (CLAUDE.md rule 20) |
+| Change tracked-tab behavior | `src/lib/tabs/tracked-tab-storage.ts`, `src/background/runtime-state/tracking-continuity.ts` |
+| Add a bounded-context entry rule | `context_entry_points` in `.architecture-boundaries.json`, with a test in `scripts/contracts/check-architecture-boundaries.test.cjs` |
 
 ## Testing
 
-Tests live in both `tests/extension/` and `extension/background/` and use the Node.js built-in test runner. Chrome APIs are mocked via factory functions (see `tests/extension/shared/helpers.js`). The mocks cover `chrome.runtime`, `chrome.storage`, `chrome.tabs`, and `chrome.scripting`.
-
 ```bash
-npm run test:ext       # Run all extension tests (both roots, sharded)
-npm test               # Run all tests (extension + other)
-make test              # Run Go + extension tests
+npm run test:ext       # Extension tests
+make lint-boundaries   # Runtime-context and bounded-context rules
+make test              # Go and extension tests
 ```

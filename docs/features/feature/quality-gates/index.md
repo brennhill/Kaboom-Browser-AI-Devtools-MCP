@@ -4,7 +4,7 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - scripts/docs/
   - scripts/maintenance/
@@ -62,6 +62,10 @@ code_paths:
   - scripts/quality/contracts/check-folder-size.cjs
   - scripts/contracts/complexity/main.go
   - scripts/contracts/layering/main.go
+  - scripts/contracts/layering/contexts.go
+  - scripts/contracts/check-architecture-boundaries.cjs
+  - .architecture-boundaries.json
+  - GLOSSARY.md
   - scripts/quality/contracts/complexity/check-complexity.mjs
   - scripts/quality/contracts/file-length/check-file-length.sh
   - scripts/quality/contracts/ts-strictness/check-ts-strictness.mjs
@@ -109,6 +113,8 @@ test_paths:
   - scripts/quality/contracts/check-folder-size.test.mjs
   - scripts/contracts/complexity/main_test.go
   - scripts/contracts/layering/main_test.go
+  - scripts/contracts/layering/contexts_test.go
+  - scripts/contracts/check-architecture-boundaries.test.cjs
   - .interface-baseline.json
   - scripts/quality/contracts/complexity/check-complexity.test.mjs
   - scripts/quality/contracts/ts-strictness/check-ts-strictness.test.mjs
@@ -314,6 +320,15 @@ root in `cmd/browser-agent`. The same gate enforces interface segregation
 production implementations live in the declaring package) and dead
 contracts (no implementation anywhere; same-package test fakes keep
 cross-boundary seams alive and are exempt).
+
+Bounded contexts are enforced on both languages. `contexts.go` lists, per
+named daemon context (Observation Capture, Event Recording, Connection &
+Sync, Extension Ingestion), the upstream contexts it may not import.
+`make lint-boundaries` runs its own regression tests and rejects imports of
+a background context's private files (`context_entry_points` in
+`.architecture-boundaries.json`). Context names match `GLOSSARY.md`, and
+`npm run docs:check` verifies every path and identifier the glossary and
+the architecture guides reference.
 
 DRY is enforced on both languages: `make check-duplicates` holds
 `src/background src/popup src/lib src/content src/inject` to zero jscpd

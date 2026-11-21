@@ -43,3 +43,51 @@ test('feature index code_paths and test_paths resolve to repository files', () =
 
   assert.deepEqual(missing, [])
 })
+
+// Glossary references are backticked tokens: `path` (must exist) or
+// `path:Identifier` / `path:Type.Member` (file must exist and declare or
+// mention every dotted segment as a whole word).
+const referencePattern = /`((?:\.?[\w-]+\/)*[\w.-]+\.(?:go|ts|json|md|cjs|mjs|js)|(?:[\w-]+\/)+)(?::([A-Za-z_][\w.]*))?`/g
+
+export function brokenReferences(markdown, root) {
+  const broken = []
+  for (const match of markdown.matchAll(referencePattern)) {
+    const [, relative, identifier] = match
+    if (!relative.includes('/') && !identifier) continue
+    const absolute = path.join(root, relative)
+    if (!fs.existsSync(absolute)) {
+      broken.push(`${relative}: missing path`)
+      continue
+    }
+    if (!identifier) continue
+    const source = fs.readFileSync(absolute, 'utf8')
+    for (const segment of identifier.split('.')) {
+      if (!new RegExp(`\\b${segment}\\b`).test(source)) broken.push(`${relative}:${identifier}: ${segment} not found`)
+    }
+  }
+  return broken
+}
+
+test('glossary reference checker rejects missing paths and identifiers', () => {
+  const sample =
+    '`scripts/docs/features/check-feature-paths.test.mjs:brokenReferences` ' +
+    '`scripts/docs/nope.md` `package.json:scripts.NoSuchSymbol`'
+  assert.deepEqual(brokenReferences(sample, repoRoot), [
+    'scripts/docs/nope.md: missing path',
+    'package.json:scripts.NoSuchSymbol: NoSuchSymbol not found'
+  ])
+})
+
+test('GLOSSARY.md and the architecture guides reference real paths and identifiers', () => {
+  const documents = [
+    'GLOSSARY.md',
+    'docs/core/architecture/server-architecture.md',
+    'docs/core/architecture/extension-architecture.md'
+  ]
+  const broken = documents.flatMap((document) =>
+    brokenReferences(fs.readFileSync(path.join(repoRoot, document), 'utf8'), repoRoot).map(
+      (entry) => `${document}: ${entry}`
+    )
+  )
+  assert.deepEqual(broken, [])
+})
