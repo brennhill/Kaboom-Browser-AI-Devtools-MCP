@@ -12,6 +12,7 @@ code_paths:
   - internal/procidentity/procidentity.go
   - internal/procidentity/procidentity_unix.go
   - internal/procidentity/procidentity_windows.go
+  - internal/procidentity/procidentity_info.go
   - internal/instancereg/registry.go
   - internal/instancereg/prune.go
   - internal/instancegov/instancegov.go

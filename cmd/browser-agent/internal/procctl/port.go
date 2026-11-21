@@ -90,7 +90,7 @@ func FindProcessOnPort(port int) ([]int, error) {
 }
 
 // GetProcessCommand returns the command line of a process by PID.
-// Uses ps on macOS/Linux and wmic/tasklist on Windows.
+// Uses ps on macOS/Linux and tasklist on Windows.
 func GetProcessCommand(pid int) string {
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
