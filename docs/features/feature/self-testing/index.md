@@ -97,6 +97,7 @@ test_paths:
   - tests/cli/contracts/uat-harness-regressions.test.cjs
   - tests/cli/uat-runner/uat-runner-accounting.test.cjs
   - tests/cli/uat-assertions/assertion-falsifiability.test.cjs
+  - tests/cli/uat-assertions/repo-glob.cjs
   - cmd/browser-agent/internal/testowner/testowner_test.go
   - cmd/browser-agent/integration/runtime/orphan_reaping_test.go
   - tests/cli/uat-assertions/test-daemon-cleanup.test.cjs

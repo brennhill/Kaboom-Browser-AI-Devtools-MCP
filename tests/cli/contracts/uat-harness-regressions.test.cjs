@@ -3,7 +3,8 @@
 
 const assert = require('node:assert/strict')
 const { execFileSync } = require('node:child_process')
-const { existsSync, globSync, mkdtempSync, readFileSync, writeFileSync } = require('node:fs')
+const { existsSync, mkdtempSync, readFileSync, writeFileSync } = require('node:fs')
+const { repoGlobSync: globSync } = require('../uat-assertions/repo-glob.cjs')
 const { describe, test } = require('node:test')
 const { tmpdir } = require('node:os')
 const { join } = require('node:path')
