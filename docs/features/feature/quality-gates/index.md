@@ -4,7 +4,7 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - scripts/docs/
   - scripts/maintenance/

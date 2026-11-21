@@ -4,7 +4,7 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - internal/listenport/store.go
   - cmd/browser-agent/internal/runtimeflags/flags.go
@@ -56,6 +56,7 @@ code_paths:
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation.go
   - cmd/browser-agent/internal/daemonlife/lifecycle.go
   - internal/proclock/proclock.go
+  - internal/instancegov/runtime.go
   - internal/instancegov/instancegov.go
   - internal/instancereg/registry.go
   - cmd/browser-agent/internal/daemonlife/install_epoch.go
