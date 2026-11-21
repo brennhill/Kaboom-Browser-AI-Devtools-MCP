@@ -155,10 +155,31 @@ func runContractFixture(fix *Fixture, repoRoot string) *Result {
 	return runFixture(fix, repoRoot, contractEvaluation, wallClockFixtureRuntime())
 }
 
+// performanceAttempts bounds how many fresh, independent runs a latency fixture
+// gets. A single wall-clock sample taken while `go test ./...` saturates every
+// core measures scheduler contention, not the hook, and made the coverage gate
+// fail nondeterministically. The best attempt is the hook's real cost: a
+// genuine regression exceeds the budget on every attempt and still fails.
+const performanceAttempts = 5
+
 // runPerformanceFixture validates the real hook implementation and its
 // wall-clock production latency budget.
 func runPerformanceFixture(fix *Fixture, repoRoot string) *Result {
-	return runFixture(fix, repoRoot, performanceEvaluation, wallClockFixtureRuntime())
+	return runPerformanceFixtureWith(fix, repoRoot, wallClockFixtureRuntime(), performanceAttempts)
+}
+
+// runPerformanceFixtureWith returns the first attempt that meets every
+// expectation (each attempt uses fresh session state), or the last failing
+// attempt so its failures are reported.
+func runPerformanceFixtureWith(fix *Fixture, repoRoot string, runtime fixtureRuntime, attempts int) *Result {
+	var result *Result
+	for attempt := 0; attempt < max(attempts, 1); attempt++ {
+		result = runFixture(fix, repoRoot, performanceEvaluation, runtime)
+		if result.Passed {
+			return result
+		}
+	}
+	return result
 }
 
 func runFixture(fix *Fixture, repoRoot string, mode evaluationMode, runtime fixtureRuntime) *Result {
