@@ -202,7 +202,7 @@ graph TB
 
     subgraph "Required Methods (14 total)"
         M1[CreatePendingQuery<br/>CreatePendingQueryWithTimeout]
-        M2[GetPendingQueries<br/>GetPendingQueriesForClient]
+        M2[GetPendingQueries]
         M3[SetQueryResult<br/>SetQueryResultWithClient]
         M4[RegisterCommand<br/>ApplyCommandResult<br/>ExpireCommand]
         M5[GetCommandResult<br/>GetPendingCommands<br/>GetCompletedCommands<br/>GetFailedCommands]

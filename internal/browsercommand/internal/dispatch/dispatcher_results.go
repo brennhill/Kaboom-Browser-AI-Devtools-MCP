@@ -18,20 +18,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
-// SetQueryTimeout sets the default timeout for queries.
-func (qd *QueryDispatcher) SetQueryTimeout(timeout time.Duration) {
-	qd.mu.Lock()
-	defer qd.mu.Unlock()
-	qd.queryTimeout = timeout
-}
-
-// GetQueryTimeout returns the current query timeout.
-func (qd *QueryDispatcher) GetQueryTimeout() time.Duration {
-	qd.mu.Lock()
-	defer qd.mu.Unlock()
-	return qd.queryTimeout
-}
-
 // QueuePosition returns the 0-based position of a command in the pending queue
 // by correlation ID, or -1 if not found. Used for progress reporting.
 func (qd *QueryDispatcher) QueuePosition(correlationID string) int {
@@ -56,12 +42,6 @@ func (qd *QueryDispatcher) QueueDepth() int {
 // ============================================
 // Result store: insert from extension callbacks, one-time consume
 // ============================================
-
-// SetQueryResult stores the result for a pending query.
-// Called when extension posts result back to server.
-func (qd *QueryDispatcher) SetQueryResult(id string, result json.RawMessage) {
-	qd.SetQueryResultWithClient(id, result, "")
-}
 
 // SetQueryResultWithClient stores a result and marks correlated command complete.
 //
@@ -131,74 +111,13 @@ func (qd *QueryDispatcher) setQueryResultWithClient(id string, result json.RawMe
 	}
 }
 
-// TakeQueryResult retrieves and deletes a query result.
-// Returns (result, found).
-func (qd *QueryDispatcher) TakeQueryResult(id string) (json.RawMessage, bool) {
-	return qd.TakeQueryResultForClient(id, "")
-}
-
-// TakeQueryResultForClient retrieves and consumes a result scoped to one client.
-//
-// Invariants:
-// - Successful reads are destructive (single-consumer semantics).
-//
-// Failure semantics:
-// - Client mismatch returns (nil,false) without consuming the stored result.
-func (qd *QueryDispatcher) TakeQueryResultForClient(id string, clientID string) (json.RawMessage, bool) {
-	qd.mu.Lock()
-	defer qd.mu.Unlock()
-
-	entry, found := qd.queryResults[id]
-	if !found {
-		return nil, false
-	}
-
-	// Check client isolation
-	if clientID != "" && entry.ClientID != clientID {
-		return nil, false
-	}
-
-	// Delete after retrieval (one-time use)
-	delete(qd.queryResults, id)
-	return entry.Result, true
-}
-
 // ============================================
 // Blocking wait for a result (synchronous tool handlers)
 // ============================================
 
-// WaitForResult blocks until result is available or timeout.
-// Used by synchronous tool handlers that need immediate results.
-func (qd *QueryDispatcher) WaitForResult(id string, timeout time.Duration) (json.RawMessage, error) {
-	return qd.waitForResultContext(context.Background(), id, timeout, "")
-}
-
 // WaitForResultContext waits for one result and wakes promptly when the caller
-// is canceled. The result remains one-time consumption, matching WaitForResult.
+// is canceled or the timeout elapses. Results are one-time consumption.
 func (qd *QueryDispatcher) WaitForResultContext(ctx context.Context, id string, timeout time.Duration) (json.RawMessage, error) {
-	return qd.waitForResultContext(ctx, id, timeout, "")
-}
-
-// WaitForResultWithClient waits for one result under client-isolated view.
-// Uses event-driven result, cancellation, and deadline notifications.
-//
-// Flow:
-// 1. Check if result already exists
-// 2. If not, wait on condition variable
-// 3. Recheck after a result, cancellation, or deadline notification
-// 4. Return result or timeout error
-//
-// Invariants:
-// - qd.queryCond.Wait is called only with qd.mu held.
-//
-// Failure semantics:
-// - Timeout returns deterministic error; caller decides retry/abort policy.
-// - Missing result after wakeups is expected (spurious or unrelated broadcasts).
-func (qd *QueryDispatcher) WaitForResultWithClient(id string, timeout time.Duration, clientID string) (json.RawMessage, error) {
-	return qd.waitForResultContext(context.Background(), id, timeout, clientID)
-}
-
-func (qd *QueryDispatcher) waitForResultContext(ctx context.Context, id string, timeout time.Duration, clientID string) (json.RawMessage, error) {
 	deadline := time.Now().Add(timeout)
 	wake := func() {
 		qd.mu.Lock()
@@ -219,11 +138,8 @@ func (qd *QueryDispatcher) waitForResultContext(ctx context.Context, id string, 
 		}
 		// Check if result exists
 		if entry, found := qd.queryResults[id]; found {
-			// Check client isolation
-			if clientID == "" || entry.ClientID == clientID {
-				delete(qd.queryResults, id)
-				return entry.Result, nil
-			}
+			delete(qd.queryResults, id)
+			return entry.Result, nil
 		}
 
 		// Check timeout

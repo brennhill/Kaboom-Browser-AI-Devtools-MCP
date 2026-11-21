@@ -33,18 +33,6 @@ func newQueryIDPrefix() string {
 // Pending Query Creation
 // ============================================
 
-// CreatePendingQuery creates a pending query with default timeout and no client ID.
-// Returns the query ID that extension will use to post the result, or queries.ErrQueueFull.
-func (qd *QueryDispatcher) CreatePendingQuery(query queries.PendingQuery) (string, error) {
-	return qd.CreatePendingQueryWithTimeout(query, qd.queryTimeout, "")
-}
-
-// CreatePendingQueryWithClient creates a pending query for a specific client.
-// Used in multi-client mode to isolate queries between different MCP clients.
-func (qd *QueryDispatcher) CreatePendingQueryWithClient(query queries.PendingQuery, clientID string) (string, error) {
-	return qd.CreatePendingQueryWithTimeout(query, qd.queryTimeout, clientID)
-}
-
 // CreatePendingQueryWithTimeout enqueues one command for extension pickup.
 //
 // Invariants:
@@ -162,7 +150,7 @@ type pendingQuerySnapshot struct {
 	sentCorrelationIDs []string
 }
 
-func (qd *QueryDispatcher) snapshotPendingQueries(clientID string) pendingQuerySnapshot {
+func (qd *QueryDispatcher) snapshotPendingQueries() pendingQuerySnapshot {
 	qd.mu.Lock()
 	defer qd.mu.Unlock()
 
@@ -171,9 +159,6 @@ func (qd *QueryDispatcher) snapshotPendingQueries(clientID string) pendingQueryS
 	result := make([]queries.PendingQueryResponse, 0, len(qd.pendingQueries))
 	sentCorrelationIDs := make([]string, 0, len(qd.pendingQueries))
 	for _, pending := range qd.pendingQueries {
-		if clientID != "" && pending.ClientID != clientID {
-			continue
-		}
 		query := pending.Query
 		query.Params = bytes.Clone(pending.Query.Params)
 		result = append(result, query)
@@ -189,17 +174,7 @@ func (qd *QueryDispatcher) snapshotPendingQueries(clientID string) pendingQueryS
 
 // GetPendingQueries snapshots all currently deliverable queued commands.
 func (qd *QueryDispatcher) GetPendingQueries() []queries.PendingQueryResponse {
-	snapshot := qd.snapshotPendingQueries("")
-
-	for _, correlationID := range snapshot.sentCorrelationIDs {
-		qd.recordTraceEvent(correlationID, traceStageSent, "sync", "pending", "", time.Now())
-	}
-	return snapshot.result
-}
-
-// GetPendingQueriesForClient snapshots queued commands scoped to one client.
-func (qd *QueryDispatcher) GetPendingQueriesForClient(clientID string) []queries.PendingQueryResponse {
-	snapshot := qd.snapshotPendingQueries(clientID)
+	snapshot := qd.snapshotPendingQueries()
 
 	for _, correlationID := range snapshot.sentCorrelationIDs {
 		qd.recordTraceEvent(correlationID, traceStageSent, "sync", "pending", "", time.Now())

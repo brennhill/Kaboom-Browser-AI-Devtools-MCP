@@ -169,7 +169,7 @@ accepted unresolved command to make room for disposable history.
   `internal/browsercommand/**`. The dispatcher itself lives in
   `internal/browsercommand/internal/dispatch`, so the Go compiler keeps every
   other package off it; `browsercommand.NewOwner()` constructs it and
-  `Owner.Close()` stops its cleanup. `Capture.Queries()` was deleted. Tests drive
+  `Owner.Close()` stops its cleanup. `Capture.Queries()` was deleted. Client-scoped pending/result reads and the query-timeout setter were deleted from the dispatcher because no production path used them: the owner delivers every queued command on one heartbeat and results are consumed by query ID. Tests drive
   the extension side through `internal/browsercommand/commandtest`, which uses only
   the owner's public result-source API (`query_result` submissions and a gated
   `ApplySyncExchange` acknowledgment). `ports.ResultSink` lives in
