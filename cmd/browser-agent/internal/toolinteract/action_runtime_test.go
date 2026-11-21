@@ -247,6 +247,7 @@ type fakeState struct {
 	// Pluggable overrides (nil => default behavior).
 	waitFn           func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse
 	waitTrackedURLFn func(beforeURL string, timeout time.Duration) (string, bool)
+	nowFn            func() time.Time // controlled clock; nil => time.Now
 	screenshot       func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	pageInfo         func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	analyzeFn        func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
@@ -460,7 +461,7 @@ func newFakeActionOwners(t *testing.T) (*fakeActionOwners, *fakeState) {
 	})
 	workflow := NewWorkflowActions(runtime, dom, browser, page, WorkflowDeps{
 		Capture: deps.Capture, ToolAnalyze: deps.ToolAnalyze,
-		ToolExportSARIF: deps.ToolExportSARIF, Now: time.Now,
+		ToolExportSARIF: deps.ToolExportSARIF, Now: fs.now,
 		WaitForTrackedURLChange: func(beforeURL string, timeout time.Duration) (string, bool) {
 			if fs.waitTrackedURLFn != nil {
 				return fs.waitTrackedURLFn(beforeURL, timeout)
@@ -778,4 +779,13 @@ func TestAppendScreenshotToResponseKeepsBaseWithoutUsableImage(t *testing.T) {
 			t.Fatalf("unusable screenshot changed base: %s", got.Result)
 		}
 	}
+}
+
+// now is the workflow owner clock. Tests that assert a derived stage timeout
+// pin nowFn so the budget does not shrink by however long the run took.
+func (fs *fakeState) now() time.Time {
+	if fs.nowFn != nil {
+		return fs.nowFn()
+	}
+	return time.Now()
 }
