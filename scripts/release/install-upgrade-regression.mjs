@@ -19,6 +19,14 @@ const supportedPreviousVersion = '0.8.1'
 let cleanupHost = () => {}
 let lifecycleEvidence = null
 let currentStage = 'bootstrap'
+// Diagnostics for a daemon that never answers /health: each startDaemon() call
+// tees the daemon's stdout/stderr into its own file under daemonLogDir, and
+// daemonStateDir is scanned for the daemon's own JSONL log. Without these, a
+// Windows-only startup failure surfaced as a bare "did not become healthy".
+let daemonLogDir = ''
+let daemonStateDir = ''
+let daemonLogSeq = 0
+const daemonLogsByPort = new Map()
 
 process.once('SIGINT', () => {
   cleanupHost()
@@ -303,12 +311,68 @@ function readPidFile(pidFile) {
 }
 
 function startDaemon(binaryPath, port, env) {
+  let stdio = 'ignore'
+  let logFd = null
+  let entry = null
+  if (daemonLogDir) {
+    daemonLogSeq += 1
+    entry = { logPath: path.join(daemonLogDir, `daemon-${port}-${daemonLogSeq}.log`), binaryPath }
+    logFd = fs.openSync(entry.logPath, 'a')
+    stdio = ['ignore', logFd, logFd]
+    daemonLogsByPort.set(port, [...(daemonLogsByPort.get(port) || []), entry])
+  }
   const child = spawn(binaryPath, ['--daemon', '--port', String(port)], {
     cwd: repoRoot,
     env,
-    stdio: 'ignore'
+    stdio
   })
+  // The child holds its own handle; closing ours keeps this process from
+  // pinning the file open (which would block tmpRoot removal on Windows).
+  if (logFd !== null) fs.closeSync(logFd)
+  if (entry) {
+    entry.pid = child.pid
+    child.on('exit', (code, signal) => {
+      entry.exit = `code=${code} signal=${signal}`
+    })
+  }
   return child
+}
+
+function tailFile(file, maxBytes = 8192) {
+  try {
+    const text = fs.readFileSync(file, 'utf8')
+    return text.length > maxBytes ? `...(truncated)\n${text.slice(-maxBytes)}` : text
+  } catch (err) {
+    return `<unreadable: ${err && err.message ? err.message : err}>`
+  }
+}
+
+function listFilesRecursive(dir, depth = 4) {
+  if (!dir || depth < 0 || !fs.existsSync(dir)) return []
+  const out = []
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) out.push(...listFilesRecursive(full, depth - 1))
+    else out.push(full)
+  }
+  return out
+}
+
+function daemonDiagnostics(port) {
+  const sections = []
+  for (const entry of daemonLogsByPort.get(port) || []) {
+    sections.push(
+      `--- daemon stdout/stderr (${entry.binaryPath}, pid=${entry.pid || '?'}, exit=${entry.exit || 'still running'}) ---\n${
+        tailFile(entry.logPath) || '<empty>'
+      }`
+    )
+  }
+  const stateFiles = listFilesRecursive(daemonStateDir)
+  sections.push(`--- state dir files ---\n${stateFiles.join('\n') || '<none>'}`)
+  for (const file of stateFiles.filter((f) => /\.(jsonl|log)$/i.test(f))) {
+    sections.push(`--- ${file} ---\n${tailFile(file) || '<empty>'}`)
+  }
+  return sections.join('\n')
 }
 
 function stopDaemon(binaryPath, port, env) {
@@ -384,7 +448,7 @@ function ensureMcpRoundTrip(binaryPath, port, env) {
 async function expectDaemonIdentity(port, expectedVersion, timeoutMs = 20000) {
   const health = await waitForPortHealth(port, timeoutMs)
   if (!health) {
-    fail(`daemon on port ${port} did not become healthy`)
+    fail(`daemon on port ${port} did not become healthy`, daemonDiagnostics(port))
   }
 
   const serviceName = resolveDaemonServiceName(health)
@@ -564,12 +628,11 @@ async function main() {
   const pypiPackageDir = path.join(repoRoot, 'pypi', 'kaboom-agentic-browser')
   const hasPypiPackage = fs.existsSync(pypiPackageDir)
   const python = hasPypiPackage ? pickPython() : null
-  // realpathSync resolves symlinked ancestors (e.g. macOS /var -> /private/var,
-  // Windows 8.3 short paths). Without it, the daemon's upload-dir security check
-  // rejects $HOME/kaboom-upload-dir because EvalSymlinks(dir) != dir, and the daemon
-  // never serves /health. A real user's HOME has no symlinked ancestors, so this only
-  // affects the temp-dir test environment.
-  const tmpRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-upgrade-regression-')))
+  // realpathSync.native resolves symlinked ancestors (macOS /var -> /private/var)
+  // AND Windows 8.3 short names (C:\\Users\\RUNNER~1 -> runneradmin) via the OS.
+  // The JS fs.realpathSync only follows symlinks and leaves 8.3 names intact, so
+  // the test HOME would differ from what Go's EvalSymlinks reports for it.
+  const tmpRoot = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-upgrade-regression-')))
   cleanupHost = () => fs.rmSync(tmpRoot, { recursive: true, force: true })
   const homeDir = path.join(tmpRoot, 'home')
   const stateDir = path.join(tmpRoot, 'state')
@@ -577,6 +640,9 @@ async function main() {
   fs.mkdirSync(homeDir, { recursive: true })
   fs.mkdirSync(stateDir, { recursive: true })
   fs.mkdirSync(binDir, { recursive: true })
+  daemonLogDir = path.join(tmpRoot, 'daemon-logs')
+  fs.mkdirSync(daemonLogDir, { recursive: true })
+  daemonStateDir = stateDir
   const identityPath = path.join(homeDir, '.kaboom', 'install_id')
   const preferencesPath = path.join(homeDir, '.kaboom', 'preferences.json')
   fs.mkdirSync(path.dirname(identityPath), { recursive: true })
