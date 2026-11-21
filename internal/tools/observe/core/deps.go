@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pageinfo"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -22,7 +23,9 @@ type Deps struct {
 	// waterfall refresh) through the browser-command owner.
 	Commands queries.QueryRunner
 	// Screenshots runs the transport-independent screenshot use case.
-	Screenshots          *screenshot.Service
+	Screenshots *screenshot.Service
+	// PageInfo runs the transport-independent tracked-page projection.
+	PageInfo             *pageinfo.Service
 	LogEntries           func() ([]types.LogEntry, []time.Time)
 	LogTotalAdded        func() int64
 	ExecuteA11yQuery     func(string, []string, any, bool) (json.RawMessage, error)

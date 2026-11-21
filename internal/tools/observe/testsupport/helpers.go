@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pageinfo"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -24,6 +25,7 @@ func Deps(captured *capture.Capture) core.Deps {
 		Capture:              captured,
 		Commands:             commandsOf(captured),
 		Screenshots:          newScreenshots(captured),
+		PageInfo:             NewPageInfo(captured, nil),
 		LogEntries:           func() ([]types.LogEntry, []time.Time) { return nil, nil },
 		LogTotalAdded:        func() int64 { return 0 },
 		IsConsoleNoise:       func(types.LogEntry) bool { return false },
@@ -78,4 +80,17 @@ func commandsOf(captured *capture.Capture) queries.QueryRunner {
 		return nil
 	}
 	return captured.Commands()
+}
+
+// NewPageInfo wires the pageinfo use case to a capture's extension state and
+// waterfall, with an optional log source for the title fallback.
+func NewPageInfo(captured *capture.Capture, logEntries func() ([]types.LogEntry, []time.Time)) *pageinfo.Service {
+	if captured == nil {
+		return pageinfo.New(pageinfo.Deps{LogEntries: logEntries})
+	}
+	return pageinfo.New(pageinfo.Deps{
+		Extension:            captured.Extension(),
+		LastWaterfallPageURL: captured.Telemetry().NetworkWaterfall().LastPageURL,
+		LogEntries:           logEntries,
+	})
 }

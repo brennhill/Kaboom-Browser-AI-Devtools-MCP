@@ -6,17 +6,14 @@
 package toolruntime
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactbatch"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
-	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
 )
 
 func initializeInteractActionOwners(h *ToolHandler) {
@@ -62,9 +59,7 @@ func initializeInteractActionOwners(h *ToolHandler) {
 		},
 		CaptureScreenshot: newScreenshotService(h).Capture,
 		Diagnostics:       h.stateRecovery,
-		GetPageInfo: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return observepage.GetPageInfo(buildObserveReadDeps(h), req, args)
-		},
+		PageInfo:          newPageInfoService(h).Read,
 	})
 	h.browserActions = toolinteract.NewBrowserActions(h.interactRuntime, h.pageActions, toolinteract.BrowserDeps{
 		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,

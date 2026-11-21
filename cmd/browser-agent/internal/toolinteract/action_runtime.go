@@ -492,42 +492,22 @@ func (h *PageActions) AppendInteractiveToResponse(resp mcp.JSONRPCResponse, req 
 	return resp
 }
 
-// readPageContext returns a compact page context payload (url/title/tab_id) from observe(what="page").
-func (h *PageActions) readPageContext(req mcp.JSONRPCRequest) (map[string]any, bool) {
-	pageReq := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: req.ID}
-	pageResp := h.deps.GetPageInfo(pageReq, nil)
-
-	var pageResult mcp.MCPToolResult
-	if err := json.Unmarshal(pageResp.Result, &pageResult); err != nil || pageResult.IsError {
+// readPageContext returns a compact page context payload (url/title/tab_id)
+// from the pageinfo projection; false when nothing is known about the page.
+func (h *PageActions) readPageContext() (map[string]any, bool) {
+	if h.deps.PageInfo == nil {
 		return nil, false
 	}
-
-	var data map[string]any
-	for _, block := range pageResult.Content {
-		if block.Type != "text" || block.Text == "" {
-			continue
-		}
-		text := block.Text
-		if idx := strings.Index(text, "\n{"); idx >= 0 {
-			text = text[idx+1:]
-		}
-		if err := json.Unmarshal([]byte(text), &data); err == nil {
-			break
-		}
-	}
-	if data == nil {
-		return nil, false
-	}
-
+	info := h.deps.PageInfo()
 	out := map[string]any{}
-	if url, ok := data["url"].(string); ok && url != "" {
-		out["url"] = url
+	if info.URL != "" {
+		out["url"] = info.URL
 	}
-	if title, ok := data["title"].(string); ok && title != "" {
-		out["title"] = title
+	if info.Title != "" {
+		out["title"] = info.Title
 	}
-	if tabID, ok := data["tab_id"]; ok {
-		out["tab_id"] = tabID
+	if info.TabID > 0 {
+		out["tab_id"] = info.TabID
 	}
 	if len(out) == 0 {
 		return nil, false
@@ -537,7 +517,7 @@ func (h *PageActions) readPageContext(req mcp.JSONRPCRequest) (map[string]any, b
 
 // appendPageContextToResponse appends a compact page context block to the response.
 func (h *PageActions) AppendPageContextToResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-	pageCtx, ok := h.readPageContext(req)
+	pageCtx, ok := h.readPageContext()
 	if !ok {
 		return resp
 	}

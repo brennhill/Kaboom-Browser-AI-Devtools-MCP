@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pageinfo"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
@@ -254,7 +255,7 @@ type fakeState struct {
 	waitFn           func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse
 	waitTrackedURLFn func(beforeURL string, timeout time.Duration) (string, bool)
 	screenshot       func(screenshot.Options) (screenshot.Result, error)
-	pageInfo         func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
+	pageInfo         func() pageinfo.Info
 	analyzeFn        func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	sarifFn          func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	listenPort       int
@@ -275,7 +276,7 @@ type fakeCapabilities struct {
 	ToolAnalyze, ToolExportSARIF                       func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
 	InjectCSPBlockedActions                            func(mcp.JSONRPCResponse) mcp.JSONRPCResponse
 	CaptureScreenshot                                  func(context.Context, screenshot.Options) (screenshot.Result, error)
-	GetPageInfo                                        func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+	PageInfo                                           func() pageinfo.Info
 	MarkDrawStarted                                    func()
 	GetListenPort                                      func() int
 	DefaultEvidenceCapture                             func(string) EvidenceShot
@@ -403,13 +404,11 @@ func (fs *fakeState) deps() *fakeCapabilities {
 			}
 			return screenshot.Result{Fields: map[string]any{}, DataURL: "data:image/png;base64,QUJD"}, nil
 		},
-		GetPageInfo: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		PageInfo: func() pageinfo.Info {
 			if fs.pageInfo != nil {
-				return fs.pageInfo(req, args)
+				return fs.pageInfo()
 			}
-			return mcp.Succeed(req, "page", map[string]any{
-				"url": "https://example.com/page", "title": "Example", "tab_id": 1,
-			})
+			return pageinfo.Info{URL: "https://example.com/page", Title: "Example", TabID: 1}
 		},
 
 		MarkDrawStarted: func() { fs.mu.Lock(); fs.drawStarted++; fs.mu.Unlock() },
@@ -459,7 +458,7 @@ func newFakeActionOwners(t *testing.T) (*fakeActionOwners, *fakeState) {
 	storage := NewStorageActions(runtime, StorageDeps{deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking})
 	page := NewPageActions(runtime, dom, storage, PageDeps{
 		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.Capture, deps.Commands,
-		deps.EnqueuePendingQuery, deps.RecordAIAction, deps.MarkDrawStarted, deps.CaptureScreenshot, deps.GetPageInfo,
+		deps.EnqueuePendingQuery, deps.RecordAIAction, deps.MarkDrawStarted, deps.CaptureScreenshot, deps.PageInfo,
 		deps.Diagnostics,
 	})
 	browser := NewBrowserActions(runtime, page, BrowserDeps{
@@ -829,5 +828,20 @@ func TestAppendScreenshotFailureReportsDiagnosticAndKeepsAction(t *testing.T) {
 	h.AppendScreenshotToResponse(base, testReq())
 	if len(fs.diagnostics.resolved) != 1 || fs.diagnostics.resolved[0] != includeScreenshotDiagnostic {
 		t.Fatalf("resolved = %v, want the diagnostic resolved after a successful capture", fs.diagnostics.resolved)
+	}
+}
+
+func TestAppendPageContextUsesTypedPageInfo(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	base := mcp.SucceedText(testReq(), "clicked")
+	fs.pageInfo = func() pageinfo.Info { return pageinfo.Info{} }
+	if got := h.AppendPageContextToResponse(base, testReq()); string(got.Result) != string(base.Result) {
+		t.Fatalf("unknown page changed the response: %s", got.Result)
+	}
+	fs.pageInfo = func() pageinfo.Info { return pageinfo.Info{URL: "https://typed.test", TabID: 9} }
+	result := parseToolResult(t, h.AppendPageContextToResponse(base, testReq()))
+	last := result.Content[len(result.Content)-1].Text
+	if !strings.Contains(last, `"url":"https://typed.test"`) || !strings.Contains(last, `"tab_id":9`) || strings.Contains(last, "title") {
+		t.Fatalf("page context block = %q", last)
 	}
 }

@@ -703,7 +703,7 @@ func buildObserveReadDeps(h *ToolHandler) observecore.Deps {
 		commands = h.capture.Commands()
 	}
 	return observecore.Deps{
-		Capture: h.capture, Commands: commands, Screenshots: newScreenshotService(h),
+		Capture: h.capture, Commands: commands, Screenshots: newScreenshotService(h), PageInfo: newPageInfoService(h),
 		LogEntries: func() ([]types.LogEntry, []time.Time) {
 			return h.state.Logs.EntriesWithAddedAt()
 		},

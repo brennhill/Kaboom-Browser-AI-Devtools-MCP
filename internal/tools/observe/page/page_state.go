@@ -13,97 +13,42 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/a11ysummary"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/idbquery"
 )
 
-// GetPageInfo returns information about the currently tracked page.
+// GetPageInfo adapts the pageinfo use case to observe(what="page").
 func GetPageInfo(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	cap := deps.Capture
-	enabled, tabID, trackedURL := cap.Extension().GetTrackingStatus()
-	trackedTitle := cap.Extension().GetTrackedTabTitle()
-
-	pageURL := resolvePageURL(cap, trackedURL)
-	pageTitle := resolvePageTitle(deps, trackedTitle)
-
-	cspRestricted, cspLevel := cap.Extension().GetCSPStatus()
-	tabStatus := cap.Extension().GetTabStatus()
-
-	// Each state getter acquires c.mu.RLock independently. Between calls, state
-	// could change (e.g., extension disconnects between GetTabStatus and
-	// IsExtensionConnected). This is acceptable for an advisory readiness signal
-	// — the next observe(what:"page") call will correct any inconsistency.
-	extensionConnected := cap.Extension().IsExtensionConnected()
-
-	// Use IsPilotEnabled (defaults false) instead of IsPilotActionAllowed (defaults
-	// true during startup). This avoids briefly reporting page_ready_for_commands=true
-	// before the first extension sync confirms pilot status.
-	pilotEnabled := cap.Extension().IsPilotEnabled()
-
-	// page_ready_for_commands is true when all four conditions hold:
-	//   1. extensionConnected — WebSocket link to extension is live
-	//   2. pilotEnabled       — AI Web Pilot is enabled in extension settings
-	//   3. enabled            — a tab is actively being tracked
-	//   4. tabStatus=="complete" — the tracked tab has finished loading
-	pageReady := extensionConnected && pilotEnabled && enabled && tabStatus == "complete"
-
-	// Tab focus state: is the tracked tab the active (foreground) tab?
-	tabActive, tabActiveKnown := cap.Extension().IsTrackedTabActive()
-
+	info := deps.PageInfo.Read()
 	result := map[string]any{
-		"url":                     pageURL,
-		"title":                   pageTitle,
-		"tracked":                 enabled,
-		"csp_restricted":          cspRestricted,
-		"csp_level":               cspLevel,
-		"tab_status":              tabStatus,
-		"page_ready_for_commands": pageReady,
-		"metadata":                core.BuildResponseMetadata(cap, time.Now()),
+		"url":                     info.URL,
+		"title":                   info.Title,
+		"tracked":                 info.Tracked,
+		"csp_restricted":          info.CSPRestricted,
+		"csp_level":               info.CSPLevel,
+		"tab_status":              info.TabStatus,
+		"page_ready_for_commands": info.ReadyForCommands,
+		"metadata":                core.BuildResponseMetadata(deps.Capture, time.Now()),
 	}
-	if tabID > 0 {
-		result["tab_id"] = tabID
+	if info.TabID > 0 {
+		result["tab_id"] = info.TabID
 	}
-	if tabActiveKnown {
-		result["is_active"] = tabActive
+	if info.TabActiveKnown {
+		result["is_active"] = info.TabActive
 	}
 
 	// Include blocked_actions/blocked_reason when CSP restricts — omit entirely
 	// when CSP is clear to avoid wasting tokens on normal pages. (#262)
-	if cspRestricted {
-		if actions, reason := syncruntime.CSPBlockedActions(cspLevel); actions != nil {
+	if info.CSPRestricted {
+		if actions, reason := syncruntime.CSPBlockedActions(info.CSPLevel); actions != nil {
 			result["blocked_actions"] = actions
 			result["blocked_reason"] = reason
 		}
 	}
 
 	return mcp.Succeed(req, "Page info", result)
-}
-
-func resolvePageURL(cap *capture.Capture, trackedURL string) string {
-	if trackedURL != "" {
-		return trackedURL
-	}
-	waterfallEntries := cap.Telemetry().NetworkWaterfall().Entries()
-	if len(waterfallEntries) > 0 {
-		return waterfallEntries[len(waterfallEntries)-1].PageURL
-	}
-	return ""
-}
-
-func resolvePageTitle(deps core.Deps, trackedTitle string) string {
-	if trackedTitle != "" {
-		return trackedTitle
-	}
-	entries, _ := deps.LogEntries()
-	for i := len(entries) - 1; i >= 0; i-- {
-		if title, ok := entries[i]["title"].(string); ok && title != "" {
-			return title
-		}
-	}
-	return ""
 }
 
 // summarizeStorageMap returns a summary of a key-value storage map.

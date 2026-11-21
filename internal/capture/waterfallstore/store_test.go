@@ -191,3 +191,15 @@ func TestStoreReloadOfTheSamePageIsNotSuppressed(t *testing.T) {
 		t.Fatalf("stored %d entries, want 3 — a reload's requests are not duplicates", got)
 	}
 }
+
+func TestStoreLastPageURLReportsNewestRetainedEntry(t *testing.T) {
+	store := New(4)
+	if got := store.LastPageURL(); got != "" {
+		t.Fatalf("empty LastPageURL() = %q", got)
+	}
+	store.Add([]types.NetworkWaterfallEntry{{URL: "https://a.test/a"}}, "https://app.local/one")
+	store.Add([]types.NetworkWaterfallEntry{{URL: "https://a.test/b"}}, "https://app.local/two")
+	if got := store.LastPageURL(); got != "https://app.local/two" {
+		t.Fatalf("LastPageURL() = %q, want newest page", got)
+	}
+}

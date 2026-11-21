@@ -44,6 +44,8 @@ code_paths:
   - internal/tools/observe/page/page_state.go
   - internal/tools/observe/page/page_screenshot.go
   - internal/app/screenshot/screenshot.go
+  - internal/app/pageinfo/pageinfo.go
+  - internal/capture/waterfallstore/store.go
   - cmd/browser-agent/internal/toolruntime/screenshot_wiring.go
   - cmd/browser-agent/internal/mcphttp/handler.go
   - cmd/browser-agent/internal/telemetryapi/handler.go
@@ -113,6 +115,8 @@ test_paths:
   - internal/tools/observe/page/page_screenshot_test.go
   - internal/app/screenshot/screenshot_test.go
   - internal/app/screenshot/save_test.go
+  - internal/app/pageinfo/pageinfo_test.go
+  - internal/capture/waterfallstore/store_test.go
   - scripts/contracts/layering/main_test.go
   - internal/capture/waterfallstore/store_test.go
   - tests/extension/capture/observe-screenshot.test.js
@@ -225,7 +229,7 @@ capture/upload has one implementation for both normal capture and CDP fallback.
 The screenshot workflow is a transport-independent use case in
 `internal/app/screenshot` (`Service.Capture(ctx, Options) (Result, error)`). It
 validates options, enqueues and awaits the extension query through the
-`internal/browsercommand` owner (via its own two-method `Commands` port), splits
+`internal/browsercommand` owner (via the shared `queries.QueryRunner` port), splits
 the data URL from the result fields, and applies `save_to`. It accepts no MCP
 types and no `*capture.Capture`; failures are typed `*screenshot.Failure` kinds.
 `internal/tools/observe/page/page_screenshot.go` is the MCP adapter: it parses
@@ -237,6 +241,16 @@ arguments, maps failure kinds to canonical `mcp.Fail` codes
 `scripts/contracts/layering` rule `app->transport` forbids `internal/app/**`
 from importing `net/http`, `internal/mcp`, `internal/capture/**` or
 `internal/tools/**`.
+The tracked-page projection is the `internal/app/pageinfo` use case
+(`Service.Read() Info`: URL with waterfall fallback, title with log fallback,
+CSP, tab status, command readiness, tab focus) over a seven-method
+`ExtensionState` port, `waterfallstore.Store.LastPageURL` and the log buffer.
+`observe(what="page")` (`page.GetPageInfo`) only assembles the MCP payload,
+metadata and CSP blocked actions; interact page-context enrichment consumes the
+typed `Info` (`PageDeps.PageInfo`) instead of re-parsing the observe MCP
+response. Storage, IndexedDB and waterfall-refresh queries go through
+`observecore.Deps.Commands` (the browser-command owner) rather than the
+dispatcher.
 Live-page storage, IndexedDB, screenshot, and accessibility failures use the
 canonical `mcp.Fail` response boundary; queue saturation guidance is built once
 with the canonical `pending_commands` recovery call.

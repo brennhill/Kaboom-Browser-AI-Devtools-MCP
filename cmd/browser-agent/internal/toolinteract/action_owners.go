@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/elemindex"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pageinfo"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -60,7 +61,7 @@ type PageDeps struct {
 	RecordAIAction                                     func(string, string, map[string]any)
 	MarkDrawStarted                                    func()
 	CaptureScreenshot                                  func(context.Context, screenshot.Options) (screenshot.Result, error)
-	GetPageInfo                                        func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+	PageInfo                                           func() pageinfo.Info
 	// Diagnostics receives redacted Doctor diagnostics for best-effort
 	// enrichment failures (include_screenshot); nil disables reporting.
 	Diagnostics statediag.Reporter

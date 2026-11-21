@@ -506,7 +506,7 @@ func (h *WorkflowActions) currentTrackedURL(req mcp.JSONRPCRequest) string {
 	if trackedURL != "" {
 		return trackedURL
 	}
-	if pageCtx, ok := h.page.readPageContext(req); ok {
+	if pageCtx, ok := h.page.readPageContext(); ok {
 		if url, ok := pageCtx["url"].(string); ok {
 			return url
 		}
