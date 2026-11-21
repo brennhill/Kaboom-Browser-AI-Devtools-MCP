@@ -8,13 +8,12 @@
 import type { PendingQuery } from '../../types/runtime/queries.js'
 import type { SyncClient } from '../sync/sync-client.js'
 import { getTrackedTabInfo, getActiveTab } from '../ui/tracked-tab-state.js'
-import { clearTrackedTab } from '../../lib/tabs/tracked-tab-storage.js'
+import { clearTrackedTab, setTrackedTab } from '../../lib/tabs/tracked-tab-storage.js'
 import { DebugCategory } from '../debug.js'
 import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js'
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js'
 import { delay } from '../../lib/timeout-utils.js'
-import { setLocals } from '../../lib/storage/local.js'
 import { isInternalTab } from '../../lib/tabs/internal-url.js'
 import { adoptTabIntoDrivenGroup } from '../tab-groups/driven-tab-group.js'
 import type { DrivenTabGroupEntryPoint } from '../tab-groups/driven-tab-group.js'
@@ -371,11 +370,7 @@ export async function persistTrackedTab(
   entryPoint: DrivenTabGroupEntryPoint = 'tracked_tab'
 ): Promise<void> {
   if (!tab.id) return
-  await setLocals({
-    trackedTabId: tab.id,
-    trackedTabUrl: tab.url || '',
-    trackedTabTitle: tab.title || ''
-  })
+  await setTrackedTab(tab)
   // Adoption lives in this funnel, not at the call sites. Every path that makes a tab
   // the tracked one — switch_tab plus the four auto-track recovery paths — must put it
   // in the driven group, and a path added later cannot forget to (rule 19).

@@ -375,6 +375,7 @@
       fix: "Choose a tab from the extension popup to save a fresh tracking state."
     });
   }
+  var writeQueue = Promise.resolve();
 
   // extension/content/tab-tracking.js
   var isTrackedTab = false;

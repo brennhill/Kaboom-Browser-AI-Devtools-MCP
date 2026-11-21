@@ -194,7 +194,7 @@ describe('tab-state helpers', () => {
       trackedTabActive: false
     })
 
-    clearTrackedTab()
+    await clearTrackedTab()
     assert.deepStrictEqual(globalThis.chrome.storage.local.remove.mock.calls[0].arguments[0], [
       'trackedTabId',
       'trackedTabUrl',
@@ -226,9 +226,9 @@ describe('tab-state helpers', () => {
     assert.strictEqual(globalThis.chrome.storage.local.set.mock.calls.length, 0)
   })
 
-  test('clearTrackedTab no-ops when storage is unavailable', () => {
+  test('clearTrackedTab no-ops when storage is unavailable', async () => {
     globalThis.chrome = undefined
-    clearTrackedTab()
+    await clearTrackedTab()
   })
 
   test('getTrackedTabInfo returns null-state when chrome is unavailable', async () => {

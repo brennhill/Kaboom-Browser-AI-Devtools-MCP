@@ -4,7 +4,7 @@ feature_id: feature-ai-web-pilot
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/internal/toolruntime/tools_core.go
@@ -26,7 +26,9 @@ code_paths:
   - src/content/ui/subtitle.ts
   - src/content/ui/toast.ts
   - src/content/ui/tracked-hover-launcher.ts
+  - internal/capture/syncruntime/tracking_projection.go
 test_paths:
+  - internal/capture/syncruntime/tracking_projection_test.go
   - cmd/browser-agent/internal/toolguard/guards_test.go
   - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
   - cmd/browser-agent/internal/asynccommand/handler_test.go
@@ -77,3 +79,11 @@ All page-bridge request and response literals live in the canonical runtime
 message contract and require the page nonce. Highlight dispatch shares the one
 authenticated inject dispatcher with DOM, accessibility, state, computed-style,
 and form queries; state ownership contains no second listener or nonce reader.
+
+## Pilot state and tracked-tab ordering
+
+A `/sync` heartbeat always applies its Pilot state. That holds even when the
+daemon drops the heartbeat's tracked-tab fields as stale after a synchronous
+`switch_tab` (see the ordering rule in
+[tab-tracking-ux](../tab-tracking-ux/index.md)). Command eligibility does not
+change: Pilot and extension guards still run before every command.

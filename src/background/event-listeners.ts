@@ -13,8 +13,12 @@ import { KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { StorageKey } from '../lib/constants.js'
 import { onStorageChanged } from '../lib/storage/changes.js'
 import { persist } from '../lib/storage/io.js'
-import { setLocal, setLocals } from '../lib/storage/local.js'
-import { clearTrackedTab as clearTrackedTabState, readTrackedTab } from '../lib/tabs/tracked-tab-storage.js'
+import {
+  clearTrackedTab as clearTrackedTabState,
+  clearTrackedTabIfCurrent,
+  readTrackedTab,
+  updateTrackedTabDetails
+} from '../lib/tabs/tracked-tab-storage.js'
 import { reportStateRecovery, resolveStateRecovery } from './runtime-state/state-recovery.js'
 import { trackingContinuity } from './runtime-state/tracking-continuity.js'
 
@@ -156,49 +160,47 @@ export function installTabUpdatedListener(onTabUpdated: (tabId: number, update: 
 }
 
 /**
- * Handle tracked tab URL change
- * Updates the stored URL and title when the tracked tab navigates
+ * Handle tracked tab URL change (Chrome navigate lifecycle adapter).
+ * Updates the stored URL and title when the tracked tab navigates. The write is
+ * scoped to `updatedTabId` by the tracked-tab storage owner, so a late update for a
+ * tab the user/AI has since switched away from is dropped instead of overwriting
+ * the new tracked tab.
  */
 export async function handleTrackedTabUrlChange(
   updatedTabId: number,
   newUrl: string,
   logFn?: (message: string) => void
 ): Promise<void> {
-  const trackedTabId = (await readTrackedTab()).id
-  if (trackedTabId === updatedTabId) {
-    trackingContinuity.navigationStarted(updatedTabId)
-    trackingContinuity.observeProvisionalURL(updatedTabId, newUrl)
-    // Update URL immediately, then refresh title from the tab
-    try {
-      const tab = await chrome.tabs.get(updatedTabId)
-      const updates: Record<string, unknown> = { [StorageKey.TRACKED_TAB_URL]: newUrl }
-      if (tab?.title) updates[StorageKey.TRACKED_TAB_TITLE] = tab.title
-      await setLocals(updates)
-      if (logFn) {
-        logFn(`${KABOOM_LOG_PREFIX} Tracked tab updated: ${newUrl}`)
-      }
-    } catch {
-      // Tab may have been closed -- update URL only (best-effort, logs on failure)
-      persist(setLocal(StorageKey.TRACKED_TAB_URL, newUrl), 'tracked-tab-url')
-    }
+  if ((await readTrackedTab()).id !== updatedTabId) return
+  trackingContinuity.navigationStarted(updatedTabId)
+  trackingContinuity.observeProvisionalURL(updatedTabId, newUrl)
+  let title: string | undefined
+  try {
+    title = (await chrome.tabs.get(updatedTabId))?.title
+  } catch {
+    // EXPECTED_ABSENCE: the tab can close mid-navigation; the URL is still recorded
+    // below and the close lifecycle clears tracking, so logging would be noise.
+  }
+  try {
+    const written = await updateTrackedTabDetails(updatedTabId, { url: newUrl, title })
+    if (written && logFn) logFn(`${KABOOM_LOG_PREFIX} Tracked tab updated: ${newUrl}`)
+  } catch (error) {
+    console.warn(`${KABOOM_LOG_PREFIX} storage write failed (tracked-tab-url):`, error)
   }
 }
 
 /**
- * Handle tracked tab being closed
- * SECURITY: Clears ephemeral tracking state when tab closes
- * Uses session storage for ephemeral tab tracking data
+ * Handle tracked tab being closed (Chrome close lifecycle adapter).
+ * SECURITY: Clears ephemeral tracking state when tab closes — only if the closed
+ * tab is still the tracked one when the clear runs.
  */
 export async function handleTrackedTabClosed(
   closedTabId: number,
   logFn?: (message: string, data?: unknown) => void
 ): Promise<void> {
-  const trackedTabId = (await readTrackedTab()).id
-  if (trackedTabId === closedTabId) {
-    if (logFn) logFn(`${KABOOM_LOG_PREFIX} Tracked tab closed (id:`, closedTabId)
-    trackingContinuity.close(closedTabId)
-    await clearTrackedTabState()
-  }
+  if (!(await clearTrackedTabIfCurrent(closedTabId))) return
+  if (logFn) logFn(`${KABOOM_LOG_PREFIX} Tracked tab closed (id:`, closedTabId)
+  trackingContinuity.close(closedTabId)
 }
 
 // =============================================================================

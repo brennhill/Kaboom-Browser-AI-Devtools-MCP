@@ -46,14 +46,17 @@ export interface TrackedTabUpdate {
 }
 export declare function installTabUpdatedListener(onTabUpdated: (tabId: number, update: TrackedTabUpdate) => void): void;
 /**
- * Handle tracked tab URL change
- * Updates the stored URL and title when the tracked tab navigates
+ * Handle tracked tab URL change (Chrome navigate lifecycle adapter).
+ * Updates the stored URL and title when the tracked tab navigates. The write is
+ * scoped to `updatedTabId` by the tracked-tab storage owner, so a late update for a
+ * tab the user/AI has since switched away from is dropped instead of overwriting
+ * the new tracked tab.
  */
 export declare function handleTrackedTabUrlChange(updatedTabId: number, newUrl: string, logFn?: (message: string) => void): Promise<void>;
 /**
- * Handle tracked tab being closed
- * SECURITY: Clears ephemeral tracking state when tab closes
- * Uses session storage for ephemeral tab tracking data
+ * Handle tracked tab being closed (Chrome close lifecycle adapter).
+ * SECURITY: Clears ephemeral tracking state when tab closes — only if the closed
+ * tab is still the tracked one when the clear runs.
  */
 export declare function handleTrackedTabClosed(closedTabId: number, logFn?: (message: string, data?: unknown) => void): Promise<void>;
 /**
