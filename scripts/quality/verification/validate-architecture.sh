@@ -39,10 +39,13 @@ echo ""
 echo "1️⃣  Checking canonical owners..."
 
 CRITICAL_FILES=(
-    "internal/queries/dispatcher.go"
-    "internal/queries/dispatcher_queries.go"
-    "internal/queries/dispatcher_commands.go"
-    "internal/queries/dispatcher_results.go"
+    "internal/browsercommand/owner.go"
+    "internal/browsercommand/exchange.go"
+    "internal/browsercommand/result.go"
+    "internal/browsercommand/internal/dispatch/dispatcher.go"
+    "internal/browsercommand/internal/dispatch/dispatcher_queries.go"
+    "internal/browsercommand/internal/dispatch/dispatcher_commands.go"
+    "internal/browsercommand/internal/dispatch/dispatcher_results.go"
     "internal/queries/types.go"
     "internal/capture/capture.go"
     "internal/capture/httpingest/handlers.go"
@@ -61,16 +64,28 @@ done
 echo ""
 echo "2️⃣  Checking query and command lifecycle methods..."
 
-QUERY_SOURCES=(
-    "internal/queries/dispatcher_queries.go"
-    "internal/queries/dispatcher_commands.go"
-    "internal/queries/dispatcher_results.go"
+# The browsercommand Owner is the only public command lifecycle surface
+# (kaboom-jdm5.2/.5); the dispatcher behind it is compiler-private.
+OWNER_SOURCES=(
+    "internal/browsercommand/owner.go"
+    "internal/browsercommand/exchange.go"
+    "internal/browsercommand/result.go"
+    "internal/browsercommand/views.go"
 )
 for method in \
-    CreatePendingQuery CreatePendingQueryWithTimeout GetPendingQueries GetPendingQueriesForClient \
-    SetQueryResult SetQueryResultWithClient TakeQueryResult RegisterCommand ApplyCommandResult \
-    ExpireCommand GetCommandResult GetPendingCommands GetCompletedCommands GetFailedCommands; do
-    require_method "$method" "${QUERY_SOURCES[@]}"
+    Enqueue Pending AwaitPending ApplySyncExchange SubmitResult RegisterLocal ExpireAll \
+    FailDisconnected Command WaitCommand WaitQueryResult PendingCommands CompletedCommands FailedCommands; do
+    require_method "$method" "${OWNER_SOURCES[@]}"
+done
+DISPATCH_SOURCES=(
+    "internal/browsercommand/internal/dispatch/dispatcher_queries.go"
+    "internal/browsercommand/internal/dispatch/dispatcher_commands.go"
+    "internal/browsercommand/internal/dispatch/dispatcher_results.go"
+)
+for method in \
+    CreatePendingQueryWithTimeout GetPendingQueries SetQueryResultWithClient RegisterCommand \
+    ApplyCommandResult ExpireCommand GetCommandResult GetPendingCommands GetCompletedCommands GetFailedCommands; do
+    require_method "$method" "${DISPATCH_SOURCES[@]}"
 done
 
 echo ""
@@ -92,19 +107,19 @@ fi
 if awk '
     /func \(d \*Dispatcher\) CommandResult\(/ { in_func=1; next }
     in_func && /^func / { in_func=0 }
-    in_func && /GetCommandResult\(/ { found=1 }
+    in_func && /d\.commands\.(Command|WaitCommand)\(/ { found=1 }
     END { exit(found ? 0 : 1) }
 ' "$CMD_DIR/internal/toolobserve/dispatcher.go"; then
     pass "observe command_result reads the canonical command store"
 else
-    fail "STUB DETECTED: observe CommandResult does not read GetCommandResult"
+    fail "STUB DETECTED: observe CommandResult does not read the command owner"
 fi
 
 echo ""
 echo "4️⃣  Running executable architecture contracts..."
 
-if go test ./internal/queries ./internal/capture "$CMD_PKG/internal/toolobserve" \
-    -run 'Test(QueryDispatcherHasNoCompatibilityFacades|CaptureHasNoCompatibilityAliases|AsyncQueueIntegration|DispatcherCommandResult)' \
+if go test ./internal/browsercommand/... ./internal/capture "$CMD_PKG/internal/toolobserve" \
+    -run 'Test(QueryDispatcherArchitectureBoundaries|CaptureHasNoCompatibilityAliases|AsyncQueueIntegration|ApplySyncExchange|SubmitResultValidatesEachSource|CommandResult)' \
     > /tmp/kaboom-architecture-tests.log 2>&1; then
     pass "query, capture, and observe architecture contracts pass"
 else
@@ -124,7 +139,7 @@ else
     pass "AsyncCommandTimeout = ${ASYNC_TIMEOUT_SECONDS}s"
 fi
 
-MAX_PENDING_QUERIES_VALUE=$(grep -E 'MaxPendingQueries[[:space:]]*=' internal/queries/dispatcher_queries.go | head -1 | grep -oE '[0-9]+' | head -1 || true)
+MAX_PENDING_QUERIES_VALUE=$(grep -E 'MaxPendingQueries[[:space:]]*=' internal/queries/types.go | head -1 | grep -oE '[0-9]+' | head -1 || true)
 if [ -z "${MAX_PENDING_QUERIES_VALUE:-}" ]; then
     fail "MaxPendingQueries constant not found"
 elif [ "$MAX_PENDING_QUERIES_VALUE" -lt 5 ]; then
