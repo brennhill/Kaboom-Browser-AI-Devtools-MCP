@@ -199,8 +199,15 @@ func (r *Runtime) WaitForExtensionConnected(ctx context.Context, timeout time.Du
 	if timeout <= 0 {
 		return false
 	}
+	return r.waitConnectedFrom(ctx, timeout, notify)
+}
+
+// waitConnectedFrom waits on a readiness generation captured while the
+// extension was disconnected, re-checking state each time it rotates.
+func (r *Runtime) waitConnectedFrom(ctx context.Context, timeout time.Duration, notify <-chan struct{}) bool {
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
+	var connected bool
 	for {
 		select {
 		case <-ctx.Done():
