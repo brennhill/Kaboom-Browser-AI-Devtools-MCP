@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -20,15 +21,13 @@ func answerFirstQuery(t *testing.T, captured *capture.Capture, queryType string,
 	t.Helper()
 	sent := make(chan json.RawMessage, 1)
 	go func() {
-		// Block on the dispatcher's own enqueue signal (the same one the /sync
-		// long-poll uses) instead of polling the queue on a wall-clock sleep.
 		deadline := time.Now().Add(5 * time.Second)
 		for time.Now().Before(deadline) {
-			captured.Queries().WaitForPendingQueries(time.Until(deadline))
-			for _, pending := range captured.Queries().GetPendingQueries() {
+			// AwaitPending blocks on the queue's arrival signal instead of sleeping.
+			for _, pending := range captured.Commands().AwaitPending(time.Until(deadline)) {
 				if pending.Type == queryType {
 					sent <- pending.Params
-					captured.Queries().SetQueryResult(pending.ID, result)
+					commandtest.Deliver(captured.Commands(), pending.ID, result)
 					return
 				}
 			}
@@ -44,7 +43,7 @@ func TestExecuteA11yQueryRoundTripsThroughQueue(t *testing.T) {
 	defer captured.Close()
 	sent := answerFirstQuery(t, captured, "a11y", json.RawMessage(`{"violations":[]}`))
 
-	got, err := New(Deps{Capture: captured}).ExecuteA11yQuery("#main", []string{"wcag2a"}, nil, true)
+	got, err := New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}).ExecuteA11yQuery("#main", []string{"wcag2a"}, nil, true)
 	if err != nil || string(got) != `{"violations":[]}` {
 		t.Fatalf("ExecuteA11yQuery = %s, %v", got, err)
 	}
@@ -60,7 +59,7 @@ func TestExecuteStyleProbeRoundTripsThroughQueue(t *testing.T) {
 	defer captured.Close()
 	sent := answerFirstQuery(t, captured, "computed_styles", json.RawMessage(`{"elements":[]}`))
 
-	got, err := New(Deps{Capture: captured}).ExecuteStyleProbe("button", 7, true)
+	got, err := New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}).ExecuteStyleProbe("button", 7, true)
 	if err != nil || string(got) != `{"elements":[]}` {
 		t.Fatalf("ExecuteStyleProbe = %s, %v", got, err)
 	}
@@ -76,7 +75,7 @@ func TestExecuteProbesFailLoudWhenQueueIsFull(t *testing.T) {
 	captured := capture.NewCapture()
 	defer captured.Close()
 	saturateQueue(t, captured)
-	handler := New(Deps{Capture: captured})
+	handler := New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()})
 
 	if _, err := handler.ExecuteA11yQuery("", nil, nil, false); !errors.Is(err, queries.ErrQueueFull) {
 		t.Fatalf("ExecuteA11yQuery err = %v, want ErrQueueFull", err)
@@ -90,7 +89,7 @@ func TestFormatCommandResultTimeoutExplainsDisconnectedExtension(t *testing.T) {
 	t.Parallel()
 	captured := capture.NewCapture()
 	defer captured.Close()
-	result := decodeToolResult(t, New(Deps{Capture: captured, DiagnosticHintString: func() string { return "hint" }}).FormatCommandResult(
+	result := decodeToolResult(t, New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry(), DiagnosticHintString: func() string { return "hint" }}).FormatCommandResult(
 		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1},
 		queries.CommandResult{CorrelationID: "slow", Status: "timeout", Error: "no response", CreatedAt: time.Unix(100, 0)},
 		"slow",
@@ -109,7 +108,7 @@ func TestStillProcessingResponseIsNonFinalPollingHandle(t *testing.T) {
 	captured := capture.NewCapture()
 	defer captured.Close()
 	cmd := &queries.CommandResult{CorrelationID: "long", Status: "pending", CreatedAt: time.Now()}
-	result := decodeToolResult(t, New(Deps{Capture: captured}).stillProcessingResponse(
+	result := decodeToolResult(t, New(Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}).stillProcessingResponse(
 		mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}, cmd, "long", 2, 1500,
 	))
 	data := decodeResponseData(t, result)

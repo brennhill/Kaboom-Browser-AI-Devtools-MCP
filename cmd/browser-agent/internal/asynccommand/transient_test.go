@@ -13,7 +13,7 @@ import (
 func TestAttachTransientElements_AttachesWhenPresent(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	h := asynccommand.New(asynccommand.Deps{Capture: cap})
+	h := asynccommand.New(asynccommand.Deps{Commands: cap.Commands(), Extension: cap.Extension(), Performance: cap.Performance(), Telemetry: cap.Telemetry()})
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
@@ -44,7 +44,7 @@ func TestAttachTransientElements_AttachesWhenPresent(t *testing.T) {
 func TestAttachTransientElements_OmitsWhenEmpty(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	h := asynccommand.New(asynccommand.Deps{Capture: cap})
+	h := asynccommand.New(asynccommand.Deps{Commands: cap.Commands(), Extension: cap.Extension(), Performance: cap.Performance(), Telemetry: cap.Telemetry()})
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
@@ -64,7 +64,7 @@ func TestAttachTransientElements_OmitsWhenEmpty(t *testing.T) {
 func TestAttachTransientElements_CapsAtMax(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	h := asynccommand.New(asynccommand.Deps{Capture: cap})
+	h := asynccommand.New(asynccommand.Deps{Commands: cap.Commands(), Extension: cap.Extension(), Performance: cap.Performance(), Telemetry: cap.Telemetry()})
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
@@ -96,7 +96,7 @@ func TestAttachTransientElements_CapsAtMax(t *testing.T) {
 func TestAttachTransientElements_FiltersByTimestamp(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	h := asynccommand.New(asynccommand.Deps{Capture: cap})
+	h := asynccommand.New(asynccommand.Deps{Commands: cap.Commands(), Extension: cap.Extension(), Performance: cap.Performance(), Telemetry: cap.Telemetry()})
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
@@ -123,7 +123,7 @@ func TestAttachTransientElements_FiltersByTimestamp(t *testing.T) {
 func TestAttachTransientElements_ClockSkewTolerance(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	h := asynccommand.New(asynccommand.Deps{Capture: cap})
+	h := asynccommand.New(asynccommand.Deps{Commands: cap.Commands(), Extension: cap.Extension(), Performance: cap.Performance(), Telemetry: cap.Telemetry()})
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()

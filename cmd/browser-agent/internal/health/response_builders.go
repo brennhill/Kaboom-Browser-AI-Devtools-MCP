@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
@@ -21,7 +20,7 @@ import (
 // GetHealth computes and returns the current health metrics.
 // This is called on-demand when the get_health tool is invoked.
 func (hm *Metrics) GetHealth(
-	cap *capture.Capture,
+	owners healthreader.Owners,
 	server ServerDeps,
 	upgrade UpgradeProvider,
 	getLaunchMode func() LaunchModeInfo,
@@ -32,18 +31,18 @@ func (hm *Metrics) GetHealth(
 	if server != nil {
 		serverInfo.TerminalPort = server.GetTerminalPort()
 	}
-	resourcePressure := BuildResourcePressure(cap, alerts)
+	resourcePressure := BuildResourcePressure(owners, alerts)
 	consoleEntries, consoleCapacity, consoleDropped := getConsoleStats(server)
 	resourcePressure["console"] = ResourcePressure{Entries: consoleEntries, Capacity: consoleCapacity,
 		DroppedCount: consoleDropped, RecoverableEntries: consoleEntries}
 	resp := MCPHealthResponse{
 		Server:           serverInfo,
-		Memory:           BuildMemoryInfo(cap),
-		Buffers:          BuildBuffersInfo(cap, server),
-		RateLimiting:     BuildRateLimitInfo(cap),
+		Memory:           BuildMemoryInfo(owners),
+		Buffers:          BuildBuffersInfo(owners, server),
+		RateLimiting:     BuildRateLimitInfo(owners),
 		Audit:            hm.BuildAuditInfo(),
-		Pilot:            BuildPilotInfo(cap),
-		CommandExecution: BuildCommandExecutionInfo(cap),
+		Pilot:            BuildPilotInfo(owners),
+		CommandExecution: BuildCommandExecutionInfo(owners),
 		ResourcePressure: resourcePressure,
 	}
 	if info := BuildUpgradeInfo(upgrade); info != nil {
@@ -53,8 +52,8 @@ func (hm *Metrics) GetHealth(
 }
 
 // BuildResourcePressureChecks explains saturation without treating bounded historical eviction as failure.
-func BuildResourcePressureChecks(cap *capture.Capture, alerts *alertbuf.AlertBuffer) []DoctorCheck {
-	pressure := BuildResourcePressure(cap, alerts)
+func BuildResourcePressureChecks(owners healthreader.Owners, alerts *alertbuf.AlertBuffer) []DoctorCheck {
+	pressure := BuildResourcePressure(owners, alerts)
 	checks := make([]DoctorCheck, 0, len(pressure))
 	for name, resource := range pressure {
 		countBelowLimit := resource.Capacity == 0 || resource.Entries < resource.Capacity
@@ -77,22 +76,22 @@ func BuildResourcePressureChecks(cap *capture.Capture, alerts *alertbuf.AlertBuf
 }
 
 // BuildResourcePressure exposes common resource budgets without merging ownership.
-func BuildResourcePressure(cap *capture.Capture, alerts *alertbuf.AlertBuffer) map[string]ResourcePressure {
+func BuildResourcePressure(owners healthreader.Owners, alerts *alertbuf.AlertBuffer) map[string]ResourcePressure {
 	result := make(map[string]ResourcePressure)
-	if cap != nil {
-		telemetry := cap.Telemetry().Pressure()
+	if owners.Available() {
+		telemetry := owners.Telemetry.Pressure()
 		for name, pressure := range map[string]pressure.Stats{
 			"network": telemetry.Network, "network_waterfall": telemetry.NetworkWaterfall,
 			"websocket": telemetry.WebSocket, "actions": telemetry.Actions,
-			"extension_diagnostics": cap.ExtensionLogs().Pressure(),
+			"extension_diagnostics": owners.ExtensionLogs.Pressure(),
 		} {
 			result[name] = ResourcePressure{Entries: pressure.Size, Capacity: pressure.Capacity,
 				DroppedCount: pressure.Dropped, OldestAgeMs: pressure.OldestAge.Milliseconds(), RecoverableEntries: pressure.Size}
 		}
-		queries := cap.Queries().GetSnapshot()
+		queries := owners.Commands.Snapshot()
 		result["pending_commands"] = ResourcePressure{Entries: queries.PendingQueryCount,
 			Capacity: queries.PendingCapacity, OldestAgeMs: queries.OldestPendingAge.Milliseconds(), ActiveEntries: queries.PendingQueryCount}
-		performance := cap.Performance().Pressure()
+		performance := owners.Performance.Pressure()
 		for name, pressure := range map[string]pressure.Stats{
 			"performance_snapshots": performance.Snapshots, "performance_samples": performance.Samples,
 			"performance_baselines": performance.BeforeSnapshots,
@@ -100,7 +99,7 @@ func BuildResourcePressure(cap *capture.Capture, alerts *alertbuf.AlertBuffer) m
 			result[name] = ResourcePressure{Entries: pressure.Size, Capacity: pressure.Capacity,
 				DroppedCount: pressure.Dropped, OldestAgeMs: pressure.OldestAge.Milliseconds(), RecoverableEntries: pressure.Size}
 		}
-		recordings := cap.Recordings().Pressure()
+		recordings := owners.Recordings.Pressure()
 		result["recordings"] = ResourcePressure{Entries: recordings.RecordingCount,
 			ActiveEntries: recordings.ActiveCount, RecoverableEntries: recordings.RecordingCount,
 			RetainedBytes: recordings.UsedBytes, ByteCapacity: recordings.CapacityBytes}
@@ -148,7 +147,7 @@ func (hm *Metrics) buildServerInfo(ver string, getLaunchMode func() LaunchModeIn
 }
 
 // BuildMemoryInfo returns runtime memory statistics.
-func BuildMemoryInfo(cap *capture.Capture) MemoryInfo {
+func BuildMemoryInfo(owners healthreader.Owners) MemoryInfo {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 
@@ -165,11 +164,11 @@ func BuildMemoryInfo(cap *capture.Capture) MemoryInfo {
 }
 
 // BuildBuffersInfo returns buffer utilization stats from capture and server.
-func BuildBuffersInfo(cap *capture.Capture, server ServerDeps) BuffersInfo {
+func BuildBuffersInfo(owners healthreader.Owners, server ServerDeps) BuffersInfo {
 	var networkEntries, wsEntries, actionEntries int
 	var networkCapacity, wsCapacity, actionCapacity int
-	if cap != nil {
-		h := healthreader.New(cap).Snapshot()
+	if owners.Available() {
+		h := healthreader.New(owners).Snapshot()
 		networkEntries = h.NetworkBodyCount
 		wsEntries = h.WebSocketCount
 		actionEntries = h.ActionCount
@@ -214,10 +213,10 @@ func getConsoleStats(server ServerDeps) (int, int, int64) {
 }
 
 // BuildRateLimitInfo returns rate limiting state from capture.
-func BuildRateLimitInfo(cap *capture.Capture) RateLimitingInfo {
+func BuildRateLimitInfo(owners healthreader.Owners) RateLimitingInfo {
 	info := RateLimitingInfo{Threshold: circuit.RateLimitThreshold}
-	if cap != nil {
-		h := healthreader.New(cap).Snapshot()
+	if owners.Available() {
+		h := healthreader.New(owners).Snapshot()
 		info.CurrentRate = h.WindowEventCount
 		info.CircuitOpen = h.CircuitOpen
 		info.CircuitReason = h.CircuitReason
@@ -253,13 +252,13 @@ func (hm *Metrics) BuildAuditInfo() AuditInfo {
 }
 
 // BuildPilotInfo returns AI Web Pilot status from capture.
-func BuildPilotInfo(cap *capture.Capture) PilotInfo {
+func BuildPilotInfo(owners healthreader.Owners) PilotInfo {
 	defaultStatus := PilotInfo{Source: "never_connected"}
-	if cap == nil {
+	if !owners.Available() {
 		return defaultStatus
 	}
 
-	statusMap := cap.Extension().GetPilotStatus()
+	statusMap := owners.Extension.GetPilotStatus()
 	m, ok := statusMap.(map[string]any)
 	if !ok {
 		return defaultStatus

@@ -1,9 +1,11 @@
 // Purpose: Records query lifecycle stage transitions (queued/sent/resolved/timed_out) for diagnostic tracing.
 // Docs: docs/features/feature/query-service/index.md
 
-package queries
+package dispatch
 
 import (
+	"bytes"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"sort"
 	"strings"
 	"time"
@@ -36,7 +38,7 @@ func deriveTraceID(explicit string, correlationID string, queryID string) string
 // Invariants:
 // - Event order is preserved; no re-sorting is performed here.
 // - Empty stages are skipped to avoid polluting timeline output.
-func buildTraceTimeline(events []CommandTraceEvent) string {
+func buildTraceTimeline(events []queries.CommandTraceEvent) string {
 	if len(events) == 0 {
 		return ""
 	}
@@ -74,7 +76,7 @@ func traceStageFromStatus(status string) string {
 // Invariants:
 // - Caller must hold resultsMu.
 // - Existing non-empty identity fields are preserved.
-func (qd *QueryDispatcher) ensureTraceContextLocked(cmd *CommandResult, correlationID string, queryID string, traceID string, now time.Time) {
+func (qd *QueryDispatcher) ensureTraceContextLocked(cmd *queries.CommandResult, correlationID string, queryID string, traceID string, now time.Time) {
 	if cmd == nil {
 		return
 	}
@@ -96,7 +98,7 @@ func (qd *QueryDispatcher) ensureTraceContextLocked(cmd *CommandResult, correlat
 //
 // Invariants:
 // - Caller must hold resultsMu.
-func (qd *QueryDispatcher) hasTraceStageLocked(cmd *CommandResult, stage string) bool {
+func (qd *QueryDispatcher) hasTraceStageLocked(cmd *queries.CommandResult, stage string) bool {
 	if cmd == nil || stage == "" {
 		return false
 	}
@@ -116,7 +118,7 @@ func (qd *QueryDispatcher) hasTraceStageLocked(cmd *CommandResult, stage string)
 //
 // Failure semantics:
 // - Empty stage or nil command are ignored to keep lifecycle ingestion non-fatal.
-func (qd *QueryDispatcher) appendTraceEventLocked(cmd *CommandResult, stage string, source string, status string, message string, at time.Time) {
+func (qd *QueryDispatcher) appendTraceEventLocked(cmd *queries.CommandResult, stage string, source string, status string, message string, at time.Time) {
 	if cmd == nil || stage == "" {
 		return
 	}
@@ -127,7 +129,7 @@ func (qd *QueryDispatcher) appendTraceEventLocked(cmd *CommandResult, stage stri
 		return
 	}
 
-	cmd.TraceEvents = append(cmd.TraceEvents, CommandTraceEvent{
+	cmd.TraceEvents = append(cmd.TraceEvents, queries.CommandTraceEvent{
 		Stage:   stage,
 		At:      at,
 		Source:  source,
@@ -169,14 +171,14 @@ func (qd *QueryDispatcher) recordTraceEvent(correlationID string, stage string, 
 //
 // Invariants:
 // - Returned pointer never aliases internal trace slice memory.
-func copyCommandResultWithTrace(src *CommandResult) *CommandResult {
+func copyCommandResultWithTrace(src *queries.CommandResult) *queries.CommandResult {
 	if src == nil {
 		return nil
 	}
 	cp := *src
-	cp.Result = cloneJSON(src.Result)
+	cp.Result = bytes.Clone(src.Result)
 	if len(src.TraceEvents) > 0 {
-		cp.TraceEvents = make([]CommandTraceEvent, len(src.TraceEvents))
+		cp.TraceEvents = make([]queries.CommandTraceEvent, len(src.TraceEvents))
 		copy(cp.TraceEvents, src.TraceEvents)
 	}
 	return &cp
@@ -184,13 +186,13 @@ func copyCommandResultWithTrace(src *CommandResult) *CommandResult {
 
 // GetRecentCommandTraces returns the latest command traces across active and failed commands.
 // Sorted by UpdatedAt descending and bounded by limit (if > 0).
-func (qd *QueryDispatcher) GetRecentCommandTraces(limit int) []*CommandResult {
+func (qd *QueryDispatcher) GetRecentCommandTraces(limit int) []*queries.CommandResult {
 	qd.resultsMu.RLock()
 	defer qd.resultsMu.RUnlock()
 
-	combined := make([]*CommandResult, 0, len(qd.activeCommands)+len(qd.terminalHistory))
+	combined := make([]*queries.CommandResult, 0, len(qd.activeCommands)+len(qd.terminalHistory))
 	seen := make(map[string]struct{}, len(qd.activeCommands)+len(qd.terminalHistory))
-	add := func(cmd *CommandResult) {
+	add := func(cmd *queries.CommandResult) {
 		if cmd == nil {
 			return
 		}

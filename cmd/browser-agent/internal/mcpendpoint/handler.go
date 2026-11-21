@@ -51,8 +51,8 @@ func New(config Config, backend mcpcall.Backend) *Handler {
 			DrainWarnings: config.DrainWarnings, PendingAudit: config.PendingAudit,
 		}),
 	}
-	handler.passiveTelemetry.SetCapture(backend.Capture)
-	handler.responsePolicy.SetCapture(backend.Capture)
+	handler.passiveTelemetry.SetOwners(backend.Extension, backend.Telemetry)
+	handler.responsePolicy.SetExtension(backend.Extension)
 	return handler
 }
 

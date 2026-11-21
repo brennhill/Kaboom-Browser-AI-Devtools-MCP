@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - cmd/browser-agent/openapi.json
   - cmd/browser-agent/internal/toolruntime/tools_configure.go
@@ -29,7 +29,11 @@ code_paths:
   - internal/capture/featureusage/observer.go
   - internal/capture/httpingest/handlers.go
   - internal/util/media.go
-  - internal/queries/dispatcher_queries.go
+  - internal/browsercommand/internal/dispatch/dispatcher_queries.go
+  - internal/browsercommand/owner.go
+  - internal/browsercommand/result.go
+  - internal/browsercommand/exchange.go
+  - scripts/contracts/layering/main.go
   - internal/capture/syncruntime/handler.go
   - internal/capture/syncruntime/wire_sync.go
   - internal/commandcontract/generated.go
@@ -410,7 +414,7 @@ implementation or preserving an obsolete compatibility surface.
 
 - `internal/capture/syncruntime/sync_test_helpers_test.go` centralizes `/sync` request marshaling, transport dispatch, and response decoding helpers.
 - `internal/capture/syncruntime/sync_test.go` reuses those helpers for request ingestion, heartbeats, and connection state.
-- `internal/capture/syncruntime/sync_command_lifecycle_test.go` owns adaptive polling and command-result lifecycle coverage.
+- `internal/capture/syncruntime/sync_command_lifecycle_test.go` owns adaptive polling, command-result lifecycle, and deterministic old-poll-resumes-after-reconnect coverage (superseded polls cannot mutate current-generation commands; command lifecycle itself lives in `internal/browsercommand`).
 - `internal/capture/syncruntime/integrationtest/sync_waterfall_test.go` owns waterfall query and result delivery coverage.
 - Additional capture contract tests (`coverage_gaps_part2_test`, `api_contract_test`) reuse shared helper assertions to keep endpoint/status checks consistent; canonical settings-path and recovery coverage lives with `settingscache`.
 - `src/background/sync/server.ts` now treats popup/background `connected` as daemon-confirmed heartbeat state instead of raw `/health` reachability.

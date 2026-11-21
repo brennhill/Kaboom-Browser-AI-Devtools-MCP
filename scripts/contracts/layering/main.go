@@ -8,6 +8,26 @@
 //	internal/types      ↛ internal/**       (payload contracts are the innermost leaf)
 //	internal/mcp        ↛ internal/tools/**, internal/capture/** (protocol ignorant of domain and ports)
 //	internal/schema/**  ↮ internal/tools/** (contract layer and tool layer are siblings)
+//	command module      ↛ net/http/**, internal/mcp, internal/capture/**
+//	                     (internal/browsercommand and internal/queries own the
+//	                     browser-command lifecycle independent of the HTTP and
+//	                     MCP transports that adapt it)
+//	internal/app/**      ↛ net/http/**, internal/mcp, internal/capture/**, internal/tools/**
+//	                     (application use cases take narrow ports, never MCP
+//	                     request/response types or the whole *capture.Capture)
+//	command-owner        no production X.Queries() call, and no import of
+//	                     internal/browsercommand/internal/dispatch outside
+//	                     internal/browsercommand/** (command_owner.go)
+//	capture-root         only cmd/browser-agent, its toolruntime wiring, the
+//	                     internal/capture tree and test-support packages may import
+//	                     internal/capture; every other package takes the owners it
+//	                     uses (syncruntime, telemetrystore, perfstore, logstore,
+//	                     browsercommand, healthreader.Owners, ...)
+//	test-support         production files never import test-support packages
+//	                     (observe/testsupport, capturefixture, browsercommand/commandtest)
+//	bounded contexts     Observation Capture, Event Recording, Connection & Sync and
+//	                     Extension Ingestion never import their upstream contexts
+//	                     (contexts.go; names match GLOSSARY.md)
 //	capture.NewCapture   only from cmd/browser-agent (ports are wired by the
 //	                     composition root; detection resolves import ALIASES
 //	                     and package-level var initializers, not the literal
@@ -76,7 +96,10 @@ type treeScan struct {
 	// compositionRootBreaches lists files outside cmd/browser-agent that
 	// construct capture.NewCapture (via any import alias).
 	compositionRootBreaches []string
-	interfaces              []ifaceInfo
+	// commandOwnerBreaches lists production dispatcher references outside the
+	// browser-command owner (see command_owner.go).
+	commandOwnerBreaches []string
+	interfaces           []ifaceInfo
 }
 
 // ignoredDir skips trees that are not this checkout's hand-written source.
@@ -220,6 +243,7 @@ func scanTree(root string) (*treeScan, error) {
 			}
 		}
 		scan.pkgOf[fileKey] = pkgPath
+		scan.commandOwnerBreaches = append(scan.commandOwnerBreaches, commandOwnerBreaches(parsed, fileKey, pkgPath)...)
 
 		for _, declaration := range parsed.Decls {
 			gd, ok := declaration.(*ast.GenDecl)
@@ -308,6 +332,28 @@ func scanTree(root string) (*treeScan, error) {
 	return scan, nil
 }
 
+// captureCompositionPkg reports packages allowed to import the whole Capture:
+// the composition root (cmd/browser-agent and its toolruntime wiring), the
+// capture package tree itself, and test-support packages.
+func captureCompositionPkg(pkg string) bool {
+	return pkg == modulePrefix+"cmd/browser-agent" ||
+		pkg == modulePrefix+"cmd/browser-agent/internal/toolruntime" ||
+		isPkgOrSub(pkg, modulePrefix+"internal/capture") ||
+		testSupportPkg(pkg)
+}
+
+// testSupportPkg reports packages that exist only to support tests; production
+// files must not import them.
+func testSupportPkg(pkg string) bool {
+	switch pkg {
+	case modulePrefix + "internal/tools/observe/testsupport",
+		modulePrefix + "internal/capturefixture",
+		modulePrefix + "internal/browsercommand/commandtest":
+		return true
+	}
+	return false
+}
+
 func isCompositionRootPkg(pkgPath string) bool {
 	return pkgPath == modulePrefix+"cmd/browser-agent"
 }
@@ -378,6 +424,14 @@ func evaluateMatrix(scan *treeScan) []string {
 	for file, imports := range scan.imports {
 		srcPkg := scan.pkgOf[file]
 		for imp := range imports {
+			if commandModule(srcPkg) && commandModuleForbidden(imp) {
+				violations = append(violations, fmt.Sprintf("command->transport: %s imports %s", file, imp))
+				continue
+			}
+			if applicationModule(srcPkg) && applicationModuleForbidden(imp) {
+				violations = append(violations, fmt.Sprintf("app->transport: %s imports %s", file, imp))
+				continue
+			}
 			internal, ok := strings.CutPrefix(imp, modulePrefix)
 			if !ok {
 				continue
@@ -390,6 +444,10 @@ func evaluateMatrix(scan *treeScan) []string {
 				violations = append(violations, fmt.Sprintf("internal->cmd: %s imports %s", file, imp))
 			case isPkgOrSub(srcPkg, modulePrefix+"internal/mcp") && (isPkgOrSub(internal, "internal/tools") || isPkgOrSub(internal, "internal/capture")):
 				violations = append(violations, fmt.Sprintf("mcp->domain: %s imports %s", file, imp))
+			case internal == "internal/capture" && !captureCompositionPkg(srcPkg):
+				violations = append(violations, fmt.Sprintf("capture-root: %s imports %s; only the composition root may hold *capture.Capture — inject the owners it uses", file, imp))
+			case testSupportPkg(modulePrefix+internal) && !testSupportPkg(srcPkg):
+				violations = append(violations, fmt.Sprintf("test-support: production file %s imports %s", file, imp))
 			case isPkgOrSub(srcPkg, modulePrefix+"internal/schema") && isPkgOrSub(internal, "internal/tools"):
 				violations = append(violations, fmt.Sprintf("schema->tools: %s imports %s", file, imp))
 			}
@@ -401,8 +459,36 @@ func evaluateMatrix(scan *treeScan) []string {
 	for _, file := range scan.compositionRootBreaches {
 		violations = append(violations, fmt.Sprintf("composition-root: %s constructs capture.NewCapture", file))
 	}
+	violations = append(violations, scan.commandOwnerBreaches...)
+	violations = append(violations, contextViolations(scan)...)
 	sort.Strings(violations)
 	return violations
+}
+
+// commandModule reports whether pkg is part of the transport-independent
+// browser-command lifecycle module.
+func commandModule(pkg string) bool {
+	return isPkgOrSub(pkg, modulePrefix+"internal/browsercommand") || isPkgOrSub(pkg, modulePrefix+"internal/queries")
+}
+
+// commandModuleForbidden reports whether imp is a transport (HTTP or MCP) or
+// transport-adapter package the command module must not depend on.
+func commandModuleForbidden(imp string) bool {
+	return isPkgOrSub(imp, "net/http") ||
+		isPkgOrSub(imp, modulePrefix+"internal/mcp") ||
+		isPkgOrSub(imp, modulePrefix+"internal/capture")
+}
+
+// applicationModule reports whether pkg is a transport-independent application
+// use case (internal/app/**).
+func applicationModule(pkg string) bool {
+	return isPkgOrSub(pkg, modulePrefix+"internal/app")
+}
+
+// applicationModuleForbidden reports whether imp is a transport, the broad
+// capture composition object, or an MCP tool adapter a use case must not see.
+func applicationModuleForbidden(imp string) bool {
+	return commandModuleForbidden(imp) || isPkgOrSub(imp, modulePrefix+"internal/tools")
 }
 
 // leafImportViolations reports internal/types files importing internal

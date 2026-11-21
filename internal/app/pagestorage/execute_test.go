@@ -1,9 +1,10 @@
 // execute_test.go — Tests IndexedDB query dispatch and result normalization.
 
-package idbquery
+package pagestorage
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"runtime"
 	"strings"
 	"testing"
@@ -19,9 +20,9 @@ func respondToNextQuery(t *testing.T, cap *capture.Capture, result json.RawMessa
 		defer close(done)
 		deadline := time.Now().Add(time.Second)
 		for time.Now().Before(deadline) {
-			pending := cap.Queries().GetPendingQueries()
+			pending := cap.Commands().Pending()
 			if len(pending) > 0 {
-				cap.Queries().SetQueryResult(pending[0].ID, result)
+				commandtest.Deliver(cap.Commands(), pending[0].ID, result)
 				return
 			}
 			runtime.Gosched()
@@ -38,7 +39,7 @@ func TestListingSortsAndSuppliesDefaults(t *testing.T) {
 		"result":{"databases":[{"name":"zeta"},{"name":"alpha"}]}
 	}`))
 
-	result, err := Listing(cap)
+	result, err := listing(cap.Commands())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +60,7 @@ func TestEntriesNormalizesSuccessAndPageErrors(t *testing.T) {
 			"success":true,
 			"result":{"entries":[{"key":1}]}
 		}`))
-		result, err := Entries(cap, "app", "users", 5)
+		result, err := entries(cap.Commands(), "app", "users", 5)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -75,7 +76,7 @@ func TestEntriesNormalizesSuccessAndPageErrors(t *testing.T) {
 			"success":true,
 			"result":{"ok":false,"message":"store missing"}
 		}`))
-		if _, err := Entries(cap, "app", "missing", 5); err == nil || err.Error() != "store missing" {
+		if _, err := entries(cap.Commands(), "app", "missing", 5); err == nil || err.Error() != "store missing" {
 			t.Fatalf("error = %v", err)
 		}
 	})
@@ -90,7 +91,7 @@ func TestListingDefaultsMissingAndNonArrayDatabasePayloads(t *testing.T) {
 			cap := capture.NewCapture()
 			t.Cleanup(cap.Close)
 			respondToNextQuery(t, cap, json.RawMessage(payload))
-			result, err := Listing(cap)
+			result, err := listing(cap.Commands())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -111,7 +112,7 @@ func TestEntriesNormalizesNonArrayAndExistingMetadata(t *testing.T) {
 		"success":true,
 		"result":{"entries":"opaque","database":"returned-db","store":"returned-store"}
 	}`))
-	result, err := Entries(cap, "requested-db", "requested-store", 5)
+	result, err := entries(cap.Commands(), "requested-db", "requested-store", 5)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +141,7 @@ func TestExecuteScriptNormalizesScalarAndErrorEnvelopes(t *testing.T) {
 			cap := capture.NewCapture()
 			t.Cleanup(cap.Close)
 			respondToNextQuery(t, cap, json.RawMessage(tc.payload))
-			result, err := executeScript(cap, "return 1", "coverage_contract", time.Second)
+			result, err := executeScript(cap.Commands(), "return 1", "coverage_contract", time.Second)
 			if tc.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
 					t.Fatalf("error = %v, want containing %q", err, tc.wantErr)

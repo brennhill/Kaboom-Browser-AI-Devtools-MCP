@@ -29,7 +29,7 @@ func TestSetupMux_WiresTerminalAndIntentRoutes(t *testing.T) {
 	mux, relays := SetupMux(deps, &fakeServerDeps{}, terminalintent.Runtime{
 		Store:  func() *terminalintent.Store { return intentStore },
 		Relays: func() terminalintent.RelayMap { return intentRelays },
-	}, mgr, store)
+	}, mgr, store.Clients())
 	if mux == nil || relays == nil {
 		t.Fatal("SetupMux returned nil mux or relays")
 	}

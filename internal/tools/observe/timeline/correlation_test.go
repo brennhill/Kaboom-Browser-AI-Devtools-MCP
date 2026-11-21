@@ -159,13 +159,11 @@ func TestCorrelationTabFiltersAndTimelineIncludes(t *testing.T) {
 		t.Fatalf("action tab filter = %#v", got)
 	}
 
-	cap := capture.NewCapture()
 	entries := []types.NetworkWaterfallEntry{{PageURL: "https://example.test/page"}, {PageURL: "https://other.test"}, {}}
-	if got := filterWaterfallByTab(entries, 7, cap); len(got) != len(entries) {
+	if got := filterWaterfallByURL(entries, ""); len(got) != len(entries) {
 		t.Fatalf("untracked waterfall = %#v", got)
 	}
-	cap.Extension().UpdateTrackedTab(7, "https://example.test", "Example")
-	got := filterWaterfallByTab(entries, 7, cap)
+	got := filterWaterfallByURL(entries, "https://example.test")
 	if len(got) != 2 || got[0].PageURL != "https://example.test/page" {
 		t.Fatalf("tracked waterfall = %#v", got)
 	}
@@ -263,11 +261,11 @@ func TestCollectTimelineActionsAndWebSocketCoverSelectorAndDirectionBranches(t *
 		{Timestamp: 1700000000000, Type: "click", Selectors: map[string]any{"css": "#go"}},
 		{Timestamp: 1700000001000, Type: "type", Selectors: map[string]any{"xpath": "//button"}},
 	})
-	entries := collectTimelineActions(capture.NewCapture())
+	entries := collectTimelineActions(nil)
 	if len(entries) != 0 {
 		t.Fatalf("empty actions = %#v", entries)
 	}
-	entries = collectTimelineActions(actionCapture)
+	entries = collectTimelineActions(actionCapture.Telemetry().Actions().Snapshot().Actions)
 	if len(entries) != 2 {
 		t.Fatalf("action entries = %#v", entries)
 	}
@@ -297,7 +295,7 @@ func TestCollectTimelineActionsAndWebSocketCoverSelectorAndDirectionBranches(t *
 	}
 }
 
-func TestBundleContextFromCaptureFiltersByTrackedTabAndScope(t *testing.T) {
+func TestBundleContextFromDepsFiltersByTrackedTabAndScope(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
 	t.Cleanup(cap.Close)
@@ -306,7 +304,7 @@ func TestBundleContextFromCaptureFiltersByTrackedTabAndScope(t *testing.T) {
 	cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "click", TabID: 7}, {Type: "click", TabID: 9}})
 	cap.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{{URL: "/w-tab7", PageURL: "https://example.test/page"}}, "https://example.test")
 
-	scoped := bundleContextFromCapture(cap, errorBundlesParams{Scope: "current_page", WindowSeconds: 3}, nil)
+	scoped := bundleContextFromDeps(testsupport.Deps(cap), errorBundlesParams{Scope: "current_page", WindowSeconds: 3}, nil)
 	if len(scoped.networkBodies) != 1 || scoped.networkBodies[0].TabID != 7 {
 		t.Fatalf("scoped network bodies = %#v", scoped.networkBodies)
 	}
@@ -320,14 +318,14 @@ func TestBundleContextFromCaptureFiltersByTrackedTabAndScope(t *testing.T) {
 		t.Fatalf("window seconds = %d", scoped.windowSeconds)
 	}
 
-	all := bundleContextFromCapture(cap, errorBundlesParams{Scope: "all", WindowSeconds: 5}, nil)
+	all := bundleContextFromDeps(testsupport.Deps(cap), errorBundlesParams{Scope: "all", WindowSeconds: 5}, nil)
 	if len(all.networkBodies) != 2 || len(all.actions) != 2 {
 		t.Fatalf("scope=all buffers = %d bodies, %d actions", len(all.networkBodies), len(all.actions))
 	}
 
 	untracked := capture.NewCapture()
 	t.Cleanup(untracked.Close)
-	global := bundleContextFromCapture(untracked, errorBundlesParams{Scope: "current_page"}, nil)
+	global := bundleContextFromDeps(testsupport.Deps(untracked), errorBundlesParams{Scope: "current_page"}, nil)
 	if len(global.networkBodies) != 0 {
 		t.Fatalf("untracked capture = %#v", global.networkBodies)
 	}

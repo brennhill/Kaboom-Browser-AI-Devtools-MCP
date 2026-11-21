@@ -31,11 +31,11 @@ import (
 const annotationCommandWaitTimeout = 55 * time.Second
 
 type CommandStore interface {
-	WaitForCommand(string, time.Duration) (*queries.CommandResult, bool)
-	GetCommandResult(string) (*queries.CommandResult, bool)
-	GetPendingCommands() []*queries.CommandResult
-	GetCompletedCommands() []*queries.CommandResult
-	GetFailedCommands() []*queries.CommandResult
+	WaitCommand(string, time.Duration) (*queries.CommandResult, bool)
+	Command(string) (*queries.CommandResult, bool)
+	PendingCommands() []*queries.CommandResult
+	CompletedCommands() []*queries.CommandResult
+	FailedCommands() []*queries.CommandResult
 }
 
 type Config struct {
@@ -165,7 +165,7 @@ func (d *Dispatcher) CommandResult(req mcp.JSONRPCRequest, args json.RawMessage)
 	var command *queries.CommandResult
 	var found bool
 	if strings.HasPrefix(params.CorrelationID, "ann_") {
-		command, found = d.commands.WaitForCommand(params.CorrelationID, annotationCommandWaitTimeout)
+		command, found = d.commands.WaitCommand(params.CorrelationID, annotationCommandWaitTimeout)
 		if !found {
 			return mcp.Fail(req, mcp.ErrNoData, "Annotation command not found: "+params.CorrelationID,
 				"The command may have expired (10 min TTL). Start a new draw mode session.",
@@ -173,7 +173,7 @@ func (d *Dispatcher) CommandResult(req mcp.JSONRPCRequest, args json.RawMessage)
 		}
 		return d.config.FormatCommand(req, *command, params.CorrelationID)
 	}
-	command, found = d.commands.GetCommandResult(params.CorrelationID)
+	command, found = d.commands.Command(params.CorrelationID)
 	if !found {
 		return mcp.Fail(req, mcp.ErrNoData, "Command not found: "+params.CorrelationID,
 			"The command may have already completed and been cleaned up (60s TTL), or the correlation_id is invalid. Use observe with what='pending_commands' to see active commands.",
@@ -187,8 +187,8 @@ func (d *Dispatcher) pendingCommands(_ observecore.Deps, req mcp.JSONRPCRequest,
 		data := map[string]any{"pending": []*queries.CommandResult{}, "completed": []*queries.CommandResult{}, "failed": []*queries.CommandResult{}, "extension_in_progress": []syncruntime.SyncInProgress{}, "extension_in_progress_count": 0}
 		return mcp.Succeed(req, "Pending: 0, Completed: 0, Failed: 0, Extension in-progress: 0", data)
 	}
-	pending, completed := d.commands.GetPendingCommands(), d.commands.GetCompletedCommands()
-	failed := d.commands.GetFailedCommands()
+	pending, completed := d.commands.PendingCommands(), d.commands.CompletedCommands()
+	failed := d.commands.FailedCommands()
 	inProgress := []syncruntime.SyncInProgress{}
 	if d.config.InProgress != nil {
 		inProgress = d.config.InProgress()
@@ -216,7 +216,7 @@ func (d *Dispatcher) FailedCommands(req mcp.JSONRPCRequest, _ json.RawMessage) m
 	if d.commands == nil {
 		return mcp.Succeed(req, "No failed commands found", map[string]any{"commands": []*queries.CommandResult{}, "count": 0})
 	}
-	failed := d.commands.GetFailedCommands()
+	failed := d.commands.FailedCommands()
 	data := map[string]any{"commands": failed, "count": len(failed)}
 	if len(failed) == 0 {
 		return mcp.Succeed(req, "No failed commands found", data)

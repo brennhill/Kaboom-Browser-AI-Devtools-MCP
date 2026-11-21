@@ -25,7 +25,7 @@ func TestCheckPerformanceIncludesCriticalPathAndTraceState(t *testing.T) {
 		URL: "/app", Timing: performance.PerformanceTiming{TimeToFirstByte: 75},
 	}})
 	response := testsupport.DecodeToolResult(t, CheckPerformance(
-		core.Deps{Capture: captured},
+		core.Deps{Extension: captured.Extension(), Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs()},
 		mcp.JSONRPCRequest{ID: json.RawMessage(`1`)},
 		json.RawMessage(`{}`),
 	))

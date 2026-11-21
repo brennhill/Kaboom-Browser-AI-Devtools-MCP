@@ -22,7 +22,7 @@ func setupTestCapture(t *testing.T) *capture.Capture {
 }
 
 func httpIngestForTest(state *capture.Capture) *httpingest.Handlers {
-	return httpingest.New(httpingest.Dependencies{Telemetry: state.Telemetry(), Queries: state.Queries(),
+	return httpingest.New(httpingest.Dependencies{Telemetry: state.Telemetry(), Commands: state.Commands(),
 		Recordings: state.Recordings(), Performance: state.Performance(), Circuit: state.Circuit()})
 }
 

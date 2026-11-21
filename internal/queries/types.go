@@ -5,14 +5,11 @@
 package queries
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"time"
 )
-
-func cloneJSON(value json.RawMessage) json.RawMessage {
-	return bytes.Clone(value)
-}
 
 // ============================================
 // Query Types
@@ -109,3 +106,28 @@ const (
 	// This timeout must be >= extension execution timeout to avoid premature expiration.
 	AsyncCommandTimeout = 60 * time.Second
 )
+
+// QueryRunner is the consumer port for "enqueue one query, then wait for its
+// one-time result". observe, interact, analyze and fixture workflows depend on
+// it instead of the dispatcher; internal/browsercommand.Owner satisfies it.
+type QueryRunner interface {
+	Enqueue(query PendingQuery, timeout time.Duration, clientID string) (string, error)
+	WaitQueryResult(ctx context.Context, queryID string, timeout time.Duration) (json.RawMessage, error)
+}
+
+// ErrQueueFull reports that the delivery queue is at MaxPendingQueries.
+var ErrQueueFull = errors.New("queue_full")
+
+const (
+	QueryResultTTL    = 5 * time.Minute // How long to keep query results before cleanup
+	MaxPendingQueries = 15              // Max pending queries in queue
+)
+
+// QuerySnapshot contains a point-in-time view of query state for health reporting.
+type QuerySnapshot struct {
+	PendingQueryCount int
+	QueryResultCount  int
+	PendingCapacity   int
+	OldestPendingAge  time.Duration
+	QueryTimeout      time.Duration
+}

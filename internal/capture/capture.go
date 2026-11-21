@@ -8,15 +8,16 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/featureusage"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 )
@@ -53,7 +54,7 @@ type Capture struct {
 	// Query Dispatch (Own Locks)
 	// ============================================
 
-	queryDispatcher *queries.QueryDispatcher // Pending queries, results, async command tracking. Has own sync.Mutex + sync.RWMutex.
+	commands *browsercommand.Owner // Browser-command lifecycle owner; owns the query dispatcher (own locks).
 
 	// ============================================
 	// Rate Limiting & Circuit Breaker (Own Lock)
@@ -99,7 +100,7 @@ type Capture struct {
 // NewCapture creates a fully initialized Capture with all subcomponents wired.
 //
 // Invariants:
-// - queryDispatcher/circuit/debug/recordingManager are non-nil in returned instance.
+// - commands/circuit/debug/recordingManager are non-nil in returned instance.
 // - extension runtime sets and command-reconciliation maps start initialized.
 func NewCapture() *Capture {
 	logRedactor := redaction.NewRedactionEngine("")
@@ -113,16 +114,26 @@ func NewCapture() *Capture {
 		featureUsage:     featureusage.New(),
 		clients:          clientstore.New(),
 	}
-	c.queryDispatcher = queries.NewQueryDispatcher()
+	c.commands = browsercommand.NewOwner()
 	c.circuit = circuit.NewCircuitBreaker(c.lifecycle.Emit)
 	c.telemetry = telemetrystore.New(telemetrystore.Dependencies{ActiveTestIDs: c.extension.GetActiveTestIDs})
 
 	return c
 }
 
-// Queries returns the canonical independently synchronized query dispatcher.
-func (c *Capture) Queries() *queries.QueryDispatcher {
-	return c.queryDispatcher
+// Commands returns the browser-command lifecycle owner shared by every transport.
+func (c *Capture) Commands() *browsercommand.Owner {
+	return c.commands
+}
+
+// HealthOwners bundles the state owners health and doctor reporting read, so
+// those consumers receive owners from the composition root instead of Capture.
+func (c *Capture) HealthOwners() healthreader.Owners {
+	return healthreader.Owners{
+		Extension: c.extension, Commands: c.commands, Telemetry: c.telemetry, Circuit: c.circuit,
+		ExtensionLogs: c.extensionLogs, Performance: c.perf, Recordings: c.recordingManager,
+		DiagnosticLogs: c.diagnosticLogs,
+	}
 }
 
 // Recordings returns the canonical independently synchronized recording manager.
@@ -175,7 +186,7 @@ func (c *Capture) DiagnosticLogs() *logstore.Diagnostic { return c.diagnosticLog
 // - Idempotent for query cleanup lifecycle; no panic on repeated calls.
 // - Does not clear in-memory buffers.
 func (c *Capture) Close() {
-	if c.queryDispatcher != nil {
-		c.queryDispatcher.Close()
+	if c.commands != nil {
+		c.commands.Close()
 	}
 }

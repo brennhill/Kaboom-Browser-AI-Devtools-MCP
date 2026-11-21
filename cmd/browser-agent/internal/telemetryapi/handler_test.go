@@ -18,7 +18,8 @@ func TestHandlerSupportsEveryTelemetryTypeAndValidation(t *testing.T) {
 	logs := logstore.New(logstore.Config{LogFile: filepath.Join(t.TempDir(), "telemetry.jsonl"), MaxEntries: 100})
 	t.Cleanup(func() { logs.Shutdown(0) })
 	logs.AddEntries([]types.LogEntry{{"level": "error", "message": "boom"}})
-	handler := Handler(logs, capture.NewCapture())
+	captured := capture.NewCapture()
+	handler := Handler(logs, Sources{Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs()})
 
 	for _, telemetryType := range []string{
 		"logs", "network_waterfall", "network_bodies", "websocket_events",

@@ -7,6 +7,7 @@
 package toolinteract
 
 import (
+	"context"
 	cryptorand "crypto/rand"
 	"encoding/json"
 	"math/big"
@@ -14,7 +15,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -431,34 +434,29 @@ func isResponseQueued(resp mcp.JSONRPCResponse) bool {
 	return false
 }
 
-// appendScreenshotToResponse captures a screenshot and appends it as an inline image block.
-func (h *PageActions) AppendScreenshotToResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-	screenshotReq := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: req.ID}
-	screenshotResp := h.deps.GetScreenshot(screenshotReq, nil)
+// includeScreenshotDiagnostic names the Doctor diagnostic for failed
+// include_screenshot enrichment; it resolves on the next successful capture.
+const includeScreenshotDiagnostic = "interact_include_screenshot"
 
-	var screenshotResult mcp.MCPToolResult
-	if err := json.Unmarshal(screenshotResp.Result, &screenshotResult); err != nil {
-		return resp // best effort: keep original response on parse failure
+// AppendScreenshotToResponse captures a screenshot and appends it as an inline image block.
+// The action already succeeded, so a failed capture leaves resp unchanged: the
+// screenshot is optional enrichment (include_screenshot), not the action result.
+// The failure is still surfaced as a redacted Doctor diagnostic (rule 27).
+func (h *PageActions) AppendScreenshotToResponse(resp mcp.JSONRPCResponse, _ mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+	result, err := h.deps.CaptureScreenshot(context.Background(), screenshot.Options{})
+	if err != nil {
+		if h.deps.Diagnostics != nil {
+			h.deps.Diagnostics.Report(statediag.Diagnostic{
+				Name:   includeScreenshotDiagnostic,
+				Detail: "include_screenshot capture failed after a successful action: " + err.Error(),
+				Fix:    "Call observe({what:'screenshot'}) to see the capture error, then confirm the tab is tracked and visible.",
+			})
+		}
+		return resp
 	}
-
-	for _, block := range screenshotResult.Content {
-		if block.Type != "image" || block.Data == "" {
-			continue
-		}
-		var result mcp.MCPToolResult
-		if err := json.Unmarshal(resp.Result, &result); err != nil {
-			return resp
-		}
-		result.Content = append(result.Content, block)
-		resultJSON, err := json.Marshal(result)
-		if err != nil {
-			return resp
-		}
-		resp.Result = json.RawMessage(resultJSON)
-		break
-	}
-
-	return resp
+	statediag.Resolve(h.deps.Diagnostics, includeScreenshotDiagnostic)
+	base64Data, mimeType := result.Image()
+	return mcp.AppendImageToResponse(resp, base64Data, mimeType)
 }
 
 // appendInteractiveToResponse appends list_interactive text to the response.
@@ -494,42 +492,22 @@ func (h *PageActions) AppendInteractiveToResponse(resp mcp.JSONRPCResponse, req 
 	return resp
 }
 
-// readPageContext returns a compact page context payload (url/title/tab_id) from observe(what="page").
-func (h *PageActions) readPageContext(req mcp.JSONRPCRequest) (map[string]any, bool) {
-	pageReq := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: req.ID}
-	pageResp := h.deps.GetPageInfo(pageReq, nil)
-
-	var pageResult mcp.MCPToolResult
-	if err := json.Unmarshal(pageResp.Result, &pageResult); err != nil || pageResult.IsError {
+// readPageContext returns a compact page context payload (url/title/tab_id)
+// from the pageinfo projection; false when nothing is known about the page.
+func (h *PageActions) readPageContext() (map[string]any, bool) {
+	if h.deps.PageInfo == nil {
 		return nil, false
 	}
-
-	var data map[string]any
-	for _, block := range pageResult.Content {
-		if block.Type != "text" || block.Text == "" {
-			continue
-		}
-		text := block.Text
-		if idx := strings.Index(text, "\n{"); idx >= 0 {
-			text = text[idx+1:]
-		}
-		if err := json.Unmarshal([]byte(text), &data); err == nil {
-			break
-		}
-	}
-	if data == nil {
-		return nil, false
-	}
-
+	info := h.deps.PageInfo()
 	out := map[string]any{}
-	if url, ok := data["url"].(string); ok && url != "" {
-		out["url"] = url
+	if info.URL != "" {
+		out["url"] = info.URL
 	}
-	if title, ok := data["title"].(string); ok && title != "" {
-		out["title"] = title
+	if info.Title != "" {
+		out["title"] = info.Title
 	}
-	if tabID, ok := data["tab_id"]; ok {
-		out["tab_id"] = tabID
+	if info.TabID > 0 {
+		out["tab_id"] = info.TabID
 	}
 	if len(out) == 0 {
 		return nil, false
@@ -539,7 +517,7 @@ func (h *PageActions) readPageContext(req mcp.JSONRPCRequest) (map[string]any, b
 
 // appendPageContextToResponse appends a compact page context block to the response.
 func (h *PageActions) AppendPageContextToResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-	pageCtx, ok := h.readPageContext(req)
+	pageCtx, ok := h.readPageContext()
 	if !ok {
 		return resp
 	}

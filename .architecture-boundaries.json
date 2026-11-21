@@ -34,5 +34,17 @@
     "lib": ["background", "content", "inject", "popup", "offscreen"],
     "offscreen": ["background", "content", "inject", "popup"],
     "popup": ["background", "content", "inject", "offscreen"]
+  },
+  "context_entry_points": {
+    "src/background/recording/": {
+      "context": "Screen Recording",
+      "public": ["index.ts", "utils.ts"],
+      "reason": "Live screen recording lifecycle (start, restore, stop) is owned by recording/index.ts; utils.ts holds shared pure helpers. See GLOSSARY.md."
+    },
+    "src/background/commands/": {
+      "context": "Browser Command Execution",
+      "public": ["registry.ts", "helpers.ts"],
+      "reason": "Commands are reached through registerCommand/dispatch and the shared target/result helpers; per-family handler modules stay private. See GLOSSARY.md."
+    }
   }
 }

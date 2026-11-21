@@ -4,7 +4,7 @@ feature_id: feature-request-session-correlation
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-11-21
 code_paths:
   - internal/capture/clientstore/owner.go
   - internal/capture/perfstore/store.go

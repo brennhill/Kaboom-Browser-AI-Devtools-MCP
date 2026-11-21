@@ -34,7 +34,7 @@ func HandleGenerateCSP(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 			mcp.WithParam("mode"))
 	}
 
-	networkBodies := d.Capture.Telemetry().NetworkBodies().Snapshot().Bodies
+	networkBodies := d.Telemetry.NetworkBodies().Snapshot().Bodies
 	if len(networkBodies) == 0 {
 		return mcp.Succeed(req, "CSP policy unavailable", map[string]any{
 			"status": "unavailable", "mode": mode, "policy": "",
@@ -54,8 +54,7 @@ func HandleGenerateCSP(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 
 // HandleGenerateSRI generates Subresource Integrity hashes for third-party scripts/styles.
 func HandleGenerateSRI(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	cap := d.Capture
-	networkBodies := cap.Telemetry().NetworkBodies().Snapshot().Bodies
+	networkBodies := d.Telemetry.NetworkBodies().Snapshot().Bodies
 	if len(networkBodies) == 0 {
 		return mcp.Succeed(req, "SRI unavailable", map[string]any{
 			"status": "unavailable",
@@ -63,7 +62,7 @@ func HandleGenerateSRI(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 		})
 	}
 
-	_, _, tabURL := cap.Extension().GetTrackingStatus()
+	_, _, tabURL := d.TrackingStatus()
 	pageURLs := []string{tabURL}
 	result, err := sri.HandleGenerate(args, networkBodies, pageURLs)
 	if err != nil {

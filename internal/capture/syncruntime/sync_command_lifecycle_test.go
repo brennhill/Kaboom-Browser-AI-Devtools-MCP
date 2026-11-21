@@ -1,13 +1,17 @@
-// sync_command_lifecycle_test.go — Tests sync polling and command-result lifecycle.
+// sync_command_lifecycle_test.go — Tests sync polling (incl. long-poll), command-result lifecycle and old-poll-after-reconnect interleaving.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 package syncruntime
 
 import (
+	"bytes"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
@@ -21,7 +25,7 @@ func TestHandleSync_AdaptivePoll_FastWhenPendingCommands(t *testing.T) {
 	cap := newTestState()
 
 	// Create a pending query so there are commands waiting
-	cap.Queries().CreatePendingQuery(queries.PendingQuery{
+	commandtest.Enqueue(cap.Commands(), queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{"selector":"body"}`),
 	})
@@ -48,7 +52,7 @@ func TestHandleSync_CommandsIncludeTabID(t *testing.T) {
 	t.Parallel()
 	cap := newTestState()
 
-	cap.Queries().CreatePendingQuery(queries.PendingQuery{
+	commandtest.Enqueue(cap.Commands(), queries.PendingQuery{
 		Type:          "dom_action",
 		Params:        json.RawMessage(`{"action":"click","selector":"#submit"}`),
 		TabID:         42,
@@ -105,7 +109,7 @@ func TestHandleSync_AdaptivePoll_RevertsAfterResultDelivered(t *testing.T) {
 	cap := newTestState()
 
 	// Create a pending query
-	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
+	queryID, _ := commandtest.Enqueue(cap.Commands(), queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{"selector":"body"}`),
 	})
@@ -140,7 +144,7 @@ func TestHandleSync_CommandResultPropagatesErrorStatus(t *testing.T) {
 	cap := newTestState()
 
 	corrID := "sync-corr-error-001"
-	cap.Queries().RegisterCommand(corrID, "q-sync-error-001", queries.AsyncCommandTimeout)
+	commandtest.Register(cap.Commands(), corrID, queries.AsyncCommandTimeout)
 
 	req := SyncRequest{
 		ExtSessionID: "test_session",
@@ -166,7 +170,7 @@ func TestHandleSync_CommandResultWithIDAndCorrelationPreservesErrorStatus(t *tes
 	cap := newTestState()
 
 	corrID := "sync-corr-with-id-error-001"
-	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, _ := cap.Commands().Enqueue(queries.PendingQuery{
 		Type:          "dom_action",
 		Params:        json.RawMessage(`{"action":"click","selector":"#publish"}`),
 		CorrelationID: corrID,
@@ -266,7 +270,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 
 			queryID := ""
 			if tc.hasID {
-				queryID, _ = cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+				queryID, _ = cap.Commands().Enqueue(queries.PendingQuery{
 					Type:          "dom_action",
 					Params:        json.RawMessage(`{"action":"click","selector":"#publish"}`),
 					CorrelationID: corrID,
@@ -275,7 +279,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 					t.Fatal("expected queryID to be created")
 				}
 			} else if tc.hasCorrelation {
-				cap.Queries().RegisterCommand(corrID, "q-"+corrID, queries.AsyncCommandTimeout)
+				commandtest.Register(cap.Commands(), corrID, queries.AsyncCommandTimeout)
 			}
 
 			result := SyncCommandResult{
@@ -300,7 +304,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 			}
 
 			if tc.hasCorrelation {
-				cmd, found := cap.Queries().GetCommandResult(corrID)
+				cmd, found := cap.Commands().Command(corrID)
 				if !found {
 					t.Fatal("expected command result to be present for correlation_id")
 				}
@@ -314,7 +318,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 			}
 
 			if tc.hasID {
-				if _, found := cap.Queries().TakeQueryResult(queryID); !found {
+				if _, found := commandtest.Take(cap.Commands(), queryID); !found {
 					t.Fatal("expected query result to be stored for id-only command result")
 				}
 			}
@@ -326,7 +330,7 @@ func TestHandleSync_LastCommandAckPreventsRedelivery(t *testing.T) {
 	t.Parallel()
 	cap := newTestState()
 
-	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
+	queryID, _ := commandtest.Enqueue(cap.Commands(), queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{"selector":"body"}`),
 	})
@@ -357,5 +361,198 @@ func TestHandleSync_LastCommandAckPreventsRedelivery(t *testing.T) {
 	second := decodeSyncResponse(t, ackResp)
 	if len(second.Commands) != 0 {
 		t.Fatalf("acknowledged command %q should not be redelivered, got %+v", queryID, second.Commands)
+	}
+}
+
+// ============================================
+// Superseded poll interleaving (kaboom-jdm5.2)
+// ============================================
+
+// pausedPoll runs one HandleSync on a goroutine and parks it at a seam until
+// released, giving the test full control over interleaving (no sleeps).
+type pausedPoll struct {
+	reached  chan struct{}
+	release  chan struct{}
+	done     chan struct{}
+	recorder *httptest.ResponseRecorder
+}
+
+func startPausedPoll(t *testing.T, handler *Handler, payload SyncRequest, park func(func())) *pausedPoll {
+	t.Helper()
+	poll := &pausedPoll{
+		reached: make(chan struct{}), release: make(chan struct{}), done: make(chan struct{}),
+		recorder: httptest.NewRecorder(),
+	}
+	park(func() {
+		close(poll.reached)
+		<-poll.release
+	})
+	request := httptest.NewRequest(http.MethodPost, "/sync", bytes.NewReader(mustMarshalJSON(t, payload)))
+	go func() {
+		defer close(poll.done)
+		handler.HandleSync(poll.recorder, request)
+	}()
+	<-poll.reached
+	return poll
+}
+
+func (p *pausedPoll) resume() *httptest.ResponseRecorder {
+	close(p.release)
+	<-p.done
+	return p.recorder
+}
+
+func TestHandleSync_OldPollResumingAfterReconnectCannotMutateCurrentCommands(t *testing.T) {
+	t.Parallel()
+	cap := newTestState()
+	t.Cleanup(cap.Close)
+	clock := newManualClock(time.Now())
+	cap.clock = clock.Now
+
+	first := runSyncRequest(t, cap, SyncRequest{ExtSessionID: "session-old"})
+	oldGeneration := decodeSyncResponse(t, first).ConnectionGeneration
+
+	// The old extension instance goes quiet past the disconnect threshold, then
+	// its poll arrives (observing a disconnect gap) and is parked after
+	// adopting connection state but before its command exchange.
+	clock.Advance(extensionDisconnectThreshold + time.Second)
+	oldHandler := newTestHandler(cap)
+	oldPoll := startPausedPoll(t, oldHandler, SyncRequest{
+		ExtSessionID:         "session-old",
+		ConnectionGeneration: oldGeneration,
+		InProgress:           []SyncInProgress{},
+	}, func(hook func()) { oldHandler.beforeExchange = hook })
+
+	// Reconnect: the new extension session supersedes the old generation and
+	// the daemon queues current-generation work.
+	current := runSyncRequest(t, cap, SyncRequest{ExtSessionID: "session-new"})
+	currentGeneration := decodeSyncResponse(t, current).ConnectionGeneration
+	if currentGeneration <= oldGeneration {
+		t.Fatalf("current generation = %d, want > %d", currentGeneration, oldGeneration)
+	}
+	correlationID := "corr-current-after-reconnect"
+	queryID, err := cap.commands.Enqueue(queries.PendingQuery{
+		Type: "browser_action", Params: json.RawMessage(`{"action":"highlight"}`), CorrelationID: correlationID,
+	}, queries.AsyncCommandTimeout, "")
+	if err != nil {
+		t.Fatalf("Enqueue() error = %v", err)
+	}
+
+	response := oldPoll.resume()
+	if response.Code != http.StatusConflict {
+		t.Fatalf("resumed old poll status = %d, want 409", response.Code)
+	}
+	command, found := cap.commands.Command(correlationID)
+	if !found || command.Status != "pending" {
+		t.Fatalf("current command = %#v found=%v; superseded disconnect expiry must not touch it", command, found)
+	}
+	if position := cap.commands.QueuePosition(correlationID); position < 0 {
+		t.Fatalf("current command %s left the delivery queue after superseded poll", queryID)
+	}
+}
+
+func TestHandleSync_OldPollResumingFromLongPollAfterReconnectIsRejected(t *testing.T) {
+	t.Parallel()
+	cap := newTestState()
+	t.Cleanup(cap.Close)
+
+	first := runSyncRequest(t, cap, SyncRequest{ExtSessionID: "session-old"})
+	oldGeneration := decodeSyncResponse(t, first).ConnectionGeneration
+
+	oldHandler := newTestHandler(cap)
+	oldPoll := startPausedPoll(t, oldHandler, SyncRequest{
+		ExtSessionID: "session-old", ConnectionGeneration: oldGeneration,
+	}, func(hook func()) {
+		oldHandler.awaitPending = func(time.Duration) []queries.PendingQueryResponse {
+			hook()
+			return cap.commands.Pending()
+		}
+	})
+
+	runSyncRequest(t, cap, SyncRequest{ExtSessionID: "session-new"})
+	correlationID := "corr-current-long-poll"
+	if _, err := cap.commands.Enqueue(queries.PendingQuery{
+		Type: "browser_action", Params: json.RawMessage(`{"action":"highlight"}`), CorrelationID: correlationID,
+	}, queries.AsyncCommandTimeout, ""); err != nil {
+		t.Fatalf("Enqueue() error = %v", err)
+	}
+
+	response := oldPoll.resume()
+	if response.Code != http.StatusConflict {
+		t.Fatalf("resumed long-poll status = %d, want 409 (commands must not be delivered to a superseded poll)", response.Code)
+	}
+	if cap.commands.QueueDepth() != 1 {
+		t.Fatalf("queue depth = %d, want 1: current work stays queued for the current generation", cap.commands.QueueDepth())
+	}
+}
+
+// Long-poll /sync behavior.
+
+func TestHandleSync_LongPolling(t *testing.T) {
+	cap := newTestState()
+	t.Cleanup(cap.Close)
+	waiting := make(chan struct{})
+	releaseWait := make(chan struct{})
+	handler := newTestHandler(cap)
+	handler.awaitPending = func(time.Duration) []queries.PendingQueryResponse {
+		close(waiting)
+		<-releaseWait
+		return cap.commands.Pending()
+	}
+
+	reqBody, _ := json.Marshal(SyncRequest{ExtSessionID: "test"})
+	req := httptest.NewRequest("POST", "/sync", bytes.NewReader(reqBody))
+	w := httptest.NewRecorder()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		handler.HandleSync(w, req)
+	}()
+	<-waiting
+	if _, err := commandtest.Enqueue(cap.Commands(), queries.PendingQuery{
+		Type:   "test_cmd",
+		Params: json.RawMessage(`{"foo":"bar"}`),
+	}); err != nil {
+		t.Fatalf("CreatePendingQuery() error = %v", err)
+	}
+	close(releaseWait)
+	<-done
+
+	var resp SyncResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if len(resp.Commands) != 1 {
+		t.Errorf("Expected 1 command, got %d", len(resp.Commands))
+	}
+}
+
+func TestHandleSync_TimeoutIfNoCommand(t *testing.T) {
+	cap := newTestState()
+	t.Cleanup(cap.Close)
+
+	timeout := syncLongPollTimeout()
+	var receivedTimeout time.Duration
+	handler := newTestHandler(cap)
+	handler.awaitPending = func(got time.Duration) []queries.PendingQueryResponse {
+		receivedTimeout = got
+		return nil
+	}
+
+	reqBody, _ := json.Marshal(SyncRequest{ExtSessionID: "test"})
+	req := httptest.NewRequest("POST", "/sync", bytes.NewReader(reqBody))
+	w := httptest.NewRecorder()
+
+	handler.HandleSync(w, req)
+	if receivedTimeout != timeout {
+		t.Fatalf("wait timeout = %v, want %v", receivedTimeout, timeout)
+	}
+
+	var resp SyncResponse
+	_ = json.NewDecoder(w.Body).Decode(&resp)
+	if len(resp.Commands) != 0 {
+		t.Errorf("Expected 0 commands, got %d", len(resp.Commands))
 	}
 }

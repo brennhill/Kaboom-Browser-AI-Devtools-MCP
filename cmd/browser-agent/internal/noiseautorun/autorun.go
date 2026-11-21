@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
@@ -120,18 +120,18 @@ func (runner *Runner) execute() {
 }
 
 // WireNavigation installs debounced detection on navigation events when enabled.
-func WireNavigation(store *capture.Capture, detect func()) {
-	if store == nil || detect == nil || !Enabled() {
+func WireNavigation(telemetry *telemetrystore.Store, detect func()) {
+	if telemetry == nil || detect == nil || !Enabled() {
 		return
 	}
 	runner := NewRunner(detect, autoDetectInterval)
-	store.Telemetry().SetNavigationCallback(runner.Schedule)
+	telemetry.SetNavigationCallback(runner.Schedule)
 	diag.Printf("[Kaboom] noise auto-detect enabled (triggers after navigation, debounce=%s)\n", autoDetectInterval)
 }
 
 // WireFirstConnect invokes detect once after the first extension connection.
-func WireFirstConnect(store *capture.Capture, shutdown <-chan struct{}, detect func()) {
-	wireFirstConnect(store, shutdown, detect, firstConnectRuntime{
+func WireFirstConnect(events *lifecycle.Observer, shutdown <-chan struct{}, detect func()) {
+	wireFirstConnect(events, shutdown, detect, firstConnectRuntime{
 		launch: util.SafeGo,
 		after:  time.After,
 	})
@@ -142,12 +142,12 @@ type firstConnectRuntime struct {
 	after  func(time.Duration) <-chan time.Time
 }
 
-func wireFirstConnect(store *capture.Capture, shutdown <-chan struct{}, detect func(), runtime firstConnectRuntime) {
-	if store == nil || detect == nil {
+func wireFirstConnect(events *lifecycle.Observer, shutdown <-chan struct{}, detect func(), runtime firstConnectRuntime) {
+	if events == nil || detect == nil {
 		return
 	}
 	var once sync.Once
-	store.Lifecycle().Subscribe(func(event lifecycle.Event, _ map[string]any) {
+	events.Subscribe(func(event lifecycle.Event, _ map[string]any) {
 		if event != lifecycle.EventExtensionConnected {
 			return
 		}
@@ -166,8 +166,8 @@ func wireFirstConnect(store *capture.Capture, shutdown <-chan struct{}, detect f
 
 // Detect adapts captured telemetry to the canonical noise detector and applies
 // only high-confidence proposals.
-func Detect(config *noise.NoiseConfig, store *capture.Capture, logs []types.LogEntry) {
-	if config == nil || store == nil {
+func Detect(config *noise.NoiseConfig, telemetry *telemetrystore.Store, logs []types.LogEntry) {
+	if config == nil || telemetry == nil {
 		return
 	}
 	consoleEntries := make([]types.LogEntry, len(logs))
@@ -176,7 +176,7 @@ func Detect(config *noise.NoiseConfig, store *capture.Capture, logs []types.LogE
 	}
 	// AutoDetect canonically applies high-confidence proposals. Do not add them a
 	// second time here; duplicate application skews rule counts and diagnostics.
-	proposals := config.AutoDetect(consoleEntries, store.Telemetry().NetworkBodies().Snapshot().Bodies, store.Telemetry().WebSockets().Snapshot().Events)
+	proposals := config.AutoDetect(consoleEntries, telemetry.NetworkBodies().Snapshot().Bodies, telemetry.WebSockets().Snapshot().Events)
 	if len(proposals) > 0 {
 		diag.Printf("[Kaboom] noise auto-detect: %d proposals evaluated\n", len(proposals))
 	}

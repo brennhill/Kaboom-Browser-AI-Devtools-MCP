@@ -32,7 +32,6 @@ const (
 // Invariants:
 // - trackingEnabled implies trackedTabID > 0 for authoritative single-tab mode.
 // - lastSyncSeen.IsZero() means extension has never synced in this process lifecycle.
-// - missingInProgressSince tracks only commands currently pending in QueryDispatcher.
 //
 // Failure semantics:
 //   - pilotStatusKnown=false intentionally defaults effective pilot access to enabled
@@ -66,11 +65,13 @@ type runtimeState struct {
 	tabStatus        string    // Chrome tab status: "loading" or "complete". Empty if unknown.
 	trackedTabActive *bool     // Whether the tracked tab is the active (foreground) tab. nil=unknown.
 	trackingUpdated  time.Time // When tracking status last refreshed.
+	// Ordering hold opened by a command-confirmed switch (see tracking_projection.go).
+	trackingHoldTabID      int // Tab confirmed by switch_tab; 0 = no hold.
+	trackingHeldHeartbeats int // Stale heartbeats dropped since the hold opened.
 
 	// Extension-reported active command execution state from /sync heartbeats.
-	inProgress             []SyncInProgress     // Last heartbeat snapshot of active commands.
-	inProgressUpdated      time.Time            // When inProgress was last refreshed.
-	missingInProgressSince map[string]time.Time // First heartbeat that omitted a started command.
+	inProgress        []SyncInProgress // Last heartbeat snapshot of active commands.
+	inProgressUpdated time.Time        // When inProgress was last refreshed.
 
 	// CSP detection: probed after each navigation to surface restrictions proactively.
 	cspRestricted bool   // true if page CSP blocks execute_js (new Function).
@@ -97,10 +98,9 @@ func New() *Runtime {
 		connectionNotify: make(chan struct{}),
 		trackingNotify:   make(chan struct{}),
 		state: runtimeState{
-			activeTestIDs:          make(map[string]bool),
-			missingInProgressSince: make(map[string]time.Time),
-			pilotSource:            PilotSourceAssumedStartup,
-			securityMode:           SecurityModeNormal,
+			activeTestIDs: make(map[string]bool),
+			pilotSource:   PilotSourceAssumedStartup,
+			securityMode:  SecurityModeNormal,
 		},
 	}
 }
@@ -479,8 +479,9 @@ func (r *Runtime) GetTrackingStatus() (enabled bool, tabID int, tabURL string) {
 	return r.state.trackingEnabled, r.state.trackedTabID, r.state.trackedTabURL
 }
 
-// UpdateTrackedTab programmatically updates the tracked tab state.
-// Used by switch_tab to retarget subsequent commands to the newly activated tab.
+// UpdateTrackedTab records a command-confirmed tracked tab (synchronous switch_tab
+// result) through the projection's single ordering rule (observeTrackingLocked): the
+// change is visible immediately and stale heartbeats for the previous tab cannot undo it.
 //
 // Invariants:
 // - tabID must be > 0; zero/negative values are silently ignored.
@@ -491,16 +492,13 @@ func (r *Runtime) UpdateTrackedTab(tabID int, tabURL string, tabTitle string) {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	changed := !r.state.trackingEnabled || r.state.trackedTabID != tabID ||
-		r.state.trackedTabURL != tabURL || r.state.trackedTabTitle != tabTitle
-	r.state.trackingEnabled = true
-	r.state.trackedTabID = tabID
-	r.state.trackedTabURL = tabURL
-	r.state.trackedTabTitle = tabTitle
-	r.state.trackingUpdated = time.Now()
-	if changed {
-		r.signalTrackingChangeLocked()
-	}
+	r.observeTrackingLocked(trackingObservation{
+		source:  trackingSourceCommandConfirmed,
+		enabled: true,
+		tabID:   tabID,
+		url:     tabURL,
+		title:   tabTitle,
+	}, time.Now())
 }
 
 // GetTrackedTabTitle returns the tracked tab's title (may be stale).

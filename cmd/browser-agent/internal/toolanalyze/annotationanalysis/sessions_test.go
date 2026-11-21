@@ -415,7 +415,7 @@ func TestToolGetAnnotations_Flush_CompletesPendingCommand_WithEmptyResultReason(
 		t.Fatalf("result.filter_applied = %v, want none", resultPayload["filter_applied"])
 	}
 
-	cmd, found := h.capture.Queries().GetCommandResult(corrID)
+	cmd, found := h.capture.Commands().Command(corrID)
 	if !found || cmd == nil {
 		t.Fatal("flushed command should exist in command tracker")
 	}
@@ -475,7 +475,7 @@ func TestToolGetAnnotations_Flush_IsIdempotent(t *testing.T) {
 		t.Fatalf("second terminal_reason = %v, want flushed", secondData["terminal_reason"])
 	}
 
-	cmd, found := h.capture.Queries().GetCommandResult(corrID)
+	cmd, found := h.capture.Commands().Command(corrID)
 	if !found || cmd == nil {
 		t.Fatal("command should still be queryable after repeated flush")
 	}

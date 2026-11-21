@@ -6,6 +6,7 @@ package network
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
 	"strings"
@@ -21,14 +22,14 @@ import (
 func answerNextWaterfallQuery(captured *capture.Capture, result any) <-chan error {
 	done := make(chan error, 1)
 	go func() {
-		captured.Queries().WaitForPendingQueries(time.Second)
-		for _, query := range captured.Queries().GetPendingQueries() {
+		captured.Commands().AwaitPending(time.Second)
+		for _, query := range captured.Commands().Pending() {
 			if query.Type != "waterfall" {
 				continue
 			}
 			encoded, err := json.Marshal(result)
 			if err == nil {
-				captured.Queries().SetQueryResult(query.ID, encoded)
+				commandtest.Deliver(captured.Commands(), query.ID, encoded)
 			}
 			done <- err
 			return
@@ -49,7 +50,7 @@ func TestWaterfallRefreshLifecycle(t *testing.T) {
 
 	deps.Now = func() time.Time { return addedAt.Add(time.Second - time.Nanosecond) }
 	_ = GetNetworkWaterfall(deps, request, nil)
-	if captured.Queries().QueueDepth() != 0 {
+	if captured.Commands().QueueDepth() != 0 {
 		t.Fatal("fresh waterfall data enqueued a refresh")
 	}
 
@@ -239,7 +240,7 @@ func TestRefreshWaterfallFreshnessUsesInjectedClock(t *testing.T) {
 	deps.WaterfallRefreshTimeout = time.Nanosecond
 	_ = GetNetworkWaterfall(deps, mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 10}, nil)
 
-	if depth := cap.Queries().QueueDepth(); depth != 1 {
+	if depth := cap.Commands().QueueDepth(); depth != 1 {
 		t.Fatalf("queue depth = %d, want one waterfall refresh at exact staleness threshold", depth)
 	}
 }

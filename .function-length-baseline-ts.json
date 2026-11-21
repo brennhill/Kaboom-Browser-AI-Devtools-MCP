@@ -6,7 +6,7 @@
     "packages/kaboom-ci/kaboom-ci.js:installNetworkCapture:262": 81,
     "packages/kaboom-ci/kaboom-ci.js:installWebSocketCapture:345": 86,
     "scripts/docs/features/normalize-docs.js:normalize:227": 140,
-    "scripts/release/install-upgrade-regression.mjs:main:658": 106,
+    "scripts/release/install-upgrade-regression.mjs:main:679": 106,
     "scripts/smoke-tests/framework/build-framework-fixtures.mjs:pageTemplate:21": 167,
     "scripts/smoke-tests/framework/build-framework-fixtures.mjs:writeHtmlFixtures:280": 131,
     "scripts/smoke-tests/framework/framework-fixtures/vue-entry.js:(anonymous):67": 158,
@@ -20,8 +20,8 @@
     "scripts/templates/partials/_dom-action-helpers.tpl:withMutationTracking:67": 90,
     "src/background/commands/analyze-page-structure.ts:pageStructureScript:54": 214,
     "src/background/commands/analyze.ts:executeDOMQueryInIsolatedWorld:245": 94,
-    "src/background/commands/helpers.ts:resolveTargetTab:539": 204,
-    "src/background/commands/helpers.ts:tryAutoTrackFallback:432": 106,
+    "src/background/commands/helpers.ts:resolveTargetTab:534": 204,
+    "src/background/commands/helpers.ts:tryAutoTrackFallback:427": 106,
     "src/background/commands/interact.ts:(anonymous):132": 104,
     "src/background/commands/registry.ts:createDispatchLifecycle:127": 145,
     "src/background/commands/registry.ts:dispatch:356": 93,
@@ -43,8 +43,8 @@
     "src/background/exec/query-execution.ts:serialize:132": 111,
     "src/background/exec/upload-handler.ts:escalateToStage4Internal:269": 100,
     "src/background/init.ts:initializeExtensionAsync:225": 253,
-    "src/background/recording/index.ts:startOffscreenRecording:309": 82,
-    "src/background/recording/index.ts:stopRecording:586": 132,
+    "src/background/recording/index.ts:startOffscreenRecording:312": 82,
+    "src/background/recording/index.ts:stopRecording:589": 132,
     "src/background/recording/listeners.ts:installRecordingListeners:57": 190,
     "src/background/sync/batchers.ts:createBatcherWithCircuitBreaker:88": 249,
     "src/background/sync/circuit-breaker.ts:createCircuitBreaker:60": 171,
@@ -67,6 +67,6 @@
     "src/offscreen/recording-worker.ts:(anonymous):308": 104,
     "src/offscreen/recording-worker.ts:handleStartRecording:70": 185,
     "src/offscreen/recording-worker.ts:handleStopRecording:260": 155,
-    "src/popup/recording/recording.ts:setupRecordingUI:261": 173
+    "src/popup/recording/recording.ts:setupRecordingUI:260": 173
   }
 }

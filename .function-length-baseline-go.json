@@ -2,6 +2,7 @@
   "version": 1,
   "max_lines": 80,
   "functions": {
+    "app/pagestorage/scripts.go:buildEntriesScript": 104,
     "browser-agent/internal/bridge/bridge.go:Runner.StdioToHTTPFast": 113,
     "browser-agent/internal/bridge/bridge.go:Runner.bridgeForwardRequest": 91,
     "browser-agent/internal/bridge/bridge_fastpath.go:Runner.handleFastPath": 96,
@@ -14,7 +15,7 @@
     "browser-agent/internal/toolanalyze/visual/handler.go:DiffBaseline": 87,
     "browser-agent/internal/toolconfigure/capabilities.go:HandleDescribeCapabilities": 82,
     "browser-agent/internal/toolgenerate/annotations/visual.go:GeneratePlaywrightFromAnnotations": 88,
-    "browser-agent/internal/toolgenerate/artifacts_pr_summary_impl.go:HandlePRSummary": 86,
+    "browser-agent/internal/toolgenerate/artifacts_pr_summary_impl.go:HandlePRSummary": 85,
     "browser-agent/internal/toolinteract/interact_workflow.go:WorkflowActions.HandleNavigateAndDocument": 88,
     "browser-agent/internal/toolruntime/tools_configure.go:buildConfigureDispatcher": 123,
     "browser-agent/server.go:registerCoreRoutes": 101,
@@ -27,7 +28,6 @@
     "schema/generate.go:generateToolSchema": 168,
     "schema/interact/properties_core.go:coreActionProperties": 141,
     "schema/observe.go:observeToolSchema": 189,
-    "tools/observe/idbquery/scripts.go:buildEntriesScript": 104,
     "upload/handlers.go:handleFileReadWithLimit": 88,
     "upload/uploadsec/denylist.go:init": 85
   }

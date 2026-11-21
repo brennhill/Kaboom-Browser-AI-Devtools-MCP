@@ -4,6 +4,7 @@ package operationalapi
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -21,19 +22,19 @@ import (
 func TestOperationalDiagnosticsRedactsHTTPAndIncludesCommandTrace(t *testing.T) {
 	handler := newOperationalTestHandler(t)
 	const rawSecret = "Bearer tokenValue1234567890abcdef"
-	handler.options.Capture.DiagnosticLogs().AddHTTP(types.HTTPDebugEntry{
+	handler.options.Owners.DiagnosticLogs.AddHTTP(types.HTTPDebugEntry{
 		Timestamp: time.Now(), Endpoint: "/mcp", Method: http.MethodPost,
 		RequestBody: `{"auth":"` + rawSecret + `"}`, ResponseBody: `{"ok":true}`, DurationMs: 5,
 	})
-	queryID, err := handler.options.Capture.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, err := handler.options.Owners.Commands.Enqueue(queries.PendingQuery{
 		Type: "browser_action", CorrelationID: "diag-trace-corr",
 	}, 30*time.Second, "test-client")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = handler.options.Capture.Queries().GetPendingQueries()
-	handler.options.Capture.Queries().AcknowledgePendingQuery(queryID)
-	handler.options.Capture.Queries().ApplyCommandResult("diag-trace-corr", "complete", json.RawMessage(`{"ok":true}`), "")
+	_ = handler.options.Owners.Commands.Pending()
+	commandtest.Acknowledge(handler.options.Owners.Commands, queryID)
+	commandtest.Complete(handler.options.Owners.Commands, "diag-trace-corr", "complete", json.RawMessage(`{"ok":true}`), "")
 
 	recorder := httptest.NewRecorder()
 	handler.ServeDiagnostics(recorder, httptest.NewRequest(http.MethodGet, "/diagnostics", nil))
@@ -66,7 +67,7 @@ func newOperationalTestHandler(t *testing.T) *Handler {
 	})
 	return New(Options{
 		Logs:            logs,
-		Capture:         capture.NewCapture(),
+		Owners:          capture.NewCapture().HealthOwners(),
 		Version:         "0.9.0-test",
 		StartedAt:       time.Now().Add(-2 * time.Second),
 		MaxPostBodySize: 1024,
@@ -168,13 +169,13 @@ func TestOperationalLogsValidateIngestClearAndMethods(t *testing.T) {
 
 func TestOperationalDiagnosticsSummarizesLatestConsoleEvent(t *testing.T) {
 	handler := newOperationalTestHandler(t)
-	handler.options.Capture.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{{
+	handler.options.Owners.Telemetry.AddWebSocketEvents([]types.WebSocketEvent{{
 		Type: "ws_connect", ID: "conn-1", URL: "wss://example.test",
 	}})
-	handler.options.Capture.Telemetry().AddNetworkBodies([]types.NetworkBody{{
+	handler.options.Owners.Telemetry.AddNetworkBodies([]types.NetworkBody{{
 		URL: "https://example.test/api", Method: http.MethodGet, Status: http.StatusOK,
 	}})
-	handler.options.Capture.Telemetry().AddEnhancedActions([]types.EnhancedAction{{
+	handler.options.Owners.Telemetry.AddEnhancedActions([]types.EnhancedAction{{
 		Type: "click", Timestamp: 1000,
 	}})
 	longMessage := strings.Repeat("x", 120)

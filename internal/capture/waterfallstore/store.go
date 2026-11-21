@@ -151,6 +151,17 @@ func (s *Store) Entries() []types.NetworkWaterfallEntry {
 	return entries
 }
 
+// LastPageURL returns the page URL tagged on the newest retained entry, or "".
+func (s *Store) LastPageURL() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	entries := s.entries.Snapshot()
+	if len(entries) == 0 {
+		return ""
+	}
+	return entries[len(entries)-1].PageURL
+}
+
 func cloneEntry(entry types.NetworkWaterfallEntry) types.NetworkWaterfallEntry {
 	entry.ServerTiming = append([]types.WireServerTiming(nil), entry.ServerTiming...)
 	entry.InitiatorStack = append([]string(nil), entry.InitiatorStack...)

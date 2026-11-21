@@ -79,7 +79,7 @@ func TestHandleClearAllClearsEveryAnnotationStateFamily(t *testing.T) {
 		Extension: captured.Extension(), Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs(),
 	})
 	result := parseRespJSON(t, HandleClear(ClearTargets{
-		Capture: captured, Resetter: reset, ClearLogs: func() int { return 0 }, Annotations: annotations,
+		Telemetry: captured.Telemetry(), Resetter: reset, ClearLogs: func() int { return 0 }, Annotations: annotations,
 	}, newReq(), json.RawMessage(`{"buffer":"all"}`)))
 	cleared := result["cleared"].(map[string]any)["annotations_cleared"].(map[string]any)
 	if cleared["sessions"] != float64(1) || cleared["named_sessions"] != float64(1) || cleared["details"] != float64(1) {
@@ -100,9 +100,9 @@ func TestHandleClearRoutesEveryBufferAndDrainsInbox(t *testing.T) {
 	inbox.Enqueue(push.PushEvent{ID: "two", Type: "chat"})
 	logCount := 3
 	targets := ClearTargets{
-		Capture:  captured,
-		Resetter: reset,
-		Inbox:    inbox,
+		Telemetry: captured.Telemetry(),
+		Resetter:  reset,
+		Inbox:     inbox,
 		ClearLogs: func() int {
 			cleared := logCount
 			logCount = 0

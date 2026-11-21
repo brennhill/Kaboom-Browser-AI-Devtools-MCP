@@ -48,6 +48,19 @@ function resolvedSourceImport(specifier, file, knownFiles) {
   return knownFiles.has(candidate) ? candidate : null
 }
 
+// contextEntryViolation enforces bounded-context public entry points: a file
+// outside a declared context directory may import only that context's public
+// files (names from GLOSSARY.md; see docs/core/architecture/extension-architecture.md).
+function contextEntryViolation(importer, dependency) {
+  const target = path.relative(root, dependency).split(path.sep).join('/')
+  for (const [prefix, entry] of Object.entries(config.context_entry_points || {})) {
+    if (!target.startsWith(prefix) || importer.startsWith(prefix)) continue
+    if (entry.public.includes(target.slice(prefix.length))) return null
+    return `${importer}: ${entry.context} internals must be reached through its public entry points (${entry.public.join(', ')}), not ${target}`
+  }
+  return null
+}
+
 function circularComponents(graph) {
   let nextIndex = 0
   const indexes = new Map()
@@ -107,7 +120,11 @@ for (const file of files) {
       violations.push(`${relative}: import must target the canonical owner (${match[1]})`)
     }
     const dependency = resolvedSourceImport(match[1], file, knownFiles)
-    if (dependency) dependencies.push(dependency)
+    if (dependency) {
+      dependencies.push(dependency)
+      const entryViolation = contextEntryViolation(relative, dependency)
+      if (entryViolation) violations.push(entryViolation)
+    }
     const target = importedFeature(match[1], file)
     if (target && forbidden.includes(target)) {
       violations.push(`${relative}: ${owner} must not import ${target} (${match[1]})`)

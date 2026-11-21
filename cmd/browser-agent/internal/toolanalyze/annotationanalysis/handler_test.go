@@ -44,13 +44,13 @@ func createTestToolHandler(t *testing.T) *annotationTestHarness {
 	t.Cleanup(store.Close)
 	captured := capture.NewCapture()
 	commands := asynccommand.New(asynccommand.Deps{
-		Capture:            captured,
+		Commands:            captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry(),
 		AttachEvidence:     func(string, map[string]any) {},
 		AttachRetryContext: func(string, map[string]any, string, string) {},
 	})
 	server := &annotationTestServer{logs: &annotationTestLogs{}}
 	return &annotationTestHarness{
-		annotationAnalysis: New(store, captured, commands.FormatCommandResult, server.logs.Entries),
+		annotationAnalysis: New(store, captured.Commands(), commands.FormatCommandResult, server.logs.Entries),
 		annotationStore:    store,
 		capture:            captured,
 		asyncCommands:      commands,
@@ -60,7 +60,7 @@ func createTestToolHandler(t *testing.T) *annotationTestHarness {
 
 func replaceAnnotationStoreForTest(h *annotationTestHarness, store *annotation.Store) {
 	h.annotationStore = store
-	h.annotationAnalysis = New(store, h.capture, h.asyncCommands.FormatCommandResult, h.server.logs.Entries)
+	h.annotationAnalysis = New(store, h.capture.Commands(), h.asyncCommands.FormatCommandResult, h.server.logs.Entries)
 }
 
 func unmarshalMCPText(t *testing.T, raw json.RawMessage) string {

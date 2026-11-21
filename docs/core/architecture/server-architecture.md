@@ -1,174 +1,201 @@
 # Server Architecture
 
+Last reviewed: 2026-11-21
+
 ## Overview
 
-The Kaboom server is a zero-dependency Go binary that receives browser telemetry from the Chrome extension over HTTP and exposes it to AI coding agents via the MCP protocol (JSON-RPC 2.0 over stdio or HTTP). Captured browser and user data stays local. Only anonymous product-usage telemetry may leave the machine, and users can disable it with `KABOOM_TELEMETRY=off`.
+The Kaboom server is a zero-dependency Go binary. It receives browser
+observations from the Chrome extension over HTTP and exposes them to AI coding
+agents through MCP (JSON-RPC 2.0 over stdio or HTTP). It also sends browser
+commands back to the extension. Captured browser and user data stays local.
+Only anonymous product-usage telemetry may leave the machine. Users can turn it
+off with `KABOOM_TELEMETRY=off`.
 
-For the extension half of the system, see [extension-architecture.md](extension-architecture.md).
+Domain terms in **bold** are defined in [GLOSSARY.md](../../../GLOSSARY.md).
+For the extension half, see
+[extension-architecture.md](extension-architecture.md).
 
 ## Modes
 
-The binary (`kaboom-agentic-browser`) runs in one of three modes:
+The binary (`kaboom-agentic-browser`) runs in one of three modes. `main()` in
+`cmd/browser-agent/main.go` selects the mode.
 
-**Bridge mode** (default) -- Stdio MCP transport. Spawns a persistent HTTP daemon in the background (or connects to an existing one), then forwards JSON-RPC messages between stdin/stdout and the daemon's `/mcp` endpoint. The daemon survives after the bridge exits. If the daemon dies mid-session, the bridge detects it and respawns transparently. Entry: `runBridgeMode()` in `bridge.go`.
+- **Bridge mode** (the default). Stdio MCP transport. It spawns or reuses a
+  persistent HTTP daemon and forwards JSON-RPC between stdio and the daemon's
+  `/mcp` endpoint. If the daemon dies, the bridge respawns it.
+  Code: `cmd/browser-agent/internal/bridge/bridge.go:Runner`.
+- **Daemon mode** (`--daemon`). An HTTP server for the extension endpoints and
+  `/mcp`. Code: `cmd/browser-agent/main_connection_mcp.go`, `cmd/browser-agent/server.go`.
+- **CLI mode** (`kaboom-agentic-browser observe errors ...`). It sends one tool
+  call to a running daemon and formats the result.
+  Code: `cmd/browser-agent/internal/cli/cli.go:Run`.
 
-**Daemon mode** (`--daemon`) -- HTTP server only. Binds a port (default 7890), serves both extension HTTP endpoints and the `/mcp` JSON-RPC endpoint. Manages PID files and handles SIGTERM/SIGINT for graceful shutdown. Entry: `runMCPMode()` in `main_connection_mcp.go`.
+## Bounded contexts
 
-**CLI mode** (`kaboom-agentic-browser observe errors ...`) -- Direct tool access from the terminal. Parses CLI flags into MCP tool arguments, sends a single JSON-RPC request to a running daemon over HTTP, formats the response as human/JSON/CSV, and exits. Entry: `runCLIMode()` in `cli.go`, parsers in `cli_commands.go`.
+Each context owns its state. Other contexts reach that state only through the
+public interface listed here. `make check-layering` enforces the arrows (see
+[Enforcement](#enforcement)).
 
-Mode selection: `main()` checks for CLI mode first (args match a tool name), otherwise `selectRuntimeMode()` picks bridge or daemon based on flags. Bridge is the default because MCP clients expect stdio transport.
+| Context | Owned state | Packages | Public interface | May depend on |
+| --- | --- | --- | --- | --- |
+| **Connection & Sync** | Extension session, **connection generation**, liveness and disconnect, settings and extension-log intake, **command contract ID**, the daemon projections of the **tracked tab** and **Pilot** | `internal/capture/syncruntime/` | `internal/capture/syncruntime/handler.go:Handler.HandleSync`, `internal/capture/syncruntime/runtime.go:Runtime` (read accessors: `Runtime.GetTrackingStatus`, `Runtime.IsPilotActionAllowed`, `Runtime.WaitForExtensionConnected`), wire `internal/capture/syncruntime/wire_sync.go` | Browser Command (`Owner` only), `internal/capture/logstore/`, leaf utilities |
+| **Browser Command** | Queue, delivery eligibility, acks, progress, results from every **result source**, expiry, **lost commands** | `internal/browsercommand/`, `internal/queries/` (types) | `internal/browsercommand/owner.go:Owner`, `internal/browsercommand/exchange.go:SyncExchange`, `internal/browsercommand/result.go:Result`, `internal/queries/types.go:QueryRunner` | stdlib only. No HTTP, MCP or capture |
+| **Observation Capture** | Ring buffers and queries for logs, network, WebSocket, actions, performance, extension logs | `internal/capture/telemetrystore/`, `internal/capture/logstore/`, `internal/capture/perfstore/`, `internal/capture/actionstore/`, `internal/capture/bodystore/`, `internal/capture/waterfallstore/`, `internal/capture/ringstore/` | Each store's `Store` type (for example `internal/capture/telemetrystore/store.go:Store`) | Its own ring stores, `internal/types/` |
+| **Extension Ingestion** | None (adapter). Validates extension uploads and writes them to their owners | `internal/capture/httpingest/`, `cmd/browser-agent/internal/mediaapi/` | `internal/capture/httpingest/handlers.go:Handlers` | Capture stores, Browser Command (`Result`, `SubmitResult`), Event Recording (storage reads) |
+| **Event Recording** | Event recordings, their disk persistence and quotas | `internal/recording/` (with `internal/recording/playback/`, `internal/recording/logdiff/`, `internal/recording/actionlog/`) | `internal/recording/manager.go:RecordingManager` | Capture stores (read), leaf state packages |
+| **Screen Recording** (daemon half) | Saved video files and their metadata | `cmd/browser-agent/internal/screenrec/` | `cmd/browser-agent/internal/screenrec/handlers.go:InteractHandler`, `cmd/browser-agent/internal/screenrec/save.go:HandleSave` | Browser Command (`Owner`, `ports.ResultSink`) |
+| **Application Use Cases** | None (workflows) | `internal/app/` | `internal/app/screenshot/screenshot.go:Service`, `internal/app/pageinfo/pageinfo.go:Service`, `internal/app/pagestorage/storage.go:Service`, `internal/app/a11yaudit/a11yaudit.go:Service`, `internal/app/ports/ports.go:ResultSink` | Browser Command (`QueryRunner`), leaf packages. No HTTP, MCP, capture or `internal/tools` |
+| **Tool Surface** | Per-call MCP state only (rate limits, response shaping) | `internal/mcp/`, `internal/schema/`, `internal/tools/`, `cmd/browser-agent/internal/toolobserve/`, `cmd/browser-agent/internal/toolinteract/`, `cmd/browser-agent/internal/toolanalyze/`, `cmd/browser-agent/internal/toolgenerate/`, `cmd/browser-agent/internal/toolconfigure/`, `cmd/browser-agent/internal/toolrecording/`, `cmd/browser-agent/internal/asynccommand/` | The five tools (observe, analyze, generate, configure, interact) | Everything above, through owners and use cases |
+| **Composition** | Object graph only | `cmd/browser-agent/server.go`, `cmd/browser-agent/internal/toolruntime/`, `internal/capture/capture.go` | `cmd/browser-agent/server.go:setupHTTPRoutes`, `cmd/browser-agent/internal/toolruntime/tools_core.go:NewToolHandler` | Everything |
+| **Process Lifecycle** | Bridge, daemon spawn and respawn, single instance, Doctor diagnostics | `cmd/browser-agent/internal/bridge/`, `cmd/browser-agent/internal/daemonlife/`, `internal/instancegov/`, `internal/statediag/` | `cmd/browser-agent/internal/bridge/bridge.go:Runner` | Leaf utilities |
+| **Product Telemetry** | Anonymous install and usage counters | `internal/telemetry/` | `internal/telemetry/beacon.go` | Leaf utilities |
 
-## Package Layout
-
-```
-cmd/browser-agent/               Main binary
-  main.go                      Entry point, flag parsing, mode dispatch
-  bridge.go                    Bridge mode: stdio-to-HTTP forwarding, daemon spawn/respawn
-  main_connection_mcp.go       Daemon mode: HTTP server startup, PID management, signals
-  cli.go, cli_commands.go      CLI mode: arg parsing, HTTP dispatch, output formatting
-  server.go                    Server state, subsystem startup, and HTTP route registration
-  internal/mcpendpoint/       JSON-RPC endpoint and response-policy composition
-  tools_core.go                ToolHandler struct, rate limiter, response helpers
-  internal/toolobserve/dispatcher.go             observe tool: dispatches to internal/tools/observe
-  tools_analyze.go             analyze tool: DOM, a11y, security, performance
-  internal/toolgenerate/dispatcher.go            generate tool: Playwright tests, HAR, CSP, SARIF
-  tools_configure.go           configure tool: noise rules, storage, streaming, health
-  tools_interact.go            interact tool: click, type, navigate, execute JS
-  tools_schema.go              JSON Schema definitions for all 5 tools
-  tools_*_schema.go            Per-tool schema files (extracted)
-
-internal/
-  mcp/                         MCP protocol types and dependency interfaces
-    types.go                   MCPToolResult, MCPInitializeResult, MCPCapabilities, etc.
-    deps.go                    Composable interfaces: CaptureProvider, LogBufferReader, etc.
-    response.go                Response construction helpers
-  capture/                     Extension state and telemetry buffer management
-    extension_state.go         Connection tracking, pilot status, tab tracking
-    sync.go                    POST /sync endpoint: bidirectional extension communication
-    accessor.go                Safe read accessors for buffer counters/timestamps
-    settings.go                Capture settings handler
-  tools/                       Extracted pure functions (thin packages, no global state)
-    observe/                   Buffer queries: errors, logs, network, websocket, actions
-    analyze/                   Link validation, DOM analysis
-    configure/                 Audit, boundaries, capabilities, rewrite
-    generate/                  CSP generation, test script generation
-    interact/                  Selector resolution, state management, workflows
-  types/                       Wire types: Go structs that define HTTP payload shapes
-    wire_*.go                  Source of truth -- TS counterparts generated from these
-    log.go, network.go         Core domain types
-  ai/                          Noise filtering, session store
-  analysis/                    API contract validation, third-party auditing
-  annotation/                  Draw-mode annotation storage and retrieval
-  audit/                       Session audit trail (append-only)
-  bridge/                      Bridge mode helpers (timeouts, request forwarding)
-  buffers/                     Generic ring buffer primitives
-  export/                      Data export formatters
-  pagination/                  Cursor-based pagination logic
-  performance/                 Performance snapshot types and wire types
-  queries/                     Async command queue (extension command dispatch)
-  recording/                   Video recording management
-  redaction/                   Sensitive data scrubbing
-  reproduction/                Bug reproduction script generation
-  schema/                      JSON Schema utilities
-  security/                    Security scanning (headers, cookies, credentials)
-  session/                     Session verification and management
-  server/                      Server configuration helpers
-  state/                       Runtime state directory paths (PID files, logs, screenshots)
-  streaming/                   Alert buffer and push notification support
-  testgen/                     Playwright test generation from captured data
-  testing/                     Test utilities
-  ttl/                         TTL-based eviction logic
-  upload/                      File upload handling (screenshots, recordings)
-  util/                        SafeGo, string helpers, misc utilities
-```
-
-## Data Flow
+### Context map
 
 ```
- TELEMETRY INGESTION (extension -> server)
-
-  Chrome Extension                    Go Server (daemon)                    AI Agent
-  +---------------+   POST /sync    +------------------+                  +----------+
-  | Background SW | --------------> | Capture          |                  |          |
-  | (batches data)|   /network-*    |  - ring buffers  |                  |          |
-  |               |   /ws-events    |  - extension     |                  |          |
-  |               |   /actions      |    state         |                  |          |
-  +---------------+   /perf-*       +--------+---------+                  |          |
-                                             |                            |          |
-                                             v                            |          |
- MCP TOOL CALLS (agent -> server -> response)                             |          |
-                                                                          |          |
-                      +------------------+   JSON-RPC    +-----------+    |          |
-                      | ToolHandler      | <------------ | Bridge    | <- | stdio    |
-                      |  .observe()      |   (or HTTP    | (stdio->  |    |          |
-                      |  .analyze()      |    /mcp)      |  HTTP)    |    |          |
-                      |  .generate()     |               +-----------+    |          |
-                      |  .configure()    |                                |          |
-                      |  .interact()     | -----------------------------> | response |
-                      +------------------+   JSON-RPC result              +----------+
-                        |           |
-                        v           v
-                  internal/    internal/
-                  tools/*      capture/
-                  (pure fns)   (buffer reads)
-
- ASYNC COMMANDS (server -> extension -> result)
-
-  ToolHandler ---queue---> Capture.queries ---/sync response---> Extension
-  Extension ---POST /query-result---> Capture ---poll---> ToolHandler
+                          MCP client (agent)
+                                |  JSON-RPC (/mcp, stdio bridge)
+                                v
+                 +------------------------------+
+                 | Tool Surface (adapters)      |-----------------+
+                 +------------------------------+                 |
+                   |            |             |                   |
+         use cases |   enqueue/ | wait        | reads             | configure
+                   v            v             v                   v
+        +----------------+  +----------------+  +-------------------+  +----------------+
+        | Application    |->| Browser Command|  | Observation       |  | Event Recording|
+        | Use Cases      |  | (Owner)        |  | Capture (stores)  |  | (Manager)      |
+        +----------------+  +----------------+  +-------------------+  +----------------+
+                                ^       ^              ^      ^               ^
+              SyncExchange under|       | SubmitResult |      | writes        | storage reads
+              GenerationGate    |       |              |      |               |
+        +---------------------------+  +-----------------------------------------------+
+        | Connection & Sync         |  | Extension Ingestion (HTTP adapters)           |
+        | (Runtime, Handler)        |  | httpingest, mediaapi, screenrec save          |
+        +---------------------------+  +-----------------------------------------------+
+                    ^  /sync (wire_sync.go)                ^  POST uploads
+                    +------------- Chrome extension -------+
 ```
 
-## Key Patterns
+Arrows point from the caller to the owner it calls. The Composition context
+builds every box and is omitted.
 
-**Tool composition root** -- `ToolHandler` in `tools_core.go` constructs the concrete feature owners and injects their narrow dependencies. It embeds the canonical `internal/mcpendpoint.Handler` and is returned directly to lifecycle callers; no backend type assertion is used to recover runtime ownership. Canonical dispatchers such as `internal/toolobserve/dispatcher.go` own their mode registries; the root does not mirror or forward those APIs.
+## Composition roots
 
-**Explicit dependencies** -- Feature owners accept concrete owners or narrow
-function-field dependency values. Shared host/provider interfaces were deleted
-because they forced the composition root to mirror unrelated APIs.
-`internal/asynccommand.Handler` owns the full queue-to-result lifecycle and its
-functions are injected directly into tool handlers.
+- `cmd/browser-agent/server.go:setupHTTPRoutes` builds the HTTP surface. It
+  wires `/sync` through `cmd/browser-agent/server.go:newSyncHandler` to
+  `internal/capture/syncruntime/handler.go:NewHandler`, binds the ingestion
+  routes to `internal/capture/httpingest/handlers.go:Handlers`, and binds
+  `/recordings/save` to `cmd/browser-agent/internal/screenrec/save.go:HandleSave`.
+- `cmd/browser-agent/internal/toolruntime/tools_core.go:NewToolHandler` builds
+  the Tool Surface. It injects owners and use cases
+  (`cmd/browser-agent/internal/toolruntime/usecase_wiring.go:newScreenshotService`)
+  into each tool dispatcher.
+- `internal/capture/capture.go:NewCapture` constructs the stores and runtimes.
+  Only `cmd/browser-agent` may call it. The **capture aggregate**
+  (`internal/capture/capture.go:Capture`) is a wiring object held only by the
+  composition root (`cmd/browser-agent` and the `toolruntime` wiring). Every
+  feature receives the owner it uses. Health, doctor, dashboard and the
+  operational API receive the `internal/capture/healthreader/reader.go:Owners`
+  bundle built by `internal/capture/capture.go:Capture.HealthOwners`. The MCP
+  guards (`cmd/browser-agent/internal/toolguard/`), `insecureproxy` and
+  `mcpresponse` take `*syncruntime.Runtime`. `clientapi` and `terminal` take
+  the client registry.
 
-**Wire types** -- `internal/types/wire_*.go` are the source of truth for HTTP payload shapes between extension and server. TypeScript counterparts in `src/types/wire/wire-*.ts` are generated from Go. CI enforces drift detection via `make check-wire-drift`.
+## Operation owners and handoffs
 
-**Zero external dependencies** -- The entire Go server uses only stdlib. No logging library, HTTP framework, or JSON library. `internal/diag` owns operator diagnostics, while lifecycle logs use append-only file I/O.
+Each row is a cross-context operation. The **owner** decides the outcome. The
+**handoff** is the contract crossed, and the direction is caller to callee.
 
-**Append-only I/O on hot paths** -- Log writes go through a buffered channel (`logChan`) to an async goroutine. Ring buffers in `Capture` use single-pass eviction (never loop-remove-recheck).
+| Operation | Owner | Flow and handoff contracts |
+| --- | --- | --- |
+| Command enqueue | Browser Command | Tool Surface → `Owner.Enqueue(PendingQuery, timeout, clientID)` (`internal/browsercommand/owner.go:Owner.Enqueue`). MCP-facing async wrapper: `cmd/browser-agent/internal/asynccommand/handler.go:Handler.EnqueuePendingQuery`. The returned **correlation ID** goes to the agent |
+| Command delivery | Browser Command (eligibility). Connection & Sync (transport) | Extension heartbeat → `Handler.HandleSync` → `Handler.GetPendingQueriesDisconnectAware` → `Owner.Pending`. Commands are stamped with the current **connection generation** in `buildSyncCommands` and returned as `SyncResponse.Commands` (`internal/capture/syncruntime/wire_sync.go:SyncCommand` ↔ `src/types/wire/wire-sync.ts`) |
+| Command ack and progress | Browser Command | Next heartbeat: `SyncRequest` last-ack and in-progress list → `Handler.applySyncExchange` builds `browsercommand.SyncExchange` → `Owner.ApplySyncExchange` under a `GenerationGate`. Reports past the grace period become **lost commands** (`internal/browsercommand/exchange.go:LostCommand`) |
+| Command result via /sync | Browser Command | Extension `SyncClient.queueCommandResult` → `SyncRequest` command results → `SyncExchange.Results` → applied as `SourceSync` only while the gate confirms the generation is current. **Stale work** is reported, not applied (`internal/browsercommand/exchange.go:StaleWork`) |
+| Command result out of band | Browser Command | `POST /query-result` → `internal/capture/httpingest/handlers.go:Handlers.HandleQueryResult` → `Owner.SubmitResult` (`SourceQueryResult`, validated by identity). Upload adapters complete commands the same way through `internal/app/ports/ports.go:ResultSink` (`cmd/browser-agent/internal/mediaapi/handler.go`, `cmd/browser-agent/internal/screenrec/save.go`) |
+| MCP wait for result | Browser Command (state). Tool Surface (formatting) | `asynccommand.Handler` waits with `Owner.WaitCommand` (commands) or `Owner.WaitQueryResult` (**browser queries**), then formats with `Handler.FormatCommandResult` |
+| Disconnect and expiry | Connection & Sync (detects). Browser Command (fails work) | `Runtime.Disconnected` → `Owner.ExpireAll("extension_disconnected")`. A waiter that sees a disconnect calls `Owner.FailDisconnected` (a `SourceDaemon` result) |
+| Reconnect and generation bump | Connection & Sync | A new extension session in `SyncRequest` → `bumpSyncGenerationForNewSession`. Superseded requests → `rejectStaleGeneration`. The new generation is returned in `SyncResponse` and mirrored by the extension (`src/background/runtime-state/connection-generation.ts:setConnectionGeneration`). **Probe syncs** adopt nothing (`respondProbeSync`) |
+| Tab switch (synchronous) | Tab Tracking & Pilot (selection). Connection & Sync (projection) | `interact({action: "switch_tab"})` → toolinteract enqueues a command → the extension persists the new tab before it returns (`src/background/exec/browser-actions.ts:executeSwitchTabAction`) → the result reaches `applySwitchTabTracking` (`cmd/browser-agent/internal/toolinteract/interact_browser.go`) → `Runtime.UpdateTrackedTab`. This is a command-confirmed observation that opens a hold in `observeTrackingLocked` |
+| Tab switch (asynchronous: user pick, close, navigation) | Tab Tracking & Pilot | Chrome adapters update the tracked tab in `chrome.storage` → the next heartbeat's `SyncSettings` → `observeTrackingLocked`. The hold drops up to `staleHeartbeatAllowance` heartbeats that still name the old tab, then the extension wins |
+| Content readiness | Tab Tracking & Pilot (extension) | Extension-internal barrier (`src/background/runtime-state/content-readiness.ts:ContentReadinessBarrier`). The daemon sees only the heartbeat tab status (`Runtime.GetTabStatus`) |
+| Pilot gating | Tab Tracking & Pilot (intent). Connection & Sync (projection) | `SyncSettings.PilotEnabled` → `Runtime.IsPilotActionAllowed` gates interact actions in the daemon. The extension re-checks with `requireAiWebPilot` before it executes |
+| Event recording start, stop, persist | Event Recording | `configure({what: "event_recording_start"})` → `cmd/browser-agent/internal/toolrecording/handler.go:Handler.EventRecordingStart` → `RecordingManager.StartRecording`. Stop → `RecordingManager.StopRecording` persists to disk. Storage reads: `GET /recordings/storage` → `Handlers.HandleRecordingStorage` |
+| Screen recording start and stop | Screen Recording (extension owns the live lifecycle) | `interact({action: "screen_recording_start"})` → `InteractHandler.HandleRecordStart` → `Owner.Enqueue` (command `screen_recording_start`) → /sync → extension. See the extension guide for start, restore and stop |
+| Saved video | Screen Recording (daemon half) | The offscreen worker sends `POST /recordings/save` → `screenrec.HandleSave` writes the file and calls `SubmitResult` with the upload's query ID, which completes the stop command |
+| Screenshot | Application Use Cases | observe(screenshot) → `internal/tools/observe/page/` adapter → `internal/app/screenshot/screenshot.go:Service.Capture` → `QueryRunner` (Browser Command) → extension `screenshot` command. The adapter maps `Result` and `Failure` to MCP image blocks and errors |
+| Observe reads | Observation Capture | `cmd/browser-agent/internal/toolobserve/dispatcher.go` → `internal/tools/observe/` modes → `internal/tools/observe/core/deps.go:Deps` (stores and Runtime). No browser command is involved |
+| Observation ingestion | Observation Capture (retention). Extension Ingestion (adapter) | Extension batchers → `/network-bodies`, `/network-waterfall`, `/enhanced-actions`, `/websocket-events`, `/performance-snapshots` → `Handlers` → stores. Extension logs ride `SyncRequest` into `internal/capture/logstore/` |
 
-**Bridge respawn** -- The bridge monitors daemon health. If the daemon becomes unresponsive, `daemonState.respawnIfNeeded()` re-launches it transparently. Only one respawn runs at a time (mutex + channel coordination).
+### Current behavior and target
 
-## "Change X, Edit Y" Lookup
+- **Done (jdm5.2 to jdm5.6):** one command owner (`internal/browsercommand/`)
+  with a private dispatcher, generation-gated sync exchanges, validated result
+  sources, the tracked-tab ordering rule, explicit recording ownership, and
+  four transport-independent use cases in `internal/app/`. Only the
+  composition root holds `*capture.Capture` (jdm5.5). Every tool, health,
+  guard and API package takes the owners it uses, and the `capture-root`
+  layering rule enforces it. Per-client dispatcher helpers were deleted.
+- **Gap:** `RecordingManager.AddRecordingAction` has no production caller, so
+  event recordings currently record lifecycle and metadata but not actions.
+  The target is an ingestion handoff from Observation Capture to Event
+  Recording.
+- **Gap:** `internal/recording/actionlog/` imports `internal/tools/interact`
+  (Tool Surface). The target moves the shared action types to a leaf package.
 
-| Want to...                              | Edit these files                                                                                          |
-|-----------------------------------------|-----------------------------------------------------------------------------------------------------------|
-| Add a new MCP tool                      | `tools_<name>.go` (handler), `tools_<name>_schema.go` (schema), `tools_core.go` (register in ToolHandler) |
-| Add a new observe mode                  | `internal/tools/observe/` (handler), `internal/toolobserve/dispatcher.go` (register in its private mode map)                 |
-| Add a new analyze/generate/etc. action  | `internal/tools/<tool>/` (logic), `tools_<tool>.go` (register in dispatch map)                            |
-| Add an HTTP endpoint for the extension  | `internal/capture/` (handler), `server.go` (register in setupHTTPRoutes)                           |
-| Change sync protocol                    | `internal/capture/syncruntime/handler.go` (server), `src/background/sync/sync-client.ts` (extension)                         |
-| Add a wire type                         | `internal/types/wire_*.go` (Go source of truth), run `make check-wire-drift`                              |
-| Add a feature dependency                | The owning `internal/<feature>/` package; inject a concrete owner or narrow function field at `tools_core.go` |
-| Add a CLI command                       | `cli_commands.go` (parser), `cli.go` (if new output format needed)                                        |
-| Change MCP protocol handling            | `internal/mcpendpoint/`, `internal/mcprouter/`, and `internal/mcpprotocol/`                              |
-| Add an internal package                 | `internal/<name>/`, import from `cmd/browser-agent/` -- keep it zero-dep                                    |
-| Change bridge behavior                  | `bridge.go` (spawn/respawn), `internal/bridge/` (timeout logic)                                           |
-| Add a resource (kaboom://*)             | `internal/mcpprotocol/` and `internal/playbooks/resources/`                                               |
+## Enforcement
+
+`make check-layering` (`scripts/contracts/layering/`) fails the build when an
+arrow is broken:
+
+- `scripts/contracts/layering/main.go` enforces the global matrix:
+  `internal/**` never imports `cmd/**`; `internal/types` is a leaf;
+  `internal/mcp` does not import tools or capture; the command module and
+  `internal/app/**` have no HTTP, MCP or capture imports; `capture-root` allows
+  only `cmd/browser-agent`, its toolruntime wiring, the `internal/capture/`
+  tree and test-support packages to import `internal/capture`; `test-support`
+  keeps production code from importing test-support packages;
+  `capture.NewCapture` is called only by the composition root.
+- `scripts/contracts/layering/command_owner.go` keeps the command owner as the
+  only dispatcher path.
+- `scripts/contracts/layering/contexts.go:boundedContexts` holds the
+  per-context rules. Observation Capture, Event Recording, Connection & Sync
+  and Extension Ingestion each list the upstream contexts they may not import.
+  Violations print the context name from this guide.
+
+## Wire types
+
+Wire types are the source of truth for HTTP payload shapes. Go `wire_*.go`
+files (for example `internal/capture/syncruntime/wire_sync.go` and
+`internal/types/wire_network.go`) pair with TypeScript files in
+`src/types/wire/`. `make check-wire-drift` enforces that they match.
+
+## Key patterns
+
+- **Explicit dependencies.** Owners accept concrete owners or narrow
+  consumer-owned ports. The `.interface-baseline.json` ratchet rejects
+  producer-owned and dead interfaces.
+- **Zero external dependencies.** stdlib only. Operator diagnostics go through
+  `internal/statediag/`.
+- **Append-only I/O on hot paths.** Ring stores evict in a single pass.
+
+## "Change X, edit Y" lookup
+
+| Want to... | Edit |
+| --- | --- |
+| Add an observe mode | `internal/tools/observe/` (mode) and `cmd/browser-agent/internal/toolobserve/registry.go` |
+| Add a transport-independent workflow | A new package under `internal/app/`, wired in `cmd/browser-agent/internal/toolruntime/usecase_wiring.go` |
+| Add a browser command | Daemon: enqueue through `Owner` from the tool adapter. Extension: `registerCommand` in `src/background/commands/` |
+| Change the sync protocol | `internal/capture/syncruntime/handler.go`, `internal/capture/syncruntime/wire_sync.go`, `src/types/wire/wire-sync.ts`, `src/background/sync/sync-client.ts` |
+| Add an extension HTTP endpoint | `internal/capture/httpingest/` (handler) and `cmd/browser-agent/server.go` (route) |
+| Add a bounded-context rule | `scripts/contracts/layering/contexts.go`, with a test in `scripts/contracts/layering/contexts_test.go` |
 
 ## Testing
 
-**Go tests** live alongside source files (`*_test.go`). Run with:
-
 ```bash
-make test              # All Go + extension tests
-go test ./cmd/browser-agent/...   # Server tests only
-go test ./internal/...          # Internal package tests only
+make test                         # Go and extension tests
+go test ./internal/...            # Internal packages
+make check-layering               # Context and layering rules
+./scripts/uat/runners/test-all-tools-comprehensive.sh   # UAT against the npm install
 ```
-
-**UAT script** validates the npm-installed binary end-to-end:
-
-```bash
-./scripts/uat/runners/test-all-tools-comprehensive.sh
-```
-
-Tests cold start, all 5 tool calls, concurrent clients, stdout purity, persistence, and graceful shutdown. Never modify UAT tests during a UAT run.
-
-**Internal tool packages** (`internal/tools/*`) have their own `*_test.go` files with unit tests against the `Deps` interface -- no HTTP server needed.

@@ -6,8 +6,33 @@ package healthreader
 import (
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 )
+
+// Owners are the independently synchronized state owners that health and
+// doctor reporting read. The composition root builds it (capture.HealthOwners)
+// so health consumers never hold the whole Capture. The zero value means no
+// capture is composed.
+type Owners struct {
+	Extension     *syncruntime.Runtime
+	Commands      *browsercommand.Owner
+	Telemetry     *telemetrystore.Store
+	Circuit       *circuit.CircuitBreaker
+	ExtensionLogs *logstore.Extension
+	Performance   *perfstore.Store
+	Recordings    *recording.RecordingManager
+	// DiagnosticLogs holds the daemon HTTP debug log.
+	DiagnosticLogs *logstore.Diagnostic
+}
+
+// Available reports whether the owners were composed (degraded mode otherwise).
+func (o Owners) Available() bool { return o.Extension != nil }
 
 // Snapshot aggregates capture, dispatcher, and circuit health state.
 type Snapshot struct {
@@ -33,17 +58,17 @@ type Snapshot struct {
 }
 
 // Reader owns the diagnostic projection over canonical state owners.
-type Reader struct{ capture *capture.Capture }
+type Reader struct{ owners Owners }
 
-// New binds health projection to a capture composition root.
-func New(captured *capture.Capture) *Reader { return &Reader{capture: captured} }
+// New binds health projection to the composed state owners.
+func New(owners Owners) *Reader { return &Reader{owners: owners} }
 
 // Snapshot returns a lock-safe aggregate health view.
 func (r *Reader) Snapshot() Snapshot {
-	circuitOpen, circuitReason, circuitOpenedAt, windowEventCount := r.capture.Circuit().GetState()
-	querySnapshot := r.capture.Queries().GetSnapshot()
-	extensionSnapshot := r.capture.Extension().Snapshot()
-	telemetrySnapshot := r.capture.Telemetry().Snapshot()
+	circuitOpen, circuitReason, circuitOpenedAt, windowEventCount := r.owners.Circuit.GetState()
+	querySnapshot := r.owners.Commands.Snapshot()
+	extensionSnapshot := r.owners.Extension.Snapshot()
+	telemetrySnapshot := r.owners.Telemetry.Snapshot()
 	return Snapshot{
 		WebSocketCount: telemetrySnapshot.WebSocketCount, NetworkBodyCount: telemetrySnapshot.NetworkCount,
 		ActionCount: telemetrySnapshot.ActionCount, NetworkCapacity: telemetrySnapshot.NetworkCapacity,

@@ -1,27 +1,24 @@
 // Purpose: Creates pending queries and notifies extension pollers of newly queued work.
 // Docs: docs/features/feature/query-service/index.md
 
-package queries
+package dispatch
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"os"
 	"sync/atomic"
 	"time"
 )
 
-// ErrQueueFull is returned when a new command is rejected because the queue is at capacity.
+// queries.ErrQueueFull is returned when a new command is rejected because the queue is at capacity.
 // Callers should return an immediate error to the LLM so it knows the command was not accepted.
-var ErrQueueFull = errors.New("queue_full")
 
 var queryDispatcherSequence atomic.Uint64
 
 // Constants for query management.
-const (
-	QueryResultTTL    = 5 * time.Minute // How long to keep query results before cleanup
-	MaxPendingQueries = 15              // Max pending queries in queue
-)
+const ()
 
 func newQueryIDPrefix() string {
 	return fmt.Sprintf(
@@ -36,24 +33,12 @@ func newQueryIDPrefix() string {
 // Pending Query Creation
 // ============================================
 
-// CreatePendingQuery creates a pending query with default timeout and no client ID.
-// Returns the query ID that extension will use to post the result, or ErrQueueFull.
-func (qd *QueryDispatcher) CreatePendingQuery(query PendingQuery) (string, error) {
-	return qd.CreatePendingQueryWithTimeout(query, qd.queryTimeout, "")
-}
-
-// CreatePendingQueryWithClient creates a pending query for a specific client.
-// Used in multi-client mode to isolate queries between different MCP clients.
-func (qd *QueryDispatcher) CreatePendingQueryWithClient(query PendingQuery, clientID string) (string, error) {
-	return qd.CreatePendingQueryWithTimeout(query, qd.queryTimeout, clientID)
-}
-
 // CreatePendingQueryWithTimeout enqueues one command for extension pickup.
 //
 // Invariants:
 //   - Signaling is edge-triggered by closing queryNotify then replacing it under
 //     mu (same pattern as commandNotify) so every blocked waiter wakes, not just one.
-func (qd *QueryDispatcher) CreatePendingQueryWithTimeout(query PendingQuery, timeout time.Duration, clientID string) (string, error) {
+func (qd *QueryDispatcher) CreatePendingQueryWithTimeout(query queries.PendingQuery, timeout time.Duration, clientID string) (string, error) {
 	type pendingQueryPlan struct {
 		id            string
 		correlationID string
@@ -64,7 +49,7 @@ func (qd *QueryDispatcher) CreatePendingQueryWithTimeout(query PendingQuery, tim
 		qd.mu.Lock()
 		defer qd.mu.Unlock()
 
-		if len(qd.pendingQueries) >= MaxPendingQueries {
+		if len(qd.pendingQueries) >= queries.MaxPendingQueries {
 			return pendingQueryPlan{
 				correlationID: query.CorrelationID,
 				queueFull:     true,
@@ -76,10 +61,10 @@ func (qd *QueryDispatcher) CreatePendingQueryWithTimeout(query PendingQuery, tim
 
 		createdAt := time.Now()
 		entry := PendingQueryEntry{
-			Query: PendingQueryResponse{
+			Query: queries.PendingQueryResponse{
 				ID:            id,
 				Type:          query.Type,
-				Params:        cloneJSON(query.Params),
+				Params:        bytes.Clone(query.Params),
 				TabID:         query.TabID,
 				CorrelationID: query.CorrelationID,
 				TraceID:       deriveTraceID(query.TraceID, query.CorrelationID, id),
@@ -100,14 +85,14 @@ func (qd *QueryDispatcher) CreatePendingQueryWithTimeout(query PendingQuery, tim
 	}()
 	if plan.queueFull {
 		fmt.Fprintf(os.Stderr, "[Kaboom] Queue full (%d/%d): rejecting command type=%s correlation_id=%s\n",
-			MaxPendingQueries, MaxPendingQueries, query.Type, plan.correlationID)
+			queries.MaxPendingQueries, queries.MaxPendingQueries, query.Type, plan.correlationID)
 
 		if plan.correlationID != "" {
 			qd.RegisterCommand(plan.correlationID, "", timeout)
 			qd.ApplyCommandResult(plan.correlationID, "error", nil,
-				fmt.Sprintf("Queue full: %d commands pending. Wait for in-flight commands to complete.", MaxPendingQueries))
+				fmt.Sprintf("Queue full: %d commands pending. Wait for in-flight commands to complete.", queries.MaxPendingQueries))
 		}
-		return "", ErrQueueFull
+		return "", queries.ErrQueueFull
 	}
 
 	close(plan.notify)
@@ -161,24 +146,21 @@ func (qd *QueryDispatcher) cleanExpiredQueries() {
 // ============================================
 
 type pendingQuerySnapshot struct {
-	result             []PendingQueryResponse
+	result             []queries.PendingQueryResponse
 	sentCorrelationIDs []string
 }
 
-func (qd *QueryDispatcher) snapshotPendingQueries(clientID string) pendingQuerySnapshot {
+func (qd *QueryDispatcher) snapshotPendingQueries() pendingQuerySnapshot {
 	qd.mu.Lock()
 	defer qd.mu.Unlock()
 
 	qd.cleanExpiredQueries()
 
-	result := make([]PendingQueryResponse, 0, len(qd.pendingQueries))
+	result := make([]queries.PendingQueryResponse, 0, len(qd.pendingQueries))
 	sentCorrelationIDs := make([]string, 0, len(qd.pendingQueries))
 	for _, pending := range qd.pendingQueries {
-		if clientID != "" && pending.ClientID != clientID {
-			continue
-		}
 		query := pending.Query
-		query.Params = cloneJSON(pending.Query.Params)
+		query.Params = bytes.Clone(pending.Query.Params)
 		result = append(result, query)
 		if pending.Query.CorrelationID != "" {
 			sentCorrelationIDs = append(sentCorrelationIDs, pending.Query.CorrelationID)
@@ -191,18 +173,8 @@ func (qd *QueryDispatcher) snapshotPendingQueries(clientID string) pendingQueryS
 }
 
 // GetPendingQueries snapshots all currently deliverable queued commands.
-func (qd *QueryDispatcher) GetPendingQueries() []PendingQueryResponse {
-	snapshot := qd.snapshotPendingQueries("")
-
-	for _, correlationID := range snapshot.sentCorrelationIDs {
-		qd.recordTraceEvent(correlationID, traceStageSent, "sync", "pending", "", time.Now())
-	}
-	return snapshot.result
-}
-
-// GetPendingQueriesForClient snapshots queued commands scoped to one client.
-func (qd *QueryDispatcher) GetPendingQueriesForClient(clientID string) []PendingQueryResponse {
-	snapshot := qd.snapshotPendingQueries(clientID)
+func (qd *QueryDispatcher) GetPendingQueries() []queries.PendingQueryResponse {
+	snapshot := qd.snapshotPendingQueries()
 
 	for _, correlationID := range snapshot.sentCorrelationIDs {
 		qd.recordTraceEvent(correlationID, traceStageSent, "sync", "pending", "", time.Now())

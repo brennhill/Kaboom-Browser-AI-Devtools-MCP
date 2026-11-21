@@ -12,8 +12,8 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -25,11 +25,13 @@ const (
 // Deps declares the runtime capabilities needed by inline batch execution.
 type Deps struct {
 	RequirePilot, RequireExtension toolguard.Check
-	Capture                        func() *capture.Capture
-	RecordAIAction                 func(string, string, map[string]any)
-	Interact                       func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
-	ReplayMu                       *sync.Mutex
-	Now                            func() time.Time
+	// WaitCommand blocks for an async step command to leave pending; nil
+	// reports every correlated step as an unavailable runtime.
+	WaitCommand    func(correlationID string, timeout time.Duration) (*queries.CommandResult, bool)
+	RecordAIAction func(string, string, map[string]any)
+	Interact       func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+	ReplayMu       *sync.Mutex
+	Now            func() time.Time
 }
 
 // Handler owns inline batch validation, serialization, and result aggregation.
@@ -131,11 +133,11 @@ func parseBatchActions(req mcp.JSONRPCRequest, steps []json.RawMessage) ([]strin
 	return actions, mcp.JSONRPCResponse{}, false
 }
 
-func classifyBatchCommand(store *capture.Capture, correlationID string, timeoutMs int) (string, string) {
-	if store == nil {
+func classifyBatchCommand(waitCommand func(string, time.Duration) (*queries.CommandResult, bool), correlationID string, timeoutMs int) (string, string) {
+	if waitCommand == nil {
 		return "error", "batch capture runtime unavailable"
 	}
-	command, found := store.Queries().WaitForCommand(correlationID, time.Duration(timeoutMs)*time.Millisecond)
+	command, found := waitCommand(correlationID, time.Duration(timeoutMs)*time.Millisecond)
 	if !found {
 		return "queued", ""
 	}
@@ -167,11 +169,7 @@ func (h *Handler) executeBatchSteps(req mcp.JSONRPCRequest, params batchParams, 
 		step := replay.StepResult{StepIndex: index, Action: actions[index], DurationMs: now().Sub(stepStarted).Milliseconds()}
 		if correlationID := replay.CorrelationID(response); correlationID != "" {
 			step.CorrelationID = correlationID
-			var store *capture.Capture
-			if h.deps.Capture != nil {
-				store = h.deps.Capture()
-			}
-			step.Status, step.Error = classifyBatchCommand(store, correlationID, params.StepTimeoutMs)
+			step.Status, step.Error = classifyBatchCommand(h.deps.WaitCommand, correlationID, params.StepTimeoutMs)
 		}
 		if act.IsErrorResponse(response) && step.Status == "" {
 			step.Status, step.Error = "error", replay.ErrorMessage(response)

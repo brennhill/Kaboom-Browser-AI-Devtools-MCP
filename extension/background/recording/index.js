@@ -92,6 +92,9 @@ async function queryOffscreenRecordingState() {
 }
 /** Rehydrate recording state after a SW restart, or clear stale persisted state. */
 async function rehydrateRecordingStateOnLoad() {
+    // A SW restart kills any in-flight gesture waiter, so a persisted pending
+    // intent is necessarily stale. This module is its only writer.
+    persist(removeLocal(StorageKey.PENDING_RECORDING), 'pending-recording-clear');
     try {
         const restored = await resolveRecordingRehydration({
             queryOffscreenRecordingState,

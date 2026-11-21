@@ -15,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -201,9 +202,9 @@ func (h *Handler) HandleDrawModeComplete(w http.ResponseWriter, r *http.Request)
 
 	// Complete the pending command — unblocks WaitForCommand in tools_async_completion.go.
 	// so the LLM can retrieve results via correlation_id.
-	if body.CorrelationID != "" && h.capture != nil {
+	if body.CorrelationID != "" && h.results != nil {
 		resultJSON, _ := json.Marshal(result)
-		h.capture.Queries().ApplyCommandResult(body.CorrelationID, "complete", resultJSON, "")
+		h.submitUploadResult(browsercommand.Result{CorrelationID: body.CorrelationID, Status: "complete", Payload: resultJSON})
 	}
 
 	// Auto-push annotations to AI client via push pipeline

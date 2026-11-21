@@ -42,7 +42,7 @@ test_paths:
   - cmd/browser-agent/composition_test.go
   - cmd/browser-agent/internal/toolpostprocess/postprocess_test.go
   - internal/mcp/errors_test.go
-  - internal/queries/dispatcher_test.go
+  - internal/browsercommand/internal/dispatch/dispatcher_test.go
   - tests/cli/runtime/cli-integration.test.cjs
   - tests/cli/runtime/config.test.cjs
   - tests/cli/runtime/doctor.test.cjs

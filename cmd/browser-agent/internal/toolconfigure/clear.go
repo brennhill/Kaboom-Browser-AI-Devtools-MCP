@@ -6,15 +6,15 @@ import (
 	"encoding/json"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/resetter"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
 
 // ClearTargets are the stores affected by configure(what="clear").
 type ClearTargets struct {
-	Capture     *capture.Capture
+	Telemetry   *telemetrystore.Store
 	Resetter    *resetter.Resetter
 	ClearLogs   func() int
 	Inbox       *push.PushInbox
@@ -59,13 +59,13 @@ func clearBuffer(targets ClearTargets, buffer string) (any, bool) {
 		}
 		return cleared, true
 	case "network":
-		counts := targets.Capture.Telemetry().ClearNetworkBuffers()
+		counts := targets.Telemetry.ClearNetworkBuffers()
 		return map[string]int{"waterfall": counts.NetworkWaterfall, "bodies": counts.NetworkBodies}, true
 	case "websocket":
-		counts := targets.Capture.Telemetry().WebSockets().Clear()
+		counts := targets.Telemetry.WebSockets().Clear()
 		return map[string]int{"events": counts.Events, "connections": counts.Connections}, true
 	case "actions":
-		return map[string]int{"actions": targets.Capture.Telemetry().Actions().Clear()}, true
+		return map[string]int{"actions": targets.Telemetry.Actions().Clear()}, true
 	case "logs":
 		return map[string]int{"logs": targets.ClearLogs()}, true
 	case "inbox":

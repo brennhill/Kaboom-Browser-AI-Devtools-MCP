@@ -2,13 +2,14 @@
 // Docs: docs/features/feature/query-service/index.md
 
 // dispatcher_test.go — Tests for QueryDispatcher init, pending queries, results, and waiting.
-package queries
+package dispatch
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,7 +25,7 @@ func TestQueryDispatcherArchitectureBoundaries(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(paths) > 10 {
-		t.Fatalf("queries package has %d Go files; maximum is 10", len(paths))
+		t.Fatalf("dispatch package has %d Go files; maximum is 10", len(paths))
 	}
 	var source strings.Builder
 	for _, path := range paths {
@@ -39,7 +40,7 @@ func TestQueryDispatcherArchitectureBoundaries(t *testing.T) {
 	}
 	for _, forbidden := range []string{"CompleteCommand(", "GetLastPendingQuery("} {
 		if strings.Contains(source.String(), forbidden) {
-			t.Errorf("queries retains compatibility surface %q", forbidden)
+			t.Errorf("dispatch retains compatibility surface %q", forbidden)
 		}
 	}
 }
@@ -66,8 +67,8 @@ func TestNewNewQueryDispatcher_Initialization(t *testing.T) {
 	if len(qd.queryResults) != 0 {
 		t.Errorf("queryResults len = %d, want 0", len(qd.queryResults))
 	}
-	if qd.queryTimeout != DefaultQueryTimeout {
-		t.Errorf("queryTimeout = %v, want %v", qd.queryTimeout, DefaultQueryTimeout)
+	if qd.queryTimeout != queries.DefaultQueryTimeout {
+		t.Errorf("queryTimeout = %v, want %v", qd.queryTimeout, queries.DefaultQueryTimeout)
 	}
 	if qd.activeCommands == nil {
 		t.Fatal("activeCommands should be initialized")
@@ -91,7 +92,7 @@ func TestQueuePositionAndDepthPreserveInsertionOrder(t *testing.T) {
 	dispatcher := NewQueryDispatcher()
 	defer dispatcher.Close()
 	for _, correlationID := range []string{"position-0", "position-1", "position-2"} {
-		if _, err := dispatcher.CreatePendingQuery(PendingQuery{
+		if _, err := createPending(dispatcher, queries.PendingQuery{
 			Type: "dom", Params: json.RawMessage(`{}`), CorrelationID: correlationID,
 		}); err != nil {
 			t.Fatalf("queue %s: %v", correlationID, err)
@@ -118,11 +119,11 @@ func TestNewQueryDispatcher_QueryIDsAreUniqueAcrossDaemonLifetimes(t *testing.T)
 	second := NewQueryDispatcher()
 	defer second.Close()
 
-	firstID, err := first.CreatePendingQuery(PendingQuery{Type: "screenshot"})
+	firstID, err := createPending(first, queries.PendingQuery{Type: "screenshot"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	secondID, err := second.CreatePendingQuery(PendingQuery{Type: "screenshot"})
+	secondID, err := createPending(second, queries.PendingQuery{Type: "screenshot"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,8 +158,8 @@ func TestNewQueryDispatcher_GetSnapshot_Empty(t *testing.T) {
 	if snap.QueryResultCount != 0 {
 		t.Errorf("QueryResultCount = %d, want 0", snap.QueryResultCount)
 	}
-	if snap.QueryTimeout != DefaultQueryTimeout {
-		t.Errorf("QueryTimeout = %v, want %v", snap.QueryTimeout, DefaultQueryTimeout)
+	if snap.QueryTimeout != queries.DefaultQueryTimeout {
+		t.Errorf("QueryTimeout = %v, want %v", snap.QueryTimeout, queries.DefaultQueryTimeout)
 	}
 }
 
@@ -168,8 +169,8 @@ func TestNewQueryDispatcher_GetSnapshot_WithPending(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
-	qd.CreatePendingQuery(PendingQuery{Type: "a11y", Params: json.RawMessage(`{}`)})
+	createPending(qd, queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
+	createPending(qd, queries.PendingQuery{Type: "a11y", Params: json.RawMessage(`{}`)})
 
 	snap := qd.GetSnapshot()
 	if snap.PendingQueryCount != 2 {
@@ -187,7 +188,7 @@ func TestNewQueryDispatcher_CreatePendingQuery(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	id, _ := qd.CreatePendingQuery(PendingQuery{
+	id, _ := createPending(qd, queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{"selector":"body"}`),
 	})
@@ -214,39 +215,13 @@ func TestNewQueryDispatcher_CreatePendingQuery(t *testing.T) {
 	}
 }
 
-func TestNewQueryDispatcher_CreatePendingQueryWithClient(t *testing.T) {
-	t.Parallel()
-
-	qd := NewQueryDispatcher()
-	defer qd.Close()
-
-	id, _ := qd.CreatePendingQueryWithClient(PendingQuery{
-		Type:   "a11y",
-		Params: json.RawMessage(`{}`),
-	}, "client-1")
-
-	if id == "" {
-		t.Fatal("CreatePendingQueryWithClient returned empty id")
-	}
-
-	clientPending := qd.GetPendingQueriesForClient("client-1")
-	if len(clientPending) != 1 {
-		t.Fatalf("client pending len = %d, want 1", len(clientPending))
-	}
-
-	otherClient := qd.GetPendingQueriesForClient("client-2")
-	if len(otherClient) != 0 {
-		t.Fatalf("other client pending len = %d, want 0", len(otherClient))
-	}
-}
-
 func TestNewQueryDispatcher_CreatePendingQueryWithTimeout(t *testing.T) {
 	t.Parallel()
 
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	id, _ := qd.CreatePendingQueryWithTimeout(PendingQuery{
+	id, _ := qd.CreatePendingQueryWithTimeout(queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{}`),
 		TabID:  42,
@@ -256,7 +231,7 @@ func TestNewQueryDispatcher_CreatePendingQueryWithTimeout(t *testing.T) {
 		t.Fatal("CreatePendingQueryWithTimeout returned empty id")
 	}
 
-	clientPending := qd.GetPendingQueriesForClient("client-x")
+	clientPending := qd.GetPendingQueries()
 	if len(clientPending) != 1 {
 		t.Fatalf("client pending len = %d, want 1", len(clientPending))
 	}
@@ -271,7 +246,7 @@ func TestNewQueryDispatcher_CreatePendingQuery_WithCorrelationID(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	qd.CreatePendingQuery(PendingQuery{
+	createPending(qd, queries.PendingQuery{
 		Type:          "execute_js",
 		Params:        json.RawMessage(`{"script":"document.title"}`),
 		CorrelationID: "corr-123",
@@ -296,8 +271,8 @@ func TestNewQueryDispatcher_CreatePendingQuery_QueueFull_RejectsNew(t *testing.T
 	defer qd.Close()
 
 	// Fill queue to max
-	for i := 0; i < MaxPendingQueries; i++ {
-		_, err := qd.CreatePendingQuery(PendingQuery{
+	for i := 0; i < queries.MaxPendingQueries; i++ {
+		_, err := createPending(qd, queries.PendingQuery{
 			Type:   "dom",
 			Params: json.RawMessage(`{}`),
 		})
@@ -306,19 +281,19 @@ func TestNewQueryDispatcher_CreatePendingQuery_QueueFull_RejectsNew(t *testing.T
 		}
 	}
 
-	// Next command should be rejected with ErrQueueFull
-	_, err := qd.CreatePendingQuery(PendingQuery{
+	// Next command should be rejected with queries.ErrQueueFull
+	_, err := createPending(qd, queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{}`),
 	})
-	if err != ErrQueueFull {
-		t.Fatalf("expected ErrQueueFull, got %v", err)
+	if err != queries.ErrQueueFull {
+		t.Fatalf("expected queries.ErrQueueFull, got %v", err)
 	}
 
 	// Queue should still be at max (no drops)
 	pending := qd.GetPendingQueries()
-	if len(pending) != MaxPendingQueries {
-		t.Fatalf("pending len = %d, want %d (max)", len(pending), MaxPendingQueries)
+	if len(pending) != queries.MaxPendingQueries {
+		t.Fatalf("pending len = %d, want %d (max)", len(pending), queries.MaxPendingQueries)
 	}
 }
 
@@ -342,7 +317,7 @@ func TestNewQueryDispatcher_CreatePendingQuery_ConcurrentCapacityIsBounded(t *te
 		go func(index int) {
 			ready.Done()
 			<-start
-			id, err := qd.CreatePendingQuery(PendingQuery{
+			id, err := createPending(qd, queries.PendingQuery{
 				Type:   "execute",
 				Params: json.RawMessage(fmt.Sprintf(`{"index":%d}`, index)),
 			})
@@ -352,7 +327,7 @@ func TestNewQueryDispatcher_CreatePendingQuery_ConcurrentCapacityIsBounded(t *te
 	ready.Wait()
 	close(start)
 
-	accepted := make(map[string]struct{}, MaxPendingQueries)
+	accepted := make(map[string]struct{}, queries.MaxPendingQueries)
 	rejected := 0
 	for i := 0; i < attempts; i++ {
 		result := <-outcomes
@@ -362,21 +337,21 @@ func TestNewQueryDispatcher_CreatePendingQuery_ConcurrentCapacityIsBounded(t *te
 				t.Fatal("accepted concurrent query returned an empty ID")
 			}
 			accepted[result.id] = struct{}{}
-		case ErrQueueFull:
+		case queries.ErrQueueFull:
 			rejected++
 		default:
-			t.Fatalf("CreatePendingQuery error = %v, want nil or ErrQueueFull", result.err)
+			t.Fatalf("CreatePendingQuery error = %v, want nil or queries.ErrQueueFull", result.err)
 		}
 	}
 
-	if len(accepted) != MaxPendingQueries {
-		t.Fatalf("accepted unique IDs = %d, want queue capacity %d", len(accepted), MaxPendingQueries)
+	if len(accepted) != queries.MaxPendingQueries {
+		t.Fatalf("accepted unique IDs = %d, want queue capacity %d", len(accepted), queries.MaxPendingQueries)
 	}
-	if rejected != attempts-MaxPendingQueries {
-		t.Fatalf("rejected = %d, want %d", rejected, attempts-MaxPendingQueries)
+	if rejected != attempts-queries.MaxPendingQueries {
+		t.Fatalf("rejected = %d, want %d", rejected, attempts-queries.MaxPendingQueries)
 	}
-	if pending := qd.GetPendingQueries(); len(pending) != MaxPendingQueries {
-		t.Fatalf("pending len = %d, want bounded capacity %d", len(pending), MaxPendingQueries)
+	if pending := qd.GetPendingQueries(); len(pending) != queries.MaxPendingQueries {
+		t.Fatalf("pending len = %d, want bounded capacity %d", len(pending), queries.MaxPendingQueries)
 	}
 }
 
@@ -387,8 +362,8 @@ func TestNewQueryDispatcher_CreatePendingQuery_QueueFull_FailsCorrelatedCommand(
 	defer qd.Close()
 
 	// Fill queue to max with correlated commands
-	for i := 0; i < MaxPendingQueries; i++ {
-		_, err := qd.CreatePendingQuery(PendingQuery{
+	for i := 0; i < queries.MaxPendingQueries; i++ {
+		_, err := createPending(qd, queries.PendingQuery{
 			Type:          "dom",
 			Params:        json.RawMessage(`{}`),
 			CorrelationID: fmt.Sprintf("corr-%d", i),
@@ -408,13 +383,13 @@ func TestNewQueryDispatcher_CreatePendingQuery_QueueFull_FailsCorrelatedCommand(
 	}
 
 	// Add one more with correlation ID — should be rejected and immediately failed
-	_, err := qd.CreatePendingQuery(PendingQuery{
+	_, err := createPending(qd, queries.PendingQuery{
 		Type:          "dom",
 		Params:        json.RawMessage(`{}`),
 		CorrelationID: "corr-rejected",
 	})
-	if err != ErrQueueFull {
-		t.Fatalf("expected ErrQueueFull, got %v", err)
+	if err != queries.ErrQueueFull {
+		t.Fatalf("expected queries.ErrQueueFull, got %v", err)
 	}
 
 	// The rejected command should be registered and immediately failed
@@ -447,7 +422,7 @@ func TestNewQueryDispatcher_UniqueIDs(t *testing.T) {
 
 	ids := make(map[string]bool)
 	for i := 0; i < 10; i++ {
-		id, _ := qd.CreatePendingQuery(PendingQuery{
+		id, _ := createPending(qd, queries.PendingQuery{
 			Type:   "dom",
 			Params: json.RawMessage(`{}`),
 		})
@@ -468,15 +443,15 @@ func TestNewQueryDispatcher_SetAndGetResult(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	id, _ := qd.CreatePendingQuery(PendingQuery{
+	id, _ := createPending(qd, queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{"selector":"body"}`),
 	})
 
 	resultData := json.RawMessage(`{"html":"<body>test</body>"}`)
-	qd.SetQueryResult(id, resultData)
+	qd.SetQueryResultWithClient(id, resultData, "")
 
-	got, found := qd.TakeQueryResult(id)
+	got, found := takeResult(qd, id)
 	if !found {
 		t.Fatal("TakeQueryResult returned false, want true")
 	}
@@ -485,7 +460,7 @@ func TestNewQueryDispatcher_SetAndGetResult(t *testing.T) {
 	}
 
 	// Second get should return not found (one-time use)
-	_, found2 := qd.TakeQueryResult(id)
+	_, found2 := takeResult(qd, id)
 	if found2 {
 		t.Error("second TakeQueryResult should return false (one-time use)")
 	}
@@ -497,38 +472,13 @@ func TestNewQueryDispatcher_SetResultRemovesFromPending(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	id, _ := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
+	id, _ := createPending(qd, queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
 
-	qd.SetQueryResult(id, json.RawMessage(`{"ok":true}`))
+	qd.SetQueryResultWithClient(id, json.RawMessage(`{"ok":true}`), "")
 
 	pending := qd.GetPendingQueries()
 	if len(pending) != 0 {
 		t.Errorf("pending queries after SetQueryResult = %d, want 0", len(pending))
-	}
-}
-
-func TestNewQueryDispatcher_GetResultForClient_Isolation(t *testing.T) {
-	t.Parallel()
-
-	qd := NewQueryDispatcher()
-	defer qd.Close()
-
-	id, _ := qd.CreatePendingQueryWithClient(PendingQuery{
-		Type:   "dom",
-		Params: json.RawMessage(`{}`),
-	}, "client-A")
-	qd.SetQueryResultWithClient(id, json.RawMessage(`{"found":true}`), "client-A")
-
-	// Client B should NOT get Client A's result
-	_, foundB := qd.TakeQueryResultForClient(id, "client-B")
-	if foundB {
-		t.Error("client-B should not be able to access client-A's result")
-	}
-
-	// Client A should get it
-	_, foundA := qd.TakeQueryResultForClient(id, "client-A")
-	if !foundA {
-		t.Error("client-A should be able to access its own result")
 	}
 }
 
@@ -538,7 +488,7 @@ func TestNewQueryDispatcher_GetResult_NotFound(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	_, found := qd.TakeQueryResult("nonexistent")
+	_, found := takeResult(qd, "nonexistent")
 	if found {
 		t.Error("TakeQueryResult for nonexistent id should return false")
 	}
@@ -554,10 +504,10 @@ func TestNewQueryDispatcher_WaitForResult_Immediate(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	id, _ := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
-	qd.SetQueryResult(id, json.RawMessage(`{"immediate":true}`))
+	id, _ := createPending(qd, queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
+	qd.SetQueryResultWithClient(id, json.RawMessage(`{"immediate":true}`), "")
 
-	result, err := qd.WaitForResult(id, 1*time.Second)
+	result, err := qd.WaitForResultContext(context.Background(), id, 1*time.Second)
 	if err != nil {
 		t.Fatalf("WaitForResult error = %v", err)
 	}
@@ -572,9 +522,9 @@ func TestNewQueryDispatcher_WaitForResult_Timeout(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	id, _ := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
+	id, _ := createPending(qd, queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
 
-	_, err := qd.WaitForResult(id, 50*time.Millisecond)
+	_, err := qd.WaitForResultContext(context.Background(), id, 50*time.Millisecond)
 	if err == nil {
 		t.Fatal("WaitForResult should timeout")
 	}
@@ -586,7 +536,7 @@ func TestNewQueryDispatcher_WaitForResult_Timeout(t *testing.T) {
 func TestQueryDispatcherWaitForResultContextStopsOnCancellation(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
-	id, err := qd.CreatePendingQuery(PendingQuery{Type: "environment_transaction_snapshot"})
+	id, err := createPending(qd, queries.PendingQuery{Type: "environment_transaction_snapshot"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -608,11 +558,11 @@ func TestNewQueryDispatcher_WaitForResult_Async(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	id, _ := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
+	id, _ := createPending(qd, queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
 
-	go qd.SetQueryResult(id, json.RawMessage(`{"async":true}`))
+	go qd.SetQueryResultWithClient(id, json.RawMessage(`{"async":true}`), "")
 
-	result, err := qd.WaitForResult(id, 2*time.Second)
+	result, err := qd.WaitForResultContext(context.Background(), id, 2*time.Second)
 	if err != nil {
 		t.Fatalf("WaitForResult error = %v", err)
 	}
@@ -645,7 +595,7 @@ func TestNewQueryDispatcher_WaitForPendingQueries_WakesAllWaiters(t *testing.T) 
 		}()
 	}
 
-	if _, err := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)}); err != nil {
+	if _, err := createPending(qd, queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)}); err != nil {
 		t.Fatalf("CreatePendingQuery error = %v", err)
 	}
 
@@ -664,7 +614,7 @@ func TestNewQueryDispatcher_WaitForPendingQueries_ImmediateWhenNonEmpty(t *testi
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	if _, err := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)}); err != nil {
+	if _, err := createPending(qd, queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)}); err != nil {
 		t.Fatalf("CreatePendingQuery error = %v", err)
 	}
 
@@ -676,24 +626,8 @@ func TestNewQueryDispatcher_WaitForPendingQueries_ImmediateWhenNonEmpty(t *testi
 }
 
 // ============================================
-// SetQueryTimeout / GetQueryTimeout Tests
+// Lifecycle Tests
 // ============================================
-
-func TestNewQueryDispatcher_SetGetQueryTimeout(t *testing.T) {
-	t.Parallel()
-
-	qd := NewQueryDispatcher()
-	defer qd.Close()
-
-	if got := qd.GetQueryTimeout(); got != DefaultQueryTimeout {
-		t.Errorf("default timeout = %v, want %v", got, DefaultQueryTimeout)
-	}
-
-	qd.SetQueryTimeout(10 * time.Second)
-	if got := qd.GetQueryTimeout(); got != 10*time.Second {
-		t.Errorf("timeout after set = %v, want 10s", got)
-	}
-}
 
 func TestQueryDispatcherCloseWaitsForCleanupAndIsConcurrentSafe(t *testing.T) {
 	t.Parallel()
@@ -723,7 +657,18 @@ func TestQueryDispatcherCloseWaitsForCleanupAndIsConcurrentSafe(t *testing.T) {
 
 func TestQueryResultTTLSupportsMultiStepAgents(t *testing.T) {
 	t.Parallel()
-	if QueryResultTTL != 5*time.Minute {
-		t.Fatalf("QueryResultTTL = %v, want 5m", QueryResultTTL)
+	if queries.QueryResultTTL != 5*time.Minute {
+		t.Fatalf("queries.QueryResultTTL = %v, want 5m", queries.QueryResultTTL)
 	}
+}
+
+// createPending queues a query with the default timeout and no client scope.
+func createPending(qd *QueryDispatcher, query queries.PendingQuery) (string, error) {
+	return qd.CreatePendingQueryWithTimeout(query, queries.DefaultQueryTimeout, "")
+}
+
+// takeResult consumes a stored result without waiting.
+func takeResult(qd *QueryDispatcher, id string) (json.RawMessage, bool) {
+	result, err := qd.WaitForResultContext(context.Background(), id, 0)
+	return result, err == nil
 }

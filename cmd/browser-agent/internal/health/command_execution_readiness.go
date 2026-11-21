@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -20,28 +20,28 @@ const (
 	commandPendingStallFailAge  = 2 * time.Minute
 )
 
-func BuildCommandExecutionInfo(cap *capture.Capture) CommandExecutionInfo {
-	return BuildCommandExecutionInfoAt(cap, time.Now())
+func BuildCommandExecutionInfo(owners healthreader.Owners) CommandExecutionInfo {
+	return BuildCommandExecutionInfoAt(owners, time.Now())
 }
 
-func BuildCommandExecutionInfoAt(cap *capture.Capture, now time.Time) CommandExecutionInfo {
+func BuildCommandExecutionInfoAt(owners healthreader.Owners, now time.Time) CommandExecutionInfo {
 	info := CommandExecutionInfo{
 		Ready:         true,
 		Status:        "pass",
 		WindowSeconds: int(commandExecutionWindow.Seconds()),
 	}
-	if cap == nil {
+	if !owners.Available() {
 		info.Ready = false
 		info.Status = "fail"
 		info.Detail = "Capture not initialized"
 		return info
 	}
 
-	pending := cap.Queries().GetPendingCommands()
-	failed := cap.Queries().GetFailedCommands()
-	completed := cap.Queries().GetCompletedCommands()
+	pending := owners.Commands.PendingCommands()
+	failed := owners.Commands.FailedCommands()
+	completed := owners.Commands.CompletedCommands()
 
-	info.QueueDepth = cap.Queries().QueueDepth()
+	info.QueueDepth = owners.Commands.QueueDepth()
 	info.PendingCount = len(pending)
 	info.OldestPendingAgeMs = oldestPendingAgeMs(pending, now)
 

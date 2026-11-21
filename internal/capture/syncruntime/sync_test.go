@@ -5,11 +5,13 @@ package syncruntime
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
@@ -157,7 +159,7 @@ func TestHandleSync_RejectsStaleCommandResultWithoutCompletingCurrentWork(t *tes
 	runSyncRequest(t, cap, SyncRequest{ExtSessionID: "session-current"})
 
 	correlationID := "corr-current-generation"
-	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, _ := cap.Commands().Enqueue(queries.PendingQuery{
 		Type:          "browser_action",
 		Params:        json.RawMessage(`{"action":"highlight"}`),
 		CorrelationID: correlationID,
@@ -176,7 +178,7 @@ func TestHandleSync_RejectsStaleCommandResultWithoutCompletingCurrentWork(t *tes
 	if stale.Code != http.StatusConflict {
 		t.Fatalf("stale result status = %d, want 409", stale.Code)
 	}
-	result, found := cap.Queries().GetCommandResult(correlationID)
+	result, found := cap.Commands().Command(correlationID)
 	if !found || result.Status != "pending" {
 		t.Fatalf("current command result = %#v, found=%v; want pending", result, found)
 	}
@@ -192,7 +194,7 @@ func TestHandleSync_RejectsStaleResultInsideCurrentHeartbeat(t *testing.T) {
 	currentGeneration := decodeSyncResponse(t, current).ConnectionGeneration
 
 	correlationID := "corr-stale-result-current-heartbeat"
-	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, _ := cap.Commands().Enqueue(queries.PendingQuery{
 		Type:          "browser_action",
 		Params:        json.RawMessage(`{"action":"highlight"}`),
 		CorrelationID: correlationID,
@@ -212,7 +214,7 @@ func TestHandleSync_RejectsStaleResultInsideCurrentHeartbeat(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("current heartbeat status = %d, want 200", response.Code)
 	}
-	result, found := cap.Queries().GetCommandResult(correlationID)
+	result, found := cap.Commands().Command(correlationID)
 	if !found || result.Status != "pending" {
 		t.Fatalf("current command result = %#v, found=%v; want pending", result, found)
 	}
@@ -397,9 +399,11 @@ func TestHandleSync_StoresInProgressHeartbeat(t *testing.T) {
 func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) {
 	t.Parallel()
 	cap := newTestState()
+	clock := newManualClock(time.Now())
+	cap.clock = clock.Now
 
 	corrID := "corr-missing-heartbeat"
-	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, _ := cap.Commands().Enqueue(queries.PendingQuery{
 		Type:          "browser_action",
 		Params:        json.RawMessage(`{"action":"navigate","url":"https://example.com"}`),
 		CorrelationID: corrID,
@@ -426,7 +430,7 @@ func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) 
 		t.Fatalf("second sync status = %d, want 200", secondResp.Code)
 	}
 
-	cmd, found := cap.Queries().GetCommandResult(corrID)
+	cmd, found := cap.Commands().Command(corrID)
 	if !found {
 		t.Fatal("expected command result after second sync")
 	}
@@ -435,9 +439,7 @@ func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) 
 	}
 
 	// Move the deterministic reconciliation clock beyond the bounded grace.
-	mutateExtensionStateForTest(cap.Extension(), func(state *runtimeState) {
-		state.missingInProgressSince[corrID] = time.Now().Add(-missingInProgressGrace)
-	})
+	clock.Advance(browsercommand.MissingProgressGrace)
 
 	// Third sync still has no in_progress entry after the grace -> fail fast.
 	thirdReqBody := mustMarshalJSON(t, map[string]any{
@@ -449,7 +451,7 @@ func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) 
 		t.Fatalf("third sync status = %d, want 200", thirdResp.Code)
 	}
 
-	cmd, found = cap.Queries().GetCommandResult(corrID)
+	cmd, found = cap.Commands().Command(corrID)
 	if !found {
 		t.Fatal("expected command result after desync reconciliation")
 	}
@@ -466,7 +468,7 @@ func TestHandleSync_ImmediateMissingHeartbeatsDoNotFailResultInFlight(t *testing
 	cap := newTestState()
 
 	corrID := "corr-result-in-flight"
-	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, _ := cap.Commands().Enqueue(queries.PendingQuery{
 		Type:          "browser_action",
 		Params:        json.RawMessage(`{"action":"highlight","selector":"#target"}`),
 		CorrelationID: corrID,
@@ -488,7 +490,7 @@ func TestHandleSync_ImmediateMissingHeartbeatsDoNotFailResultInFlight(t *testing
 		}
 	}
 
-	cmd, found := cap.Queries().GetCommandResult(corrID)
+	cmd, found := cap.Commands().Command(corrID)
 	if !found {
 		t.Fatal("expected command result after immediate partial heartbeats")
 	}
@@ -511,7 +513,7 @@ func TestHandleSync_ImmediateMissingHeartbeatsDoNotFailResultInFlight(t *testing
 		t.Fatalf("terminal result status = %d, want 200", terminalResponse.Code)
 	}
 
-	cmd, found = cap.Queries().GetCommandResult(corrID)
+	cmd, found = cap.Commands().Command(corrID)
 	if !found || cmd.Status != "complete" {
 		t.Fatalf("terminal command = %#v, found=%v; want complete", cmd, found)
 	}
@@ -593,7 +595,7 @@ func TestHandleSync_ProbeClientNeverBecomesTheAuthoritativeSession(t *testing.T)
 		t.Fatalf("expected the real extension to own tracking, got %#v", before)
 	}
 
-	cap.Queries().CreatePendingQuery(queries.PendingQuery{Type: "query_dom", Params: []byte(`{"selector":".x"}`)})
+	commandtest.Enqueue(cap.Commands(), queries.PendingQuery{Type: "query_dom", Params: []byte(`{"selector":".x"}`)})
 
 	w := runSyncRequestAsClient(t, cap, "kaboom-probe/0.9.0", SyncRequest{
 		ExtSessionID: "pilot-success-js",
@@ -620,7 +622,7 @@ func TestHandleSync_ProbeClientNeverBecomesTheAuthoritativeSession(t *testing.T)
 	if !after.trackingEnabled || after.trackedTabID != 41 {
 		t.Errorf("probe erased tracking: trackingEnabled=%v trackedTabID=%d", after.trackingEnabled, after.trackedTabID)
 	}
-	if pending := cap.Queries().GetPendingQueries(); len(pending) != 1 {
+	if pending := cap.Commands().Pending(); len(pending) != 1 {
 		t.Errorf("pending queries = %d, want the command still queued for the extension", len(pending))
 	}
 }

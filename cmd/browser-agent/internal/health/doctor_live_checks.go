@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/commandcontract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -68,8 +67,8 @@ type DoctorTransition struct {
 }
 
 // HandleDoctorHTTP serves the /doctor HTTP endpoint with JSON readiness checks.
-func HandleDoctorHTTP(w http.ResponseWriter, cap *capture.Capture, ver string, extraChecks ...DoctorCheck) {
-	report := buildDoctorReport(append(RunDoctorChecks(cap), extraChecks...))
+func HandleDoctorHTTP(w http.ResponseWriter, owners healthreader.Owners, ver string, extraChecks ...DoctorCheck) {
+	report := buildDoctorReport(append(RunDoctorChecks(owners), extraChecks...))
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
@@ -104,7 +103,7 @@ func buildDoctorReport(checks []DoctorCheck) doctorReport {
 // assembled from, keeping HandleDoctorMCP within the six-parameter budget.
 type DoctorMCPDeps struct {
 	Metrics        *Metrics
-	Capture        *capture.Capture
+	Owners         healthreader.Owners
 	Alerts         *alertbuf.AlertBuffer
 	DiagnosticHint func() string
 	ExtraChecks    []DoctorCheck
@@ -112,7 +111,7 @@ type DoctorMCPDeps struct {
 
 // HandleDoctorMCP serves configure Doctor from the same readiness model as HTTP.
 func HandleDoctorMCP(deps DoctorMCPDeps, req mcp.JSONRPCRequest, version string) mcp.JSONRPCResponse {
-	checks := append(RunDoctorChecks(deps.Capture), BuildResourcePressureChecks(deps.Capture, deps.Alerts)...)
+	checks := append(RunDoctorChecks(deps.Owners), BuildResourcePressureChecks(deps.Owners, deps.Alerts)...)
 	checks = append(checks, deps.ExtraChecks...)
 	if deps.Metrics != nil {
 		checks = append(checks, DoctorCheck{Name: "server_uptime", Status: "pass", Detail: fmt.Sprintf("Server running for %s (version %s)", deps.Metrics.GetUptime().Round(time.Second), version)})
@@ -129,34 +128,34 @@ func HandleDoctorMCP(deps DoctorMCPDeps, req mcp.JSONRPCRequest, version string)
 }
 
 // RunDoctorChecks runs all live diagnostic checks against the capture instance.
-func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
-	return runDoctorChecks(cap, defaultDoctorCommandRuntime())
+func RunDoctorChecks(owners healthreader.Owners) []DoctorCheck {
+	return runDoctorChecks(owners, defaultDoctorCommandRuntime())
 }
 
 // runDoctorChecks assembles every live check in fixed order: extension
 // connectivity, command contract, pilot, tracked tab, circuit breaker, command
 // queue, command execution, AI auth, state recovery, and diagnostics lifecycle.
-func runDoctorChecks(cap *capture.Capture, runtime doctorCommandRuntime) []DoctorCheck {
-	snap := healthreader.New(cap).Snapshot()
+func runDoctorChecks(owners healthreader.Owners, runtime doctorCommandRuntime) []DoctorCheck {
+	snap := healthreader.New(owners).Snapshot()
 	checks := make([]DoctorCheck, 0, 12)
-	checks = append(checks, extensionConnectivityCheck(cap, snap))
-	checks = append(checks, commandContractCheck(cap)...)
-	checks = append(checks, pilotEnabledCheck(cap))
-	checks = append(checks, trackedTabCheck(cap))
+	checks = append(checks, extensionConnectivityCheck(owners, snap))
+	checks = append(checks, commandContractCheck(owners)...)
+	checks = append(checks, pilotEnabledCheck(owners))
+	checks = append(checks, trackedTabCheck(owners))
 	checks = append(checks, circuitBreakerCheck(snap))
-	checks = append(checks, commandQueueCheck(cap))
-	checks = append(checks, commandExecutionDoctorCheck(cap))
+	checks = append(checks, commandQueueCheck(owners))
+	checks = append(checks, commandExecutionDoctorCheck(owners))
 	checks = append(checks, runAIAuthDoctorCheck(runtime, "claude"), runAIAuthDoctorCheck(runtime, "codex"))
-	checks = append(checks, extensionStateRecoveryChecks(cap)...)
-	if diagnosticCheck, ok := extensionDiagnosticLifecycleCheck(cap); ok {
+	checks = append(checks, extensionStateRecoveryChecks(owners)...)
+	if diagnosticCheck, ok := extensionDiagnosticLifecycleCheck(owners); ok {
 		checks = append(checks, diagnosticCheck)
 	}
 	return checks
 }
 
 // extensionConnectivityCheck reports whether the extension sync channel is live.
-func extensionConnectivityCheck(cap *capture.Capture, snap healthreader.Snapshot) DoctorCheck {
-	if cap.Extension().IsExtensionConnected() {
+func extensionConnectivityCheck(owners healthreader.Owners, snap healthreader.Snapshot) DoctorCheck {
+	if owners.Extension.IsExtensionConnected() {
 		lastSeen := "unknown"
 		if !snap.LastPollTime.IsZero() {
 			lastSeen = fmt.Sprintf("%.1fs ago", time.Since(snap.LastPollTime).Seconds())
@@ -178,11 +177,11 @@ func extensionConnectivityCheck(cap *capture.Capture, snap healthreader.Snapshot
 // between version bumps; the generated command registry identity prevents those
 // builds from silently losing or misrouting extension commands. It emits no
 // check while the extension is disconnected.
-func commandContractCheck(cap *capture.Capture) []DoctorCheck {
-	if !cap.Extension().IsExtensionConnected() {
+func commandContractCheck(owners healthreader.Owners) []DoctorCheck {
+	if !owners.Extension.IsExtensionConnected() {
 		return nil
 	}
-	if cap.Extension().CommandContractID() == commandcontract.ID {
+	if owners.Extension.CommandContractID() == commandcontract.ID {
 		return []DoctorCheck{{
 			Name: "command_contract", Status: "pass", Detail: "Daemon and extension command contracts match",
 		}}
@@ -195,9 +194,9 @@ func commandContractCheck(cap *capture.Capture) []DoctorCheck {
 }
 
 // pilotEnabledCheck reports AI Web Pilot availability from the extension's view.
-func pilotEnabledCheck(cap *capture.Capture) DoctorCheck {
+func pilotEnabledCheck(owners healthreader.Owners) DoctorCheck {
 	pilotState := ""
-	if status, ok := cap.Extension().GetPilotStatus().(map[string]any); ok {
+	if status, ok := owners.Extension.GetPilotStatus().(map[string]any); ok {
 		pilotState, _ = status["state"].(string)
 	}
 	switch pilotState {
@@ -214,7 +213,7 @@ func pilotEnabledCheck(cap *capture.Capture) DoctorCheck {
 			Fix:    "Open the extension once to confirm pilot settings, then rerun doctor",
 		}
 	}
-	if cap.Extension().IsPilotActionAllowed() {
+	if owners.Extension.IsPilotActionAllowed() {
 		return DoctorCheck{Name: "pilot_enabled", Status: "pass", Detail: "AI Web Pilot is enabled"}
 	}
 	return DoctorCheck{
@@ -225,8 +224,8 @@ func pilotEnabledCheck(cap *capture.Capture) DoctorCheck {
 }
 
 // trackedTabCheck reports whether a browser tab is actively tracked.
-func trackedTabCheck(cap *capture.Capture) DoctorCheck {
-	tracking, tabID, tabURL := cap.Extension().GetTrackingStatus()
+func trackedTabCheck(owners healthreader.Owners) DoctorCheck {
+	tracking, tabID, tabURL := owners.Extension.GetTrackingStatus()
 	if tracking && tabID != 0 {
 		return DoctorCheck{
 			Name: "tracked_tab", Status: "pass",
@@ -253,8 +252,8 @@ func circuitBreakerCheck(snap healthreader.Snapshot) DoctorCheck {
 }
 
 // commandQueueCheck reports pending command-queue depth.
-func commandQueueCheck(cap *capture.Capture) DoctorCheck {
-	queueDepth := cap.Queries().QueueDepth()
+func commandQueueCheck(owners healthreader.Owners) DoctorCheck {
+	queueDepth := owners.Commands.QueueDepth()
 	if queueDepth < 5 {
 		detail := "Command queue empty"
 		if queueDepth > 0 {
@@ -270,8 +269,8 @@ func commandQueueCheck(cap *capture.Capture) DoctorCheck {
 }
 
 // commandExecutionDoctorCheck surfaces command execution reliability as a check.
-func commandExecutionDoctorCheck(cap *capture.Capture) DoctorCheck {
-	cmdExec := BuildCommandExecutionInfo(cap)
+func commandExecutionDoctorCheck(owners healthreader.Owners) DoctorCheck {
+	cmdExec := BuildCommandExecutionInfo(owners)
 	check := DoctorCheck{
 		Name:   "command_execution",
 		Status: cmdExec.Status,
@@ -302,12 +301,12 @@ func newExtensionDiagnosticState() *extensionDiagnosticState {
 	return &extensionDiagnosticState{events: make([]string, 0, 5)}
 }
 
-func extensionDiagnosticLifecycleCheck(cap *capture.Capture) (DoctorCheck, bool) {
-	if cap == nil {
+func extensionDiagnosticLifecycleCheck(owners healthreader.Owners) (DoctorCheck, bool) {
+	if !owners.Available() {
 		return DoctorCheck{}, false
 	}
 	state := newExtensionDiagnosticState()
-	for _, entry := range cap.ExtensionLogs().Entries() {
+	for _, entry := range owners.ExtensionLogs.Entries() {
 		state.observeEntry(entry)
 	}
 	return state.doctorCheck()
@@ -384,12 +383,12 @@ type stateRecoveryLogData struct {
 	RecoveryOutcome        string `json:"recovery_outcome"`
 }
 
-func extensionStateRecoveryChecks(cap *capture.Capture) []DoctorCheck {
-	if cap == nil {
+func extensionStateRecoveryChecks(owners healthreader.Owners) []DoctorCheck {
+	if !owners.Available() {
 		return nil
 	}
 	byName := make(map[string]DoctorCheck)
-	for _, entry := range cap.ExtensionLogs().Entries() {
+	for _, entry := range owners.ExtensionLogs.Entries() {
 		recovery, ok := parseStateRecoveryEntry(entry)
 		if !ok {
 			continue

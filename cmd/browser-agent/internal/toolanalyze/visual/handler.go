@@ -5,11 +5,13 @@
 package visual
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -18,7 +20,8 @@ import (
 )
 
 type Deps interface {
-	CaptureScreenshot(req mcp.JSONRPCRequest) mcp.JSONRPCResponse
+	CaptureScreenshot(ctx context.Context) (screenshot.Result, error)
+	ScreenshotFailure(req mcp.JSONRPCRequest, err error) mcp.JSONRPCResponse
 	GetTrackingStatus() (bool, int, string)
 	HasSessionStore() bool
 	HandleSessionStore(args persistence.SessionStoreArgs) (json.RawMessage, error)
@@ -30,12 +33,12 @@ func SaveBaseline(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSON
 		return mcp.Fail(req, mcp.ErrMissingParam, err.Error(), "Add the 'name' parameter for the baseline", mcp.WithParam("name"))
 	}
 
-	screenshotResp := d.CaptureScreenshot(req)
-	if responseIsError(screenshotResp) {
-		return screenshotResp
+	shot, captureErr := d.CaptureScreenshot(context.Background())
+	if captureErr != nil {
+		return d.ScreenshotFailure(req, captureErr)
 	}
 
-	screenshotPath := extractScreenshotPath(screenshotResp)
+	screenshotPath := shot.Path()
 	if screenshotPath == "" {
 		return mcp.Fail(req, mcp.ErrExtError, "Screenshot captured but path not available", "Try again or check extension connection")
 	}
@@ -102,12 +105,12 @@ func DiffBaseline(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSON
 		return mcp.Fail(req, mcp.ErrInvalidJSON, "Failed to parse baseline metadata: "+err.Error(), "Re-save the baseline")
 	}
 
-	screenshotResp := d.CaptureScreenshot(req)
-	if responseIsError(screenshotResp) {
-		return screenshotResp
+	shot, captureErr := d.CaptureScreenshot(context.Background())
+	if captureErr != nil {
+		return d.ScreenshotFailure(req, captureErr)
 	}
 
-	currentPath := extractScreenshotPath(screenshotResp)
+	currentPath := shot.Path()
 	if currentPath == "" {
 		return mcp.Fail(req, mcp.ErrExtError, "Current screenshot path not available", "Try again")
 	}
@@ -179,40 +182,4 @@ func ListBaselines(d Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRP
 		listData = map[string]any{"raw": string(listResult)}
 	}
 	return mcp.Succeed(req, "Visual baselines", listData)
-}
-
-// extractScreenshotPath extracts the file path from a screenshot response.
-func extractScreenshotPath(resp mcp.JSONRPCResponse) string {
-	var result mcp.MCPToolResult
-	if err := json.Unmarshal(resp.Result, &result); err != nil || len(result.Content) == 0 {
-		return ""
-	}
-	text := result.Content[0].Text
-
-	idx := 0
-	for i, ch := range text {
-		if ch == '{' {
-			idx = i
-			break
-		}
-	}
-
-	var data map[string]any
-	if err := json.Unmarshal([]byte(text[idx:]), &data); err != nil {
-		return ""
-	}
-	if p, ok := data["path"].(string); ok && p != "" {
-		return p
-	}
-	if filename, ok := data["filename"].(string); ok && filename != "" {
-		if dir, err := state.ScreenshotsDir(); err == nil {
-			return filepath.Join(dir, filename)
-		}
-	}
-	return ""
-}
-
-func responseIsError(resp mcp.JSONRPCResponse) bool {
-	var result mcp.MCPToolResult
-	return json.Unmarshal(resp.Result, &result) != nil || result.IsError
 }

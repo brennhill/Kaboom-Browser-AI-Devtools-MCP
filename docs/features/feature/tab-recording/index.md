@@ -4,7 +4,7 @@ feature_id: feature-tab-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
   - internal/schema/interact/actions.go
@@ -51,6 +51,13 @@ code_paths:
   - extension/manifest.json
   - extension/popup.html
   - extension/popup.css
+  - internal/recording/manager.go
+  - internal/recording/manager_store.go
+  - internal/capture/capture.go
+  - cmd/browser-agent/internal/toolrecording/handler.go
+  - src/popup/recording/action-recording.ts
+  - src/popup/recording/recording-io.ts
+  - src/background/recording/listeners.ts
 test_paths:
   - cmd/browser-agent/internal/screenrec/state_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
@@ -71,6 +78,7 @@ test_paths:
   - tests/extension/recording-lifecycle/recording-rehydration.test.js
   - tests/extension/recording-lifecycle/recording-fixture.js
   - tests/extension/recording-lifecycle/recording.test.js
+  - tests/extension/contracts/background-boundaries.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -83,6 +91,49 @@ last_verified_date: 2026-03-05
 - Tool: interact, observe
 - Mode/Action: screen_recording_start, screen_recording_stop, saved_videos, toggle_action_sequence_recording
 - Location: `docs/features/feature/tab-recording`
+
+## Recording Ownership
+
+Kaboom has three recording kinds. Each has exactly one owner, and no owner
+reads or writes another kind's state directly. This section is the canonical
+ownership reference; the [flow-recording index](../flow-recording/index.md#recording-ownership)
+links here.
+
+| Kind | Source of truth | Starts | Restores | Stops | Persists |
+| --- | --- | --- | --- | --- | --- |
+| Event recording (`configure` `event_recording_start` / `event_recording_stop`) | Go `RecordingManager` (`internal/recording/manager.go`), held by `Capture` and exposed only through `Capture.Recordings()` (`internal/capture/capture.go`) | `toolrecording.Handler.EventRecordingStart` (`cmd/browser-agent/internal/toolrecording/handler.go`); the popup action-recording row calls the same daemon API | Not restored. The active recording lives in memory only, so a daemon restart drops it. Saved recordings are listed from disk (`manager_store.go`) | `toolrecording.Handler.EventRecordingStop` | `persistRecordingToDisk` on stop (`manager_store.go`); quota in `manager_storage.go` |
+| Live screen recording (`interact` `screen_recording_start` / `screen_recording_stop`, aliases `record_start` / `record_stop`; popup, keyboard, context menu, hover launcher) | Offscreen `MediaRecorder` (`src/offscreen/recording-worker.ts`). The background mirrors it in memory and in `kaboom_recording` | `startRecording` in `src/background/recording/index.ts`. Every entry point goes through it; the MCP path waits for the popup gesture (`capture.ts`) | `rehydrateRecordingStateOnLoad` (`index.ts`) asks the offscreen document via `rehydration.ts`. With no live recorder it clears `kaboom_recording`; it always clears `kaboom_pending_recording` | `stopRecording` in `index.ts`, which stops the offscreen recorder | The offscreen worker POSTs the WebM blob to daemon `/recordings/save` |
+| Saved video artifact | Daemon recordings directory (`screenrec.Dir`, `cmd/browser-agent/internal/screenrec/paths.go`) | `screenrec.InteractHandler.HandleRecordStart` queues the start command (`handlers.go`) | Read back from disk by `HandleObserveSavedVideos` (`observe.go`) | `HandleRecordStop` (`handlers.go`) | `screenrec.HandleSave` and `writeVideoToDisk` (`save.go`) |
+
+Extension storage keys and their writers (CLAUDE.md rule 18):
+
+| Key | Writer | Readers |
+| --- | --- | --- |
+| `kaboom_recording` | `src/background/recording/index.ts` | popup `src/popup/recording/recording.ts`, hover launcher |
+| `kaboom_pending_recording` (MCP gesture intent) | `src/background/recording/capture.ts` sets it and clears it once the gesture resolves; `index.ts` clears it on service-worker start | popup `recording.ts` shows the approve/deny card and sends only the decision message |
+| `kaboom_pending_mic_recording` | popup `recording-io.ts` sets it; popup `recording.ts` consumes it | background `listeners.ts` |
+| `kaboom_action_recording` (event-recording mirror) | popup `action-recording.ts` | popup `action-recording.ts`, which reconciles it against the daemon when the popup opens |
+
+`tests/extension/contracts/background-boundaries.test.js` fails if
+anything outside `src/background/recording/` writes `kaboom_recording` or
+`kaboom_pending_recording`. The popup still trusts the `kaboom_recording`
+mirror without asking the live owner; that is tracked as kaboom-jdm5.7.
+
+### Failure modes
+
+- **Event recording.** Start fails with `already_recording` while one is active.
+  Stop fails with `recording_not_found` for an unknown ID, and with
+  `recording_save_failed` when the disk write fails; the recording then stays
+  active so stop can be retried. A daemon restart loses the active recording.
+- **Live screen recording.** A service-worker restart during a recording is
+  recovered from the offscreen document. A restart while waiting for the popup
+  gesture drops the wait, and the next start clears the stale pending intent.
+  Gesture denial or the 30 s timeout returns a `RECORD_START` error. If the
+  offscreen document dies, the recording ends and the next service-worker
+  start clears the stale `kaboom_recording` mirror.
+- **Saved video artifact.** An upload with a bad name or path returns a
+  `RECORDING_SAVE` error and writes nothing. The save result is also stored as
+  the pending query result (`query_id`), so `screen_recording_stop` reports it.
 
 ## Specs
 

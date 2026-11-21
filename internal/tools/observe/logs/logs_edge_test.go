@@ -72,7 +72,7 @@ func TestGetBrowserLogsAppliesCurrentPageFiltersAndIncludesExtensionLogs(t *test
 		{"level": "error", "source": "console", "url": "https://app.example.test/page", "tabId": float64(7), "message": "noise"},
 	}
 	deps := core.Deps{
-		Capture:       cap,
+		Extension: cap.Extension(), Telemetry: cap.Telemetry(), Performance: cap.Performance(), ExtensionLogs: cap.ExtensionLogs(),
 		LogEntries:    func() ([]types.LogEntry, []time.Time) { return entries, nil },
 		LogTotalAdded: func() int64 { return int64(len(entries)) },
 		IsConsoleNoise: func(entry types.LogEntry) bool {
@@ -113,7 +113,7 @@ func TestGetBrowserLogsSummarizesInternalEntriesAndReportsInvalidParameters(t *t
 		{"level": "warn", "source": "console", "message": "warning", "ts": "2026-07-29T10:00:00Z"},
 	}
 	deps := core.Deps{
-		Capture:        cap,
+		Extension: cap.Extension(), Telemetry: cap.Telemetry(), Performance: cap.Performance(), ExtensionLogs: cap.ExtensionLogs(),
 		LogEntries:     func() ([]types.LogEntry, []time.Time) { return entries, nil },
 		LogTotalAdded:  func() int64 { return int64(len(entries)) },
 		IsConsoleNoise: func(types.LogEntry) bool { return false },
@@ -183,7 +183,7 @@ func TestGetBrowserErrorsScopesTrackedPageAndSummarizesNoise(t *testing.T) {
 		{"level": "warn", "source": "console", "url": "https://app.example.test/page", "tabId": float64(7), "message": "not an error"},
 	}
 	deps := core.Deps{
-		Capture:    cap,
+		Extension: cap.Extension(), Telemetry: cap.Telemetry(), Performance: cap.Performance(), ExtensionLogs: cap.ExtensionLogs(),
 		LogEntries: func() ([]types.LogEntry, []time.Time) { return entries, nil },
 		IsConsoleNoise: func(entry types.LogEntry) bool {
 			return entry["message"] == "noise"

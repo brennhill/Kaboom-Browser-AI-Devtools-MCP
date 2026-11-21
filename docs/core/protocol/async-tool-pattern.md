@@ -57,7 +57,7 @@ The call **blocks for up to 55 seconds** waiting for annotations to arrive. This
 
 2. **AnnotationStore** (`internal/annotation/store.go`): Maintains annotation waiters. When `StoreSession()` or `AppendToNamedSession()` receives annotations, it completes matching waiters through the command-completion callback.
 
-3. **CommandTracker** (`internal/queries/dispatcher_commands.go`): Provides `WaitForCommand(correlationID, timeout)` which blocks using a `commandNotify` channel. `ApplyCommandResult(correlationID, status, result, err)` closes the channel to wake all waiters. The waiter registration uses a 10-minute TTL to give users ample drawing time.
+3. **CommandTracker** (`internal/browsercommand/internal/dispatch/dispatcher_commands.go`): Provides `WaitForCommand(correlationID, timeout)` which blocks using a `commandNotify` channel. `ApplyCommandResult(correlationID, status, result, err)` closes the channel to wake all waiters. The waiter registration uses a 10-minute TTL to give users ample drawing time.
 
 4. **Observe handler** (`cmd/browser-agent/internal/asynccommand/handler.go`): Waits through the canonical command tracker and returns either the terminal result or the current pending lifecycle state.
 

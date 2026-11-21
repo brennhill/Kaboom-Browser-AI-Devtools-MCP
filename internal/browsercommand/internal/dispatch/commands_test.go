@@ -2,11 +2,12 @@
 // Docs: docs/features/feature/query-service/index.md
 
 // commands_test.go — Tests for command lifecycle, expiration, and status normalization.
-package queries
+package dispatch
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"strings"
 	"testing"
 	"time"
@@ -373,7 +374,7 @@ func TestNewQueryDispatcher_ExpireCommandResultAfterDispatchTimeout(t *testing.T
 
 	// Create async query with short timeout, then acknowledge delivery so it is
 	// no longer in pendingQueries (simulates extension dequeued but never replied).
-	queryID, _ := qd.CreatePendingQueryWithTimeout(PendingQuery{
+	queryID, _ := qd.CreatePendingQueryWithTimeout(queries.PendingQuery{
 		Type:          "browser_action",
 		CorrelationID: "corr-dispatched-timeout",
 	}, 30*time.Millisecond, "test-client")
@@ -551,12 +552,12 @@ func TestNewQueryDispatcher_ExpireAllPendingQueries(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	qd.CreatePendingQuery(PendingQuery{
+	createPending(qd, queries.PendingQuery{
 		Type:          "dom",
 		Params:        json.RawMessage(`{}`),
 		CorrelationID: "corr-exp-1",
 	})
-	qd.CreatePendingQuery(PendingQuery{
+	createPending(qd, queries.PendingQuery{
 		Type:          "a11y",
 		Params:        json.RawMessage(`{}`),
 		CorrelationID: "corr-exp-2",
@@ -592,14 +593,14 @@ func TestSetQueryResultDetachesCallerPayload(t *testing.T) {
 	t.Parallel()
 	qd := NewQueryDispatcher()
 	defer qd.Close()
-	id, err := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
+	id, err := createPending(qd, queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	payload := json.RawMessage(`{"stable":true}`)
-	qd.SetQueryResult(id, payload)
+	qd.SetQueryResultWithClient(id, payload, "")
 	payload[2] = 'X'
-	got, found := qd.TakeQueryResult(id)
+	got, found := takeResult(qd, id)
 	if !found || string(got) != `{"stable":true}` {
 		t.Fatalf("stored result = %s, found=%v; want detached original payload", got, found)
 	}
@@ -610,7 +611,7 @@ func TestPendingQuerySnapshotsDetachPayload(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 	params := json.RawMessage(`{"selector":"main"}`)
-	if _, err := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: params}); err != nil {
+	if _, err := createPending(qd, queries.PendingQuery{Type: "dom", Params: params}); err != nil {
 		t.Fatal(err)
 	}
 	params[2] = 'X'

@@ -1,10 +1,12 @@
 // Purpose: Normalizes extension command status values and handles command lifecycle state transitions.
 // Docs: docs/features/feature/query-service/index.md
 
-package queries
+package dispatch
 
 import (
+	"bytes"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"strings"
 	"time"
 )
@@ -57,7 +59,7 @@ func isFailedCommandStatus(status string) bool {
 //
 // Invariants:
 // - correlationID is the primary key across pending/completed/failed views.
-// - ExpiresAt is always set to an absolute deadline (provided timeout or AsyncCommandTimeout).
+// - ExpiresAt is always set to an absolute deadline (provided timeout or queries.AsyncCommandTimeout).
 //
 // Failure semantics:
 // - Empty correlation IDs are ignored (non-async command path).
@@ -70,13 +72,13 @@ func (qd *QueryDispatcher) RegisterCommand(correlationID string, queryID string,
 	now := time.Now()
 	expiresAt := now.Add(timeout)
 	if timeout <= 0 {
-		expiresAt = now.Add(AsyncCommandTimeout)
+		expiresAt = now.Add(queries.AsyncCommandTimeout)
 	}
 
 	qd.resultsMu.Lock()
 	defer qd.resultsMu.Unlock()
 
-	cmd := &CommandResult{
+	cmd := &queries.CommandResult{
 		CorrelationID: correlationID,
 		TraceID:       deriveTraceID("", correlationID, queryID),
 		QueryID:       queryID,
@@ -119,7 +121,7 @@ func (qd *QueryDispatcher) ApplyCommandResult(correlationID string, status strin
 		}
 
 		cmd.Status = normalizedStatus
-		cmd.Result = cloneJSON(result)
+		cmd.Result = bytes.Clone(result)
 		cmd.Error = err
 		eventAt := time.Now()
 		stage := traceStageFromStatus(normalizedStatus)
@@ -150,7 +152,7 @@ func (qd *QueryDispatcher) ApplyCommandResult(correlationID string, status strin
 // Invariants:
 // - Caller holds resultsMu.
 // - Eviction is single-pass and never affects pending commands.
-func (qd *QueryDispatcher) appendTerminalCommandLocked(cmd *CommandResult) {
+func (qd *QueryDispatcher) appendTerminalCommandLocked(cmd *queries.CommandResult) {
 	if len(qd.terminalHistory) == terminalCommandHistoryLimit {
 		copy(qd.terminalHistory, qd.terminalHistory[1:])
 		qd.terminalHistory[len(qd.terminalHistory)-1] = cmd
@@ -185,11 +187,11 @@ func (qd *QueryDispatcher) expireCommandWithReason(correlationID string, reason 
 
 // GetPendingCommands returns all commands with status "pending".
 // Used by toolObservePendingCommands.
-func (qd *QueryDispatcher) GetPendingCommands() []*CommandResult {
+func (qd *QueryDispatcher) GetPendingCommands() []*queries.CommandResult {
 	qd.resultsMu.RLock()
 	defer qd.resultsMu.RUnlock()
 
-	result := make([]*CommandResult, 0)
+	result := make([]*queries.CommandResult, 0)
 	for _, cmd := range qd.activeCommands {
 		if cmd.Status == "pending" {
 			result = append(result, copyCommandResultWithTrace(cmd))
@@ -200,11 +202,11 @@ func (qd *QueryDispatcher) GetPendingCommands() []*CommandResult {
 
 // GetCompletedCommands returns all commands with status "complete".
 // Used by toolObservePendingCommands.
-func (qd *QueryDispatcher) GetCompletedCommands() []*CommandResult {
+func (qd *QueryDispatcher) GetCompletedCommands() []*queries.CommandResult {
 	qd.resultsMu.RLock()
 	defer qd.resultsMu.RUnlock()
 
-	result := make([]*CommandResult, 0)
+	result := make([]*queries.CommandResult, 0)
 	for _, cmd := range qd.terminalHistory {
 		if cmd.Status == "complete" {
 			result = append(result, copyCommandResultWithTrace(cmd))
@@ -216,13 +218,13 @@ func (qd *QueryDispatcher) GetCompletedCommands() []*CommandResult {
 // GetFailedCommands returns recent failed/expired commands.
 // Used by toolObserveFailedCommands.
 // Eagerly cleans expired commands so callers see freshly expired entries.
-func (qd *QueryDispatcher) GetFailedCommands() []*CommandResult {
+func (qd *QueryDispatcher) GetFailedCommands() []*queries.CommandResult {
 	qd.cleanExpiredCommands()
 
 	qd.resultsMu.RLock()
 	defer qd.resultsMu.RUnlock()
 
-	result := make([]*CommandResult, 0, len(qd.terminalHistory))
+	result := make([]*queries.CommandResult, 0, len(qd.terminalHistory))
 	for _, cmd := range qd.terminalHistory {
 		if cmd == nil || !isFailedCommandStatus(cmd.Status) {
 			continue
@@ -244,7 +246,7 @@ func (qd *QueryDispatcher) GetFailedCommands() []*CommandResult {
 // Failure semantics:
 // - On timeout, returns latest observed state (possibly still pending).
 // - If command was never registered, returns (nil,false) immediately.
-func (qd *QueryDispatcher) WaitForCommand(correlationID string, timeout time.Duration) (*CommandResult, bool) {
+func (qd *QueryDispatcher) WaitForCommand(correlationID string, timeout time.Duration) (*queries.CommandResult, bool) {
 	cmd, found := qd.GetCommandResult(correlationID)
 	if !found || cmd.Status != "pending" {
 		return cmd, found
@@ -293,7 +295,7 @@ func (qd *QueryDispatcher) WaitForCommand(correlationID string, timeout time.Dur
 //
 // Failure semantics:
 // - Expired commands are also cleaned by the periodic 30s ticker in startResultCleanup.
-func (qd *QueryDispatcher) GetCommandResult(correlationID string) (*CommandResult, bool) {
+func (qd *QueryDispatcher) GetCommandResult(correlationID string) (*queries.CommandResult, bool) {
 	qd.cleanExpiredCommands()
 
 	qd.resultsMu.RLock()
@@ -345,7 +347,7 @@ func (qd *QueryDispatcher) cleanExpiredCommands() {
 		}
 		expiresAt := cmd.ExpiresAt
 		if expiresAt.IsZero() {
-			expiresAt = cmd.CreatedAt.Add(AsyncCommandTimeout)
+			expiresAt = cmd.CreatedAt.Add(queries.AsyncCommandTimeout)
 		}
 		if !expiresAt.After(now) {
 			if _, seen := expiredSet[correlationID]; !seen {

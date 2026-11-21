@@ -4,7 +4,7 @@ feature_id: feature-operational-observability
 status: in_progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-11-21
 code_paths:
   - internal/capture/pressure/stats.go
   - internal/capture/perfstore/store.go

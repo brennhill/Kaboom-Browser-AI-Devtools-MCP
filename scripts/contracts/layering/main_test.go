@@ -27,23 +27,23 @@ func TestDependencyMatrixRules(t *testing.T) {
 		"internal/pagination/pagination.go": "package pagination\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp\"\n",
 		// Clean: internal tool importing another internal package, and tools
 		// importing schema is the INTENDED direction (schema sits below tools).
-		"internal/tools/observe/handler.go": "package observe\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination\"\n",
+		"internal/tools/observe/handler.go":     "package observe\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination\"\n",
 		"internal/tools/observe/uses_schema.go": "package observe\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema/interact\"\n",
 		// D1: internal importing cmd.
-		"internal/bridge/bridge.go":         "package bridge\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge\"\n",
+		"internal/bridge/bridge.go": "package bridge\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge\"\n",
 		// D2: types must stay a leaf.
-		"internal/types/types.go":           "package types\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination\"\n",
+		"internal/types/types.go": "package types\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination\"\n",
 		// D3: protocol package must not know the domain or the capture port.
-		"internal/mcp/protocol.go":          "package mcp\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe\"\n",
-		"internal/mcp/protocol2.go":         "package mcp\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n",
+		"internal/mcp/protocol.go":  "package mcp\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe\"\n",
+		"internal/mcp/protocol2.go": "package mcp\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n",
 		// D4: schema sits below tools; only schema importing tools is a breach.
-		"internal/schema/configure/s.go":    "package configure\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe\"\n",
+		"internal/schema/configure/s.go": "package configure\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe\"\n",
 		// D5: NewCapture outside the composition root.
-		"internal/tools/interact/setup.go":  "package interact\n\nimport \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n\nfunc boot() { _ = capture.NewCapture() }\n",
+		"internal/tools/interact/setup.go": "package interact\n\nimport \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n\nfunc boot() { _ = capture.NewCapture() }\n",
 		// Clean: composition root constructing the capture port.
-		"cmd/browser-agent/main.go":         "package main\n\nimport \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n\nfunc main() { _ = capture.NewCapture() }\n",
+		"cmd/browser-agent/main.go": "package main\n\nimport \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n\nfunc main() { _ = capture.NewCapture() }\n",
 		// Test files are exempt from every matrix rule.
-		"internal/bridge/bridge_test.go":    "package bridge\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge\"\n",
+		"internal/bridge/bridge_test.go": "package bridge\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge\"\n",
 	})
 
 	scan, err := scanTree(root)
@@ -51,14 +51,14 @@ func TestDependencyMatrixRules(t *testing.T) {
 		t.Fatal(err)
 	}
 	violations := evaluateMatrix(scan)
-	if len(violations) != 6 {
-		t.Fatalf("violations = %v\nwant 6 (internal->cmd, types-leaf, mcp->domain x2, schema->tools, composition-root)", violations)
+	if len(violations) != 7 {
+		t.Fatalf("violations = %v\nwant 7 (internal->cmd, types-leaf, mcp->domain x2, schema->tools, composition-root, capture-root)", violations)
 	}
 	joined := ""
 	for _, v := range violations {
 		joined += v + "\n"
 	}
-	for _, want := range []string{"internal->cmd", "types-leaf", "mcp->domain", "composition-root"} {
+	for _, want := range []string{"internal->cmd", "types-leaf", "mcp->domain", "composition-root", "capture-root"} {
 		if !contains(joined, want) {
 			t.Errorf("violation kind %q missing from:\n%s", want, joined)
 		}
@@ -76,11 +76,11 @@ func contains(haystack, needle string) bool {
 func TestMatrixFiresUnderDefaultRoots(t *testing.T) {
 	root := t.TempDir()
 	writeTree(t, root, map[string]string{
-		"go.mod": "module example.invalid/probe\n",
-		"internal/bridge/bridge.go": "package bridge\n\nimport _ \"" + modulePrefix + "cmd/browser-agent/internal/bridge\"\n",
-		"internal/types/types.go":   "package types\n\nimport _ \"" + modulePrefix + "internal/pagination\"\n",
-		"internal/pagination/p.go":  "package pagination\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp\"\n",
-		"internal/mcp/m.go":         "package mcp\n",
+		"go.mod":                                 "module example.invalid/probe\n",
+		"internal/bridge/bridge.go":              "package bridge\n\nimport _ \"" + modulePrefix + "cmd/browser-agent/internal/bridge\"\n",
+		"internal/types/types.go":                "package types\n\nimport _ \"" + modulePrefix + "internal/pagination\"\n",
+		"internal/pagination/p.go":               "package pagination\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp\"\n",
+		"internal/mcp/m.go":                      "package mcp\n",
 		"cmd/browser-agent/internal/bridge/b.go": "package bridge\n",
 		"cmd/browser-agent/main.go":              "package main\n",
 	})
@@ -237,8 +237,8 @@ func (Impl) Fetch() int { return 2 }
 		// Dead contract: no production implementation anywhere.
 		"internal/dead/d.go": "package dead\n\ntype Ghost interface {\n\tHaunt() string\n}\n",
 		// Same-package TEST fake does not count as a production impl.
-		"internal/seam/s.go":         "package seam\n\ntype Seam interface {\n\tRun() error\n}\n\nfunc Use(s Seam) {}\n",
-		"internal/seam/s_test.go":    "package seam\n\ntype fake struct{}\n\nfunc (fake) Run() error { return nil }\n",
+		"internal/seam/s.go":      "package seam\n\ntype Seam interface {\n\tRun() error\n}\n\nfunc Use(s Seam) {}\n",
+		"internal/seam/s_test.go": "package seam\n\ntype fake struct{}\n\nfunc (fake) Run() error { return nil }\n",
 	})
 
 	scan, err := scanTree(root)
@@ -272,5 +272,129 @@ func TestInterfaceKeyIsStableAcrossImplMoves(t *testing.T) {
 	i := ifaceInfo{repo: "r", pkg: "internal/owned", file: "o.go", name: "Port"}
 	if got := i.key(); got != "internal/owned/o.go:Port" {
 		t.Fatalf("key = %q", got)
+	}
+}
+
+// TestCommandModuleHasNoTransportDependencies pins kaboom-jdm5.2: the
+// browser-command lifecycle owner must not import HTTP, MCP or the capture
+// transport adapters; transports depend on it, never the reverse.
+func TestApplicationUseCasesHaveNoTransportDependencies(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{
+		"internal/app/screenshot/http.go":    "package screenshot\n\nimport _ \"net/http\"\n",
+		"internal/app/screenshot/mcp.go":     "package screenshot\n\nimport _ \"" + modulePrefix + "internal/mcp\"\n",
+		"internal/app/screenshot/capture.go": "package screenshot\n\nimport _ \"" + modulePrefix + "internal/capture\"\n",
+		"internal/app/other/adapter.go":      "package other\n\nimport _ \"" + modulePrefix + "internal/tools/observe/page\"\n",
+		// Clean: use cases may depend on the command module and leaf utilities.
+		"internal/app/screenshot/service.go": "package screenshot\n\nimport (\n\t_ \"context\"\n\t_ \"" + modulePrefix + "internal/queries\"\n)\n",
+		// Clean: adapters depending on the use case.
+		"internal/tools/observe/page/p.go": "package page\n\nimport (\n\t_ \"" + modulePrefix + "internal/mcp\"\n\t_ \"" + modulePrefix + "internal/app/screenshot\"\n)\n",
+		// Test files are exempt.
+		"internal/app/screenshot/x_test.go": "package screenshot\n\nimport _ \"" + modulePrefix + "internal/capture\"\n",
+	})
+	scan, err := scanTree(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	violations := evaluateMatrix(scan)
+	if len(violations) != 4 {
+		t.Fatalf("violations = %v\nwant 4 app->transport breaches", violations)
+	}
+	for _, v := range violations {
+		if !contains(v, "app->transport") {
+			t.Errorf("unexpected violation kind: %s", v)
+		}
+	}
+}
+
+func TestCommandModuleHasNoTransportDependencies(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{
+		"internal/browsercommand/http.go": "package browsercommand\n\nimport _ \"net/http\"\n",
+		"internal/browsercommand/mcp.go":  "package browsercommand\n\nimport _ \"" + modulePrefix + "internal/mcp\"\n",
+		"internal/queries/sync.go":        "package queries\n\nimport _ \"" + modulePrefix + "internal/capture/syncruntime\"\n",
+		"internal/queries/httptest.go":    "package queries\n\nimport _ \"net/http/httptest\"\n",
+		// Clean: the command module may use its own store and plain stdlib.
+		"internal/browsercommand/owner.go": "package browsercommand\n\nimport (\n\t_ \"time\"\n\t_ \"" + modulePrefix + "internal/queries\"\n)\n",
+		// Clean: transport adapters depending on the command module.
+		"internal/capture/httpingest/h.go": "package httpingest\n\nimport (\n\t_ \"net/http\"\n\t_ \"" + modulePrefix + "internal/browsercommand\"\n)\n",
+		// Test files are exempt.
+		"internal/browsercommand/x_test.go": "package browsercommand\n\nimport _ \"net/http\"\n",
+	})
+	scan, err := scanTree(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	violations := evaluateMatrix(scan)
+	if len(violations) != 4 {
+		t.Fatalf("violations = %v\nwant 4 command->transport breaches", violations)
+	}
+	for _, v := range violations {
+		if !contains(v, "command->transport") {
+			t.Errorf("unexpected violation kind: %s", v)
+		}
+	}
+}
+
+func TestCommandOwnerIsTheOnlyDispatcherPath(t *testing.T) {
+	root := t.TempDir()
+	d := modulePrefix + "internal/browsercommand/internal/dispatch"
+	writeTree(t, root, map[string]string{
+		// Breach: production code calling a dispatcher accessor.
+		"cmd/browser-agent/internal/toolx/x.go": "package toolx\n\nfunc f(c interface{ Queries() any }) { _ = c.Queries() }\n",
+		// Breach: the capture composition file no longer gets an exception.
+		"internal/capture/capture.go": "package capture\n\nimport _ \"" + d + "\"\n",
+		// Breach: aliased import elsewhere.
+		"internal/tools/observe/page/p.go": "package page\n\nimport qq \"" + d + "\"\n\nvar _ = qq.X\n",
+		// Clean: the owner itself and test fixtures.
+		"internal/browsercommand/owner.go":           "package browsercommand\n\nimport _ \"" + d + "\"\n",
+		"internal/app/screenshot/s.go":               "package screenshot\n\nimport \"" + modulePrefix + "internal/queries\"\n\nvar _ queries.QueryRunner\n",
+		"cmd/browser-agent/internal/toolx/x_test.go": "package toolx\n\nfunc g(c interface{ Queries() any }) { _ = c.Queries() }\n",
+	})
+	scan, err := scanTree(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	violations := evaluateMatrix(scan)
+	if len(violations) != 3 {
+		t.Fatalf("violations = %v\nwant 3 command-owner breaches", violations)
+	}
+	for _, v := range violations {
+		if !contains(v, "command-owner") {
+			t.Errorf("unexpected violation kind: %s", v)
+		}
+	}
+}
+
+func TestOnlyCompositionRootImportsCapture(t *testing.T) {
+	root := t.TempDir()
+	c := modulePrefix + "internal/capture"
+	writeTree(t, root, map[string]string{
+		// Breaches: tool, observe and other adapter packages holding the whole Capture.
+		"cmd/browser-agent/internal/toolinteract/a.go": "package toolinteract\n\nimport _ \"" + c + "\"\n",
+		"internal/tools/observe/logs/l.go":             "package logs\n\nimport _ \"" + c + "\"\n",
+		"cmd/browser-agent/internal/health/h.go":       "package health\n\nimport _ \"" + c + "\"\n",
+		// Breach: production code importing test support.
+		"cmd/browser-agent/internal/health/t.go": "package health\n\nimport _ \"" + modulePrefix + "internal/browsercommand/commandtest\"\n",
+		// Clean: composition root, capture tree, test support, owner subpackages, tests.
+		"cmd/browser-agent/main.go":                   "package main\n\nimport _ \"" + c + "\"\n",
+		"cmd/browser-agent/internal/toolruntime/w.go": "package toolruntime\n\nimport _ \"" + c + "\"\n",
+		"internal/capture/healthreader/r.go":          "package healthreader\n\nimport _ \"" + c + "/telemetrystore\"\n",
+		"internal/tools/observe/testsupport/h.go":     "package testsupport\n\nimport _ \"" + c + "\"\n",
+		"internal/tools/observe/core/d.go":            "package core\n\nimport _ \"" + c + "/telemetrystore\"\n",
+		"cmd/browser-agent/internal/health/h_test.go": "package health\n\nimport _ \"" + c + "\"\n",
+	})
+	scan, err := scanTree(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	violations := evaluateMatrix(scan)
+	if len(violations) != 4 {
+		t.Fatalf("violations = %v, want 3 capture-root + 1 test-support", violations)
+	}
+	for _, v := range violations {
+		if !contains(v, "capture-root") && !contains(v, "test-support") {
+			t.Errorf("unexpected violation kind: %s", v)
+		}
 	}
 }

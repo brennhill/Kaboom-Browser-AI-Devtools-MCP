@@ -4,10 +4,11 @@
 // expire_signal_test.go — Tests for commandNotify signaling on command expiration.
 // Verifies that ExpireCommand, expireCommandWithReason, and ExpireAllPendingQueries
 // wake blocked WaitForCommand goroutines instead of making them wait the full timeout.
-package queries
+package dispatch
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"strings"
 	"sync"
 	"testing"
@@ -26,7 +27,7 @@ func TestExpireCommand_SignalsWaiters(t *testing.T) {
 
 	// Start WaitForCommand in a goroutine with a long timeout
 	done := make(chan struct{})
-	var result *CommandResult
+	var result *queries.CommandResult
 	var found bool
 	go func() {
 		result, found = qd.WaitForCommand(correlationID, 15*time.Second)
@@ -61,7 +62,7 @@ func TestExpireCommandWithReason_SignalsWaiters(t *testing.T) {
 	qd.RegisterCommand(correlationID, "q-2", 30*time.Second)
 
 	done := make(chan struct{})
-	var result *CommandResult
+	var result *queries.CommandResult
 	go func() {
 		result, _ = qd.WaitForCommand(correlationID, 15*time.Second)
 		close(done)
@@ -91,13 +92,13 @@ func TestExpireAllPendingQueries_SignalsWaiters(t *testing.T) {
 	defer qd.Close()
 
 	// Create two pending queries with correlation IDs
-	qd.CreatePendingQueryWithTimeout(PendingQuery{
+	qd.CreatePendingQueryWithTimeout(queries.PendingQuery{
 		Type:          "dom",
 		Params:        json.RawMessage(`{}`),
 		CorrelationID: "corr-a",
 	}, 30*time.Second, "")
 
-	qd.CreatePendingQueryWithTimeout(PendingQuery{
+	qd.CreatePendingQueryWithTimeout(queries.PendingQuery{
 		Type:          "dom",
 		Params:        json.RawMessage(`{}`),
 		CorrelationID: "corr-b",
@@ -231,21 +232,21 @@ func TestCleanExpiredResultsPrunesStaleStateAndExpiresOrphans(t *testing.T) {
 	qd := NewQueryDispatcher()
 	t.Cleanup(qd.Close)
 	now := time.Now()
-	grace := AsyncCommandTimeout + 10*time.Second
+	grace := queries.AsyncCommandTimeout + 10*time.Second
 
 	qd.mu.Lock()
-	qd.queryResults["stale"] = QueryResultEntry{Result: json.RawMessage(`1`), CreatedAt: now.Add(-2 * QueryResultTTL)}
+	qd.queryResults["stale"] = QueryResultEntry{Result: json.RawMessage(`1`), CreatedAt: now.Add(-2 * queries.QueryResultTTL)}
 	qd.queryResults["fresh"] = QueryResultEntry{Result: json.RawMessage(`2`), CreatedAt: now}
 	qd.pendingQueries = append(qd.pendingQueries,
-		PendingQueryEntry{Query: PendingQueryResponse{ID: "orphan", CorrelationID: "corr-orphan"}, Expires: now.Add(-grace - time.Minute)},
-		PendingQueryEntry{Query: PendingQueryResponse{ID: "orphan-untracked"}, Expires: now.Add(-grace - time.Minute)},
-		PendingQueryEntry{Query: PendingQueryResponse{ID: "live", CorrelationID: "corr-live"}, Expires: now.Add(time.Minute)},
+		PendingQueryEntry{Query: queries.PendingQueryResponse{ID: "orphan", CorrelationID: "corr-orphan"}, Expires: now.Add(-grace - time.Minute)},
+		PendingQueryEntry{Query: queries.PendingQueryResponse{ID: "orphan-untracked"}, Expires: now.Add(-grace - time.Minute)},
+		PendingQueryEntry{Query: queries.PendingQueryResponse{ID: "live", CorrelationID: "corr-live"}, Expires: now.Add(time.Minute)},
 	)
 	qd.mu.Unlock()
 
 	qd.resultsMu.Lock()
-	qd.activeCommands["corr-orphan"] = &CommandResult{CorrelationID: "corr-orphan", Status: "pending", CreatedAt: now, ExpiresAt: now.Add(time.Hour)}
-	qd.activeCommands["corr-ancient"] = &CommandResult{CorrelationID: "corr-ancient", Status: "pending", CreatedAt: now.Add(-2 * QueryResultTTL), ExpiresAt: now.Add(time.Hour)}
+	qd.activeCommands["corr-orphan"] = &queries.CommandResult{CorrelationID: "corr-orphan", Status: "pending", CreatedAt: now, ExpiresAt: now.Add(time.Hour)}
+	qd.activeCommands["corr-ancient"] = &queries.CommandResult{CorrelationID: "corr-ancient", Status: "pending", CreatedAt: now.Add(-2 * queries.QueryResultTTL), ExpiresAt: now.Add(time.Hour)}
 	qd.resultsMu.Unlock()
 
 	qd.cleanExpiredResults()
@@ -277,23 +278,5 @@ func TestCleanExpiredResultsPrunesStaleStateAndExpiresOrphans(t *testing.T) {
 	}
 	if result, ok := qd.GetCommandResult("corr-orphan"); !ok || result.Status != "expired" {
 		t.Fatalf("orphaned command = %#v, %v; want expired outcome preserved", result, ok)
-	}
-}
-
-func TestWaitForResultWithClientHonorsIsolation(t *testing.T) {
-	t.Parallel()
-	qd := NewQueryDispatcher()
-	t.Cleanup(qd.Close)
-
-	qd.SetQueryResultWithClientNoCommandComplete("q-owned", json.RawMessage(`{"ok":true}`), "client-a")
-	if _, err := qd.WaitForResultWithClient("q-owned", 10*time.Millisecond, "client-b"); err == nil || !strings.Contains(err.Error(), "timeout") {
-		t.Fatalf("foreign client wait err = %v, want timeout", err)
-	}
-	got, err := qd.WaitForResultWithClient("q-owned", time.Second, "client-a")
-	if err != nil || string(got) != `{"ok":true}` {
-		t.Fatalf("owner wait = %s, %v", got, err)
-	}
-	if _, err := qd.WaitForResultWithClient("q-owned", 10*time.Millisecond, ""); err == nil {
-		t.Fatal("result was replayed after being consumed")
 	}
 }

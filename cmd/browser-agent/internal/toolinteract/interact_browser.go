@@ -12,6 +12,7 @@
 package toolinteract
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -70,13 +71,16 @@ func (h *BrowserActions) Handle(action string, req mcp.JSONRPCRequest, args json
 // stashPerfSnapshot saves the current performance snapshot as a "before" baseline
 // for perf_diff computation, keyed by correlation ID.
 func (h *BrowserActions) stashPerfSnapshot(correlationID string) {
-	_, _, trackedURL := h.deps.Capture().Extension().GetTrackingStatus()
+	if h.deps.Tab == nil || h.deps.Perf == nil {
+		return
+	}
+	_, _, trackedURL := h.deps.Tab.GetTrackingStatus()
 	u, err := url.Parse(trackedURL)
 	if err != nil || u.Path == "" {
 		return
 	}
-	if snap, ok := h.deps.Capture().Performance().ByURL(u.Path); ok {
-		h.deps.Capture().Performance().StoreBefore(correlationID, snap)
+	if snap, ok := h.deps.Perf.ByURL(u.Path); ok {
+		h.deps.Perf.StoreBefore(correlationID, snap)
 	}
 }
 
@@ -86,11 +90,11 @@ func (h *BrowserActions) resolveNavigateURL(rawURL string) (string, error) {
 	if !strings.HasPrefix(strings.ToLower(trimmed), insecurePrefix) {
 		return trimmed, nil
 	}
-	if h.deps.Capture() == nil {
+	if h.deps.Tab == nil {
 		return "", fmt.Errorf("resolve insecure URL: capture not initialized. Initialize capture before using insecure mode")
 	}
 
-	mode, _, _ := h.deps.Capture().Extension().GetSecurityMode()
+	mode, _, _ := h.deps.Tab.GetSecurityMode()
 	if mode != syncruntime.SecurityModeInsecureProxy {
 		return "", fmt.Errorf("resolve insecure URL: requires security_mode=insecure_proxy. Set security mode before navigating")
 	}
@@ -485,7 +489,10 @@ func (h *BrowserActions) handleExecuteJS(req mcp.JSONRPCRequest, args json.RawMe
 // The extension-side persistTrackedTab handles async retarget via the
 // next /sync heartbeat. See issue #271.
 func (h *BrowserActions) applySwitchTabTracking(correlationID string) {
-	cmd, found := h.deps.Capture().Queries().GetCommandResult(correlationID)
+	if h.deps.Commands == nil {
+		return
+	}
+	cmd, found := h.deps.Commands.Command(correlationID)
 	if !found || cmd == nil || cmd.Status != "complete" {
 		return
 	}
@@ -508,7 +515,9 @@ func (h *BrowserActions) applySwitchTabTracking(correlationID string) {
 
 	tabURL, _ := result["url"].(string)
 	tabTitle, _ := result["title"].(string)
-	h.deps.Capture().Extension().UpdateTrackedTab(tabID, tabURL, tabTitle)
+	if h.deps.Tab != nil {
+		h.deps.Tab.UpdateTrackedTab(tabID, tabURL, tabTitle)
+	}
 }
 
 // =============================================================================
@@ -566,20 +575,19 @@ func validateZoomRegionParams(req mcp.JSONRPCRequest, params zoomRegionParams) (
 }
 
 func (h *BrowserActions) captureZoomRegion(req mcp.JSONRPCRequest, params zoomRegionParams) mcp.JSONRPCResponse {
-	store := h.deps.Capture()
-	if store == nil {
-		return mcp.Fail(req, mcp.ErrNoData, "Capture is not initialized", "Restart the Kaboom daemon and retry.")
+	if h.deps.Commands == nil {
+		return mcp.Fail(req, mcp.ErrNoData, "Browser command owner is not initialized", "Restart the Kaboom daemon and retry.")
 	}
 	query := queries.PendingQuery{
 		Type:   "cdp_action",
 		Params: marshalQueryParams(zoomRegionQueryFields(params)),
 		TabID:  params.TabID,
 	}
-	queryID, err := store.Queries().CreatePendingQueryWithTimeout(query, zoomRegionTimeout, req.ClientID)
+	queryID, err := h.deps.Commands.Enqueue(query, zoomRegionTimeout, req.ClientID)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrExtError, "Command queue full: "+err.Error(), "Wait for in-flight commands to complete, then retry.")
 	}
-	raw, err := store.Queries().WaitForResult(queryID, zoomRegionTimeout)
+	raw, err := h.deps.Commands.WaitQueryResult(context.Background(), queryID, zoomRegionTimeout)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrExtTimeout, "zoom_region capture timeout: "+err.Error(),
 			"Confirm the extension is connected and the tab is not held by a performance trace, then retry.")

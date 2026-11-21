@@ -49,7 +49,7 @@ func TestNavigationActionsStoreChangeCoupledPerformanceBaselines(t *testing.T) {
 			})
 			actions := toolinteract.NewBrowserActions(runtime, nil, toolinteract.BrowserDeps{
 				RequirePilot: allow, RequireExtension: allow, RequireTabTracking: allow,
-				Capture:                 func() *capture.Capture { return captured },
+				Tab: captured.Extension(), Perf: captured.Performance(),
 				InjectCSPBlockedActions: func(response mcp.JSONRPCResponse) mcp.JSONRPCResponse { return response },
 			})
 			response := actions.Handle(testCase.action, request(), testCase.args)

@@ -29,6 +29,7 @@ package responsegate
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"os"
 	"path/filepath"
 	"sort"
@@ -92,7 +93,7 @@ func newHarness(t *testing.T, stateRoot string) *harness {
 	captured := capture.NewCapture()
 	fixture := &harness{
 		captured: captured,
-		async:    asynccommand.New(asynccommand.Deps{Capture: captured}),
+		async:    asynccommand.New(asynccommand.Deps{Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry()}),
 		request:  mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1, Method: "tools/call"},
 	}
 	state, closeState := fixtureState(t, stateRoot)
@@ -212,9 +213,15 @@ const (
 // is empty, so a fixture with only a completed command would declare nothing
 // about a pending or failed entry — the two a caller most needs to recognise.
 func (h *harness) seedCommandLifecycle() {
-	commands := h.captured.Queries()
-	commands.RegisterCommand(seededCorrelationID, "query_fixture", time.Minute)
-	commands.ApplyCommandResult(
+	commands := h.captured.Commands()
+	// Enqueued (not registered locally) so the completed command carries a
+	// query_id, matching what an extension-delivered command reports.
+	if _, err := commands.Enqueue(queries.PendingQuery{
+		Type: "dom", Params: json.RawMessage(`{"selector":"div"}`), CorrelationID: seededCorrelationID,
+	}, time.Minute, ""); err != nil {
+		panic("seed completed command: " + err.Error())
+	}
+	commandtest.Complete(commands,
 		seededCorrelationID, "complete", json.RawMessage(`{"elements":[{"tag":"div"}],"count":1}`), "")
 
 	// Created through the production enqueue path so the command carries the
@@ -226,7 +233,7 @@ func (h *harness) seedCommandLifecycle() {
 		{pendingCorrelationID, ""},
 		{failedCorrelationID, "error"},
 	} {
-		if _, err := commands.CreatePendingQueryWithTimeout(queries.PendingQuery{
+		if _, err := commands.Enqueue(queries.PendingQuery{
 			Type:          "dom",
 			Params:        json.RawMessage(`{"selector":"#fixture"}`),
 			CorrelationID: planted.correlationID,
@@ -234,7 +241,7 @@ func (h *harness) seedCommandLifecycle() {
 			panic("seed a " + planted.correlationID + " command: " + err.Error())
 		}
 		if planted.status != "" {
-			commands.ApplyCommandResult(planted.correlationID, planted.status, nil, "fixture failure")
+			commandtest.Complete(commands, planted.correlationID, planted.status, nil, "fixture failure")
 		}
 	}
 }

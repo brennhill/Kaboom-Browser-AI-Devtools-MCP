@@ -8,14 +8,23 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	capturelogs "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 const validTypes = "logs, network_waterfall, network_bodies, websocket_events, actions, performance_snapshots, extension_logs, websocket_status"
 
 // Handler returns the local telemetry read endpoint.
-func Handler(logs *logstore.Store, captured *capture.Capture) http.HandlerFunc {
+// Sources are the capture read owners the /telemetry endpoint serves.
+type Sources struct {
+	Telemetry     *telemetrystore.Store
+	Performance   *perfstore.Store
+	ExtensionLogs *capturelogs.Extension
+}
+
+func Handler(logs *logstore.Store, captured Sources) http.HandlerFunc {
 	return func(w http.ResponseWriter, request *http.Request) {
 		if request.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -41,31 +50,31 @@ func Handler(logs *logstore.Store, captured *capture.Capture) http.HandlerFunc {
 	}
 }
 
-func snapshot(telemetryType string, limit int, logs *logstore.Store, captured *capture.Capture) (any, int, bool) {
+func snapshot(telemetryType string, limit int, logs *logstore.Store, captured Sources) (any, int, bool) {
 	switch telemetryType {
 	case "logs":
 		entries := tail(logs.Entries(), limit)
 		return entries, len(entries), true
 	case "network_waterfall":
-		entries := tail(captured.Telemetry().NetworkWaterfall().Entries(), limit)
+		entries := tail(captured.Telemetry.NetworkWaterfall().Entries(), limit)
 		return entries, len(entries), true
 	case "network_bodies":
-		entries := tail(captured.Telemetry().NetworkBodies().Snapshot().Bodies, limit)
+		entries := tail(captured.Telemetry.NetworkBodies().Snapshot().Bodies, limit)
 		return entries, len(entries), true
 	case "websocket_events":
-		entries := tail(captured.Telemetry().WebSockets().Events(types.WebSocketEventFilter{}), limit)
+		entries := tail(captured.Telemetry.WebSockets().Events(types.WebSocketEventFilter{}), limit)
 		return entries, len(entries), true
 	case "actions":
-		entries := tail(captured.Telemetry().Actions().Snapshot().Actions, limit)
+		entries := tail(captured.Telemetry.Actions().Snapshot().Actions, limit)
 		return entries, len(entries), true
 	case "performance_snapshots":
-		entries := tail(captured.Performance().Entries(), limit)
+		entries := tail(captured.Performance.Entries(), limit)
 		return entries, len(entries), true
 	case "extension_logs":
-		entries := tail(captured.ExtensionLogs().Entries(), limit)
+		entries := tail(captured.ExtensionLogs.Entries(), limit)
 		return entries, len(entries), true
 	case "websocket_status":
-		status := captured.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
+		status := captured.Telemetry.WebSockets().Status(types.WebSocketStatusFilter{})
 		return status, len(status.Connections), true
 	default:
 		return nil, 0, false

@@ -123,7 +123,7 @@ graph TB
     MCP_A -->|CreatePendingQuery<br/>clientID: agent-a| Queue
     MCP_B -->|CreatePendingQuery<br/>clientID: agent-b| Queue
 
-    Queue -->|GetPendingQueriesForClient<br/>Filter by clientID| Poll
+    Queue -->|GetPendingQueries| Poll
 
     Poll -->|POST /dom-result<br/>clientID in body| Results
 

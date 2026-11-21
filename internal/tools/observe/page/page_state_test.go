@@ -6,6 +6,8 @@ package page
 import (
 	"encoding/json"
 	"errors"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/a11yaudit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
 	"os"
 	"path/filepath"
@@ -25,13 +27,13 @@ import (
 
 func completeNextPageStateQuery(t *testing.T, cap *capture.Capture, result json.RawMessage) {
 	t.Helper()
-	cap.Queries().WaitForPendingQueries(time.Second)
-	pending := cap.Queries().GetPendingQueries()
+	cap.Commands().AwaitPending(time.Second)
+	pending := cap.Commands().Pending()
 	if len(pending) == 0 {
 		t.Error("page-state query was not enqueued")
 		return
 	}
-	cap.Queries().SetQueryResultWithClient(pending[0].ID, result, "")
+	commandtest.DeliverForClient(cap.Commands(), pending[0].ID, result, "")
 }
 
 func TestGetStorageReportsCaptureFailuresAndQueuePressure(t *testing.T) {
@@ -64,7 +66,7 @@ func TestGetStorageReportsCaptureFailuresAndQueuePressure(t *testing.T) {
 		defer cap.Close()
 		capturefixture.Track(cap, 1, "https://example.test")
 		for i := 0; i < queries.MaxPendingQueries; i++ {
-			if _, err := cap.Queries().CreatePendingQuery(queries.PendingQuery{Type: "occupied"}); err != nil {
+			if _, err := commandtest.Enqueue(cap.Commands(), queries.PendingQuery{Type: "occupied"}); err != nil {
 				t.Fatalf("fill queue: %v", err)
 			}
 		}
@@ -142,18 +144,6 @@ func TestGetStorageReturnsAllRawStorageFamilies(t *testing.T) {
 	if result.IsError || !strings.Contains(result.Content[0].Text, "local_storage") ||
 		!strings.Contains(result.Content[0].Text, "session_storage") || !strings.Contains(result.Content[0].Text, "cookies") {
 		t.Fatalf("raw storage response = %+v", result)
-	}
-}
-
-func TestToIntAcceptsWireAndServerNumericKinds(t *testing.T) {
-	t.Parallel()
-	for _, value := range []any{int(4), int32(5), int64(6), float64(7)} {
-		if got, ok := toInt(value); !ok || got < 4 || got > 7 {
-			t.Fatalf("toInt(%T(%v)) = %d, %t", value, value, got, ok)
-		}
-	}
-	if _, ok := toInt("8"); ok {
-		t.Fatal("toInt accepted a string")
 	}
 }
 
@@ -346,108 +336,25 @@ type mockA11yDeps struct {
 
 func (m *mockA11yDeps) deps() core.Deps {
 	return core.Deps{
-		Capture:              m.cap,
+		Extension: m.cap.Extension(), Telemetry: m.cap.Telemetry(), Performance: m.cap.Performance(), ExtensionLogs: m.cap.ExtensionLogs(),
 		LogEntries:           func() ([]types.LogEntry, []time.Time) { return nil, nil },
 		LogTotalAdded:        func() int64 { return 0 },
 		IsConsoleNoise:       func(types.LogEntry) bool { return false },
 		DiagnosticHintString: func() string { return m.diagnosticStr },
-		ExecuteA11yQuery: func(string, []string, any, bool) (json.RawMessage, error) {
-			return m.a11yResult, m.a11yErr
-		},
+		A11y: a11yaudit.New(a11yaudit.Deps{
+			TrackingEnabled: func() bool {
+				enabled, _, _ := m.cap.Extension().GetTrackingStatus()
+				return enabled
+			},
+			Execute: func(string, []string, any, bool) (json.RawMessage, error) {
+				return m.a11yResult, m.a11yErr
+			},
+		}),
 	}
 }
 
 // ============================================
 // Waterfall Summary Tests
-// ============================================
-
-func TestBuildA11ySummary_Compact(t *testing.T) {
-	t.Parallel()
-	auditResult := map[string]any{
-		"passes": []any{
-			map[string]any{"id": "rule1"},
-			map[string]any{"id": "rule2"},
-		},
-		"violations": []any{
-			map[string]any{
-				"id":     "color-contrast",
-				"impact": "serious",
-				"nodes":  []any{map[string]any{}, map[string]any{}, map[string]any{}},
-			},
-			map[string]any{
-				"id":     "image-alt",
-				"impact": "critical",
-				"nodes":  []any{map[string]any{}},
-			},
-		},
-		"incomplete": []any{
-			map[string]any{"id": "aria-label"},
-		},
-	}
-
-	result := buildA11ySummary(auditResult)
-
-	if result["pass"] != 2 {
-		t.Errorf("pass = %v, want 2", result["pass"])
-	}
-	if result["violations"] != 2 {
-		t.Errorf("violations = %v, want 2", result["violations"])
-	}
-	if result["incomplete"] != 1 {
-		t.Errorf("incomplete = %v, want 1", result["incomplete"])
-	}
-
-	topIssues, ok := result["top_issues"].([]map[string]any)
-	if !ok {
-		t.Fatalf("top_issues wrong type: %T", result["top_issues"])
-	}
-	if len(topIssues) != 2 {
-		t.Fatalf("expected 2 top issues, got %d", len(topIssues))
-	}
-	// Should be sorted by node count descending
-	if topIssues[0]["rule"] != "color-contrast" {
-		t.Errorf("first issue = %v, want color-contrast", topIssues[0]["rule"])
-	}
-	if topIssues[0]["count"] != 3 {
-		t.Errorf("first issue count = %v, want 3", topIssues[0]["count"])
-	}
-	if topIssues[0]["severity"] != "serious" {
-		t.Errorf("first issue severity = %v, want serious", topIssues[0]["severity"])
-	}
-}
-
-func TestBuildA11ySummary_Empty(t *testing.T) {
-	t.Parallel()
-	result := buildA11ySummary(map[string]any{})
-	if result["pass"] != 0 {
-		t.Errorf("pass = %v, want 0", result["pass"])
-	}
-	if result["violations"] != 0 {
-		t.Errorf("violations = %v, want 0", result["violations"])
-	}
-}
-
-func TestBuildA11ySummary_TopIssuesLimitedTo5(t *testing.T) {
-	t.Parallel()
-	violations := make([]any, 7)
-	for i := range violations {
-		violations[i] = map[string]any{
-			"id":     "rule-" + string(rune('a'+i)),
-			"impact": "minor",
-			"nodes":  []any{map[string]any{}},
-		}
-	}
-	auditResult := map[string]any{"violations": violations}
-
-	result := buildA11ySummary(auditResult)
-	topIssues := result["top_issues"].([]map[string]any)
-	if len(topIssues) != 5 {
-		t.Errorf("expected 5 top issues (capped), got %d", len(topIssues))
-	}
-}
-
-// ============================================
-// Issue #276: A11y Audit Partial Results Tests
 // ============================================
 
 func TestRunA11yAudit_TimeoutReturnsPartialResults(t *testing.T) {

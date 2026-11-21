@@ -6,6 +6,8 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/ports"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/warningqueue"
 	"net/http"
 	"os"
@@ -229,7 +231,11 @@ func (s *Server) Close() {
 var openapiJSON []byte
 
 func setupHTTPRoutes(server *Server, captured *capture.Capture) (*http.ServeMux, *toolruntime.ToolHandler) {
-	server.mediaHTTP = mediaapi.New(captured, server.annotationRuntime.Store(), server.pushRouter)
+	var mediaResults ports.ResultSink
+	if captured != nil {
+		mediaResults = captured.Commands()
+	}
+	server.mediaHTTP = mediaapi.New(mediaResults, server.annotationRuntime.Store(), server.pushRouter)
 	mux := http.NewServeMux()
 	if captured != nil {
 		registerCaptureRoutes(mux, server, captured)
@@ -254,7 +260,7 @@ func registerPerformanceTraceRoutes(mux *http.ServeMux) {
 
 func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture.Capture) {
 	captureHTTP := httpingest.New(httpingest.Dependencies{
-		Telemetry: captured.Telemetry(), Queries: captured.Queries(), Recordings: captured.Recordings(),
+		Telemetry: captured.Telemetry(), Commands: captured.Commands(), Recordings: captured.Recordings(),
 		Performance: captured.Performance(), Circuit: captured.Circuit(),
 	})
 	mux.HandleFunc("/websocket-events", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleWebSocketEvents)))
@@ -265,13 +271,15 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 	mux.HandleFunc("/enhanced-actions", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleEnhancedActions)))
 	mux.HandleFunc("/performance-snapshots", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandlePerformanceSnapshots)))
 	mux.HandleFunc("/sync", httpguard.CORS(httpguard.ExtensionOnly(newSyncHandler(captured).HandleSync)))
-	clientapi.Register(mux, captured, maxPostBodySize)
+	clientapi.Register(mux, captured.Clients(), maxPostBodySize)
 	mux.HandleFunc("/recordings/save", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		screenrec.HandleSave(w, r, captured.Queries(), server.stateRecovery)
+		screenrec.HandleSave(w, r, captured.Commands(), server.stateRecovery)
 	})))
 	mux.HandleFunc("/recordings/storage", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleRecordingStorage)))
 	mux.HandleFunc("/recordings/reveal", httpguard.CORS(httpguard.ExtensionOnly(screenrec.HandleReveal)))
-	mux.HandleFunc("/telemetry", httpguard.CORS(telemetryapi.Handler(server.logs, captured)))
+	mux.HandleFunc("/telemetry", httpguard.CORS(telemetryapi.Handler(server.logs, telemetryapi.Sources{
+		Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs(),
+	})))
 	mux.HandleFunc("/snapshot", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Snapshot(server.logs, captured))))
 	mux.HandleFunc("/clear", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Clear(server.logs, toolruntime.NewRuntimeResetter(captured)))))
 	mux.HandleFunc("/test-boundary", httpguard.CORS(httpguard.ExtensionOnly(ciapi.TestBoundary(captured))))
@@ -280,7 +288,7 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 func newSyncHandler(captured *capture.Capture) *syncruntime.Handler {
 	return syncruntime.NewHandler(syncruntime.Dependencies{
 		Runtime:        captured.Extension(),
-		Queries:        captured.Queries(),
+		Commands:       captured.Commands(),
 		Lifecycle:      captured.Lifecycle(),
 		FeatureUsage:   captured.FeatureUsage(),
 		ExtensionLogs:  captured.ExtensionLogs(),
@@ -320,7 +328,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	mux.HandleFunc("/mcp", httpguard.CORS(newMCPHTTPHandler(mcpHandler).ServeHTTP))
 	operations := operationalapi.New(operationalapi.Options{
 		Logs:      server.logs,
-		Capture:   captured,
+		Owners:    healthOwnersOf(captured),
 		Version:   version,
 		StartedAt: server.runtime.StartedAt(),
 		TerminalStatus: func() operationalapi.TerminalStatus {
@@ -345,7 +353,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	})
 
 	mux.HandleFunc("/api/status", httpguard.CORS(dashboard.Status(dashboard.StatusOptions{
-		Version: version, StartedAt: server.runtime.StartedAt(), Capture: captured, JSONResponse: httpapi.JSON,
+		Version: version, StartedAt: server.runtime.StartedAt(), Owners: healthOwnersOf(captured), JSONResponse: httpapi.JSON,
 		Logs: func() (int, int) {
 			return server.logs.EntryCount(), server.logs.MaxEntries()
 		},
@@ -361,12 +369,12 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	})))
 	mux.HandleFunc("/health", httpguard.CORS(operations.ServeHealth))
 
-	proxyHandler := insecureproxy.New(captured, httpapi.JSON)
+	proxyHandler := insecureproxy.New(extensionOf(captured), httpapi.JSON)
 	mux.HandleFunc("/insecure-proxy", httpguard.CORS(proxyHandler.ServeHTTP))
 	mux.HandleFunc("/doctor", httpguard.CORS(func(w http.ResponseWriter, _ *http.Request) {
 		var extraChecks []health.DoctorCheck
 		extraChecks = doctorsupport.Checks(mcpHandler.StateRecovery(), server.incidents)
-		health.HandleDoctorHTTP(w, captured, version, extraChecks...)
+		health.HandleDoctorHTTP(w, healthOwnersOf(captured), version, extraChecks...)
 	}))
 	mux.HandleFunc("/api/token-savings", httpguard.CORS(tracking.HandleRecordTokenSavings(server.tokenTracker)))
 
@@ -417,9 +425,26 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 
 func newMCPHTTPHandler(handler *toolruntime.ToolHandler) *mcphttp.Handler {
 	return mcphttp.New(mcphttp.Config{
-		Version:       version,
-		MaxBodySize:   maxPostBodySize,
-		HandleRequest: handler.HandleRequest,
-		Capture:       handler.Capture,
+		Version:        version,
+		MaxBodySize:    maxPostBodySize,
+		HandleRequest:  handler.HandleRequest,
+		DiagnosticLogs: healthOwnersOf(handler.Capture()).DiagnosticLogs,
 	})
+}
+
+// healthOwnersOf returns the health/doctor state owners, or the zero value
+// (degraded composition) without a capture.
+func healthOwnersOf(captured *capture.Capture) healthreader.Owners {
+	if captured == nil {
+		return healthreader.Owners{}
+	}
+	return captured.HealthOwners()
+}
+
+// extensionOf returns the extension connection owner, or nil without a capture.
+func extensionOf(captured *capture.Capture) *syncruntime.Runtime {
+	if captured == nil {
+		return nil
+	}
+	return captured.Extension()
 }

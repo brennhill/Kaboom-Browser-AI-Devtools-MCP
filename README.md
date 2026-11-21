@@ -162,6 +162,8 @@ node --test tests/extension/*.test.js  # Extension tests
 make dev                               # Build for current platform
 ```
 
+**[Glossary & bounded contexts →](GLOSSARY.md)** · **[Server architecture →](docs/core/architecture/server-architecture.md)** · **[Extension architecture →](docs/core/architecture/extension-architecture.md)**
+
 **[Release process & quality gates →](docs/core/product/release.md)** · **[Changelog →](CHANGELOG.md)**
 
 ## License

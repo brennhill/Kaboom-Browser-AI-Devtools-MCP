@@ -8,10 +8,8 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
-	observecore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -22,7 +20,6 @@ func (auditScannerStub) HandleSecurityAudit(json.RawMessage, []types.NetworkBody
 }
 
 func auditTestDeps() Deps {
-	captured := capture.NewCapture()
 	return Deps{
 		Analyze: toolanalyze.Deps{
 			GetTrackingStatus:       func() (bool, int, string) { return false, 0, "" },
@@ -31,12 +28,11 @@ func auditTestDeps() Deps {
 			ConsoleSecurityEntries:  func() []types.LogEntry { return nil },
 			SecurityScanner:         func() toolanalyze.SecurityScannerInterface { return auditScannerStub{} },
 		},
-		Observe: observecore.Deps{
-			Capture: captured,
-			ExecuteA11yQuery: func(string, []string, any, bool) (json.RawMessage, error) {
-				return json.RawMessage(`{"violations":[]}`), nil
-			},
-			DiagnosticHintString: func() string { return "" },
+		Performance: func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+			return mcp.Succeed(req, "Performance", map[string]any{"snapshots": []any{}})
+		},
+		Accessibility: func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+			return mcp.Succeed(req, "A11y audit", map[string]any{"violations": []any{}})
 		},
 	}
 }

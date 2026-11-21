@@ -17,6 +17,8 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/action_runtime.go
+  - cmd/browser-agent/internal/toolruntime/interact_wiring.go
+  - internal/app/screenshot/screenshot.go
   - cmd/browser-agent/internal/toolinteract/interact_dom.go
   - cmd/browser-agent/internal/toolinteract/interact_browser.go
   - cmd/browser-agent/internal/toolinteract/interact_page.go
@@ -217,7 +219,17 @@ Pilot navigation lifecycle tests model tab readiness explicitly and use
 controlled completion signals, so consecutive operations prove exactly-once
 settlement without wall-clock sleeps or load-sensitive timeout behavior.
 `include_screenshot` remains a composable response enrichment after a real
-interact action. Tests acknowledge the action query exactly as the extension
+interact action. A failed enrichment capture never fails the action, but it
+reports the redacted `interact_include_screenshot` Doctor diagnostic (resolved by
+the next successful capture) instead of being silently swallowed.
+Interact action owners no longer take `*capture.Capture` (kaboom-jdm5.5):
+`PageDeps` carries `Tab` (`TrackedTab`), `Vitals`, `Commands` and `PageInfo`;
+`BrowserDeps` carries `Tab` (`BrowserTab`: tracking, security mode, retarget) and
+`Perf` (`PerfBaseline`); `WorkflowDeps` carries `TrackingStatus` and the typed
+`AuditA11y` (the `internal/app/a11yaudit` use case), `A11yFailure` and
+`ExportSARIF` (`toolgenerate.BuildSARIF`) instead of the MCP-shaped
+`ToolAnalyze`/`ToolExportSARIF`. The layering rule `observe->capture` also
+covers `cmd/browser-agent/internal/toolinteract/**`. Tests acknowledge the action query exactly as the extension
 does, then await the screenshot query through the canonical pending-query
 notification barrier; no polling sleeps or undelivered-query shortcuts remain.
 Browser-action completion helpers use that same dispatcher notification rather

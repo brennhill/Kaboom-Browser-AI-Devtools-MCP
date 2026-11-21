@@ -8,6 +8,7 @@ package capture
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"testing"
 	"time"
 
@@ -38,13 +39,13 @@ func TestAsyncQueueIntegration(t *testing.T) {
 		TabID:         0,
 	}
 
-	queryID, _ := capture.Queries().CreatePendingQueryWithTimeout(query, queries.AsyncCommandTimeout, "")
+	queryID, _ := capture.Commands().Enqueue(query, queries.AsyncCommandTimeout, "")
 	if queryID == "" {
 		t.Fatal("CreatePendingQueryWithTimeout returned empty query ID")
 	}
 
 	// Verify command is tracked as "pending"
-	cmd, found := capture.Queries().GetCommandResult(correlationID)
+	cmd, found := capture.Commands().Command(correlationID)
 	if !found {
 		t.Fatal("Command not registered after CreatePendingQueryWithTimeout")
 	}
@@ -53,7 +54,7 @@ func TestAsyncQueueIntegration(t *testing.T) {
 	}
 
 	// Step 2: Extension polls for pending queries (simulate GET /pending-queries)
-	pendingQueries := capture.Queries().GetPendingQueries()
+	pendingQueries := capture.Commands().Pending()
 	if len(pendingQueries) != 1 {
 		t.Fatalf("Expected 1 pending query, got %d", len(pendingQueries))
 	}
@@ -73,16 +74,16 @@ func TestAsyncQueueIntegration(t *testing.T) {
 	result := json.RawMessage(`{"value": 42, "success": true}`)
 
 	// Step 4: Extension posts result (simulate POST /dom-result)
-	capture.Queries().SetQueryResult(queryID, result)
+	commandtest.Deliver(capture.Commands(), queryID, result)
 
 	// Verify query is no longer in pending list
-	pendingQueries = capture.Queries().GetPendingQueries()
+	pendingQueries = capture.Commands().Pending()
 	if len(pendingQueries) != 0 {
 		t.Errorf("Expected 0 pending queries after result posted, got %d", len(pendingQueries))
 	}
 
 	// Verify result is stored
-	storedResult, found := capture.Queries().TakeQueryResult(queryID)
+	storedResult, found := commandtest.Take(capture.Commands(), queryID)
 	if !found {
 		t.Fatal("Result not found after SetQueryResult")
 	}
@@ -91,7 +92,7 @@ func TestAsyncQueueIntegration(t *testing.T) {
 	}
 
 	// Step 5: MCP retrieves command status (simulate observe({what: 'command_result', correlation_id: '...'}))
-	cmd, found = capture.Queries().GetCommandResult(correlationID)
+	cmd, found = capture.Commands().Command(correlationID)
 	if !found {
 		t.Fatal("Command not found after result posted")
 	}
@@ -116,22 +117,22 @@ func TestAsyncQueueArchitectureInvariants(t *testing.T) {
 
 	// Verify CreatePendingQueryWithTimeout exists and works
 	query := queries.PendingQuery{Type: "test", Params: json.RawMessage(`{}`)}
-	id, _ := capture.Queries().CreatePendingQueryWithTimeout(query, 1*time.Second, "")
+	id, _ := capture.Commands().Enqueue(query, 1*time.Second, "")
 	if id == "" {
 		t.Error("CreatePendingQueryWithTimeout is broken or missing")
 	}
 
 	// Verify GetPendingQueries exists and works
-	pending := capture.Queries().GetPendingQueries()
+	pending := capture.Commands().Pending()
 	if pending == nil {
 		t.Error("GetPendingQueries is broken or missing")
 	}
 
 	// Verify SetQueryResult exists and works
-	capture.Queries().SetQueryResult(id, json.RawMessage(`{}`))
+	commandtest.Deliver(capture.Commands(), id, json.RawMessage(`{}`))
 
 	// Verify TakeQueryResult exists and works
-	_, _ = capture.Queries().TakeQueryResult(id)
+	_, _ = commandtest.Take(capture.Commands(), id)
 
 	// Verify correlation ID tracking methods exist
 	query2 := queries.PendingQuery{
@@ -139,28 +140,28 @@ func TestAsyncQueueArchitectureInvariants(t *testing.T) {
 		Params:        json.RawMessage(`{}`),
 		CorrelationID: "test_corr_id",
 	}
-	capture.Queries().CreatePendingQueryWithTimeout(query2, 1*time.Second, "")
+	capture.Commands().Enqueue(query2, 1*time.Second, "")
 
 	// Verify GetCommandResult exists and works
-	_, found := capture.Queries().GetCommandResult("test_corr_id")
+	_, found := capture.Commands().Command("test_corr_id")
 	if !found {
 		t.Error("GetCommandResult is broken or correlation ID tracking is missing")
 	}
 
 	// Verify GetPendingCommands exists and works
-	pendingCmds := capture.Queries().GetPendingCommands()
+	pendingCmds := capture.Commands().PendingCommands()
 	if pendingCmds == nil {
 		t.Error("GetPendingCommands is broken or missing")
 	}
 
 	// Verify GetCompletedCommands exists and works
-	completedCmds := capture.Queries().GetCompletedCommands()
+	completedCmds := capture.Commands().CompletedCommands()
 	if completedCmds == nil {
 		t.Error("GetCompletedCommands is broken or missing")
 	}
 
 	// Verify GetFailedCommands exists and works
-	failedCmds := capture.Queries().GetFailedCommands()
+	failedCmds := capture.Commands().FailedCommands()
 	if failedCmds == nil {
 		t.Error("GetFailedCommands is broken or missing")
 	}
@@ -180,7 +181,7 @@ func TestAsyncQueueMultiClientIntegration(t *testing.T) {
 		CorrelationID: "client_a_integration",
 		TabID:         1,
 	}
-	idA, _ := capture.Queries().CreatePendingQueryWithTimeout(queryA, queries.AsyncCommandTimeout, "client_a")
+	idA, _ := capture.Commands().Enqueue(queryA, queries.AsyncCommandTimeout, "client_a")
 
 	// Client B creates command
 	queryB := queries.PendingQuery{
@@ -189,41 +190,29 @@ func TestAsyncQueueMultiClientIntegration(t *testing.T) {
 		CorrelationID: "client_b_integration",
 		TabID:         2,
 	}
-	idB, _ := capture.Queries().CreatePendingQueryWithTimeout(queryB, queries.AsyncCommandTimeout, "client_b")
+	idB, _ := capture.Commands().Enqueue(queryB, queries.AsyncCommandTimeout, "client_b")
 
-	// Client A polls - should only see their query
-	pendingA := capture.Queries().GetPendingQueriesForClient("client_a")
-	if len(pendingA) != 1 {
-		t.Errorf("Client A: expected 1 pending query, got %d", len(pendingA))
-	}
-	if len(pendingA) > 0 && pendingA[0].CorrelationID != "client_a_integration" {
-		t.Errorf("Client A got wrong query: %s", pendingA[0].CorrelationID)
-	}
-
-	// Client B polls - should only see their query
-	pendingB := capture.Queries().GetPendingQueriesForClient("client_b")
-	if len(pendingB) != 1 {
-		t.Errorf("Client B: expected 1 pending query, got %d", len(pendingB))
-	}
-	if len(pendingB) > 0 && pendingB[0].CorrelationID != "client_b_integration" {
-		t.Errorf("Client B got wrong query: %s", pendingB[0].CorrelationID)
+	// The owner delivers every client's queued command on one heartbeat;
+	// result consumption below stays client-scoped.
+	if pending := capture.Commands().Pending(); len(pending) != 2 {
+		t.Errorf("expected both clients' queries pending, got %d", len(pending))
 	}
 
 	// Client A posts result
 	resultA := json.RawMessage(`{"client":"A"}`)
-	capture.Queries().SetQueryResultWithClient(idA, resultA, "client_a")
+	commandtest.DeliverForClient(capture.Commands(), idA, resultA, "client_a")
 
 	// Client B posts result
 	resultB := json.RawMessage(`{"client":"B"}`)
-	capture.Queries().SetQueryResultWithClient(idB, resultB, "client_b")
+	commandtest.DeliverForClient(capture.Commands(), idB, resultB, "client_b")
 
 	// Both commands should be tracked as complete (correlation tracking is global)
-	cmdA, foundA := capture.Queries().GetCommandResult("client_a_integration")
+	cmdA, foundA := capture.Commands().Command("client_a_integration")
 	if !foundA || cmdA.Status != "complete" {
 		t.Error("Client A command not completed correctly")
 	}
 
-	cmdB, foundB := capture.Queries().GetCommandResult("client_b_integration")
+	cmdB, foundB := capture.Commands().Command("client_b_integration")
 	if !foundB || cmdB.Status != "complete" {
 		t.Error("Client B command not completed correctly")
 	}

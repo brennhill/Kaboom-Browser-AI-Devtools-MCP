@@ -35,7 +35,7 @@ func TestBuildResponseMetadata_DataAgeMs_FreshData(t *testing.T) {
 	capturefixture.Connect(cap)
 
 	newestEntry := time.Now().Add(-500 * time.Millisecond)
-	meta := BuildResponseMetadata(cap, newestEntry)
+	meta := BuildResponseMetadata(cap.Extension(), newestEntry)
 
 	// data_age_ms should be approximately 500 (within 100ms tolerance)
 	if meta.DataAgeMs < 400 || meta.DataAgeMs > 700 {
@@ -49,7 +49,7 @@ func TestBuildResponseMetadata_DataAgeMs_ZeroForVeryFresh(t *testing.T) {
 	capturefixture.Connect(cap)
 
 	newestEntry := time.Now()
-	meta := BuildResponseMetadata(cap, newestEntry)
+	meta := BuildResponseMetadata(cap.Extension(), newestEntry)
 
 	// data_age_ms should be 0 or very small for just-now data
 	if meta.DataAgeMs > 100 {
@@ -63,7 +63,7 @@ func TestBuildResponseMetadata_DataAgeMs_StaleData(t *testing.T) {
 	capturefixture.Connect(cap)
 
 	newestEntry := time.Now().Add(-30 * time.Second)
-	meta := BuildResponseMetadata(cap, newestEntry)
+	meta := BuildResponseMetadata(cap.Extension(), newestEntry)
 
 	// data_age_ms should be approximately 30000
 	if meta.DataAgeMs < 29000 || meta.DataAgeMs > 31000 {
@@ -76,7 +76,7 @@ func TestBuildResponseMetadata_DataAgeMs_NoData(t *testing.T) {
 	cap := capture.NewCapture()
 	capturefixture.Connect(cap)
 
-	meta := BuildResponseMetadata(cap, time.Time{})
+	meta := BuildResponseMetadata(cap.Extension(), time.Time{})
 
 	// When no data, data_age_ms should be -1 (sentinel for "no data")
 	if meta.DataAgeMs != -1 {
@@ -94,7 +94,7 @@ func TestBuildResponseMetadata_DataAgeMs_FutureTimestamp(t *testing.T) {
 
 	// Simulate NTP clock adjustment: newestEntry is in the future relative to now.
 	newestEntry := time.Now().Add(5 * time.Second)
-	meta := BuildResponseMetadata(cap, newestEntry)
+	meta := BuildResponseMetadata(cap.Extension(), newestEntry)
 
 	// data_age_ms must be clamped to 0, not negative.
 	if meta.DataAgeMs < 0 {
@@ -118,7 +118,7 @@ func TestBuildResponseMetadata_DataAgeMs_InPaginatedMetadata(t *testing.T) {
 		Total:   10,
 		HasMore: false,
 	}
-	meta := BuildPaginatedResponseMetadata(cap, newestEntry, pMeta)
+	meta := BuildPaginatedResponseMetadata(cap.Extension(), newestEntry, pMeta)
 
 	dataAgeMs, ok := meta["data_age_ms"]
 	if !ok {

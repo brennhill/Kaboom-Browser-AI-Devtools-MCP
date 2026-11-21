@@ -10,12 +10,27 @@ code_paths:
   - internal/mcp/response_content.go
   - internal/mcp/response_clamp.go
   - internal/mcp/errors.go
-  - internal/queries/dispatcher.go
-  - internal/queries/dispatcher_commands.go
-  - internal/queries/dispatcher_queries.go
-  - internal/queries/dispatcher_results.go
-  - internal/queries/dispatcher_trace.go
+  - internal/browsercommand/internal/dispatch/dispatcher.go
+  - internal/browsercommand/internal/dispatch/dispatcher_commands.go
+  - internal/browsercommand/internal/dispatch/dispatcher_queries.go
+  - internal/browsercommand/internal/dispatch/dispatcher_results.go
+  - internal/browsercommand/internal/dispatch/dispatcher_trace.go
   - internal/queries/types.go
+  - internal/browsercommand/owner.go
+  - internal/browsercommand/result.go
+  - internal/browsercommand/exchange.go
+  - internal/browsercommand/views.go
+  - internal/browsercommand/commandtest/commandtest.go
+  - internal/app/ports/ports.go
+  - scripts/contracts/layering/main.go
+  - scripts/contracts/layering/command_owner.go
+  - cmd/browser-agent/internal/mediaapi/handler.go
+  - cmd/browser-agent/internal/screenrec/save.go
+  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
+  - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command.go
+  - cmd/browser-agent/internal/toolobserve/dispatcher.go
+  - cmd/browser-agent/internal/toolruntime/interact_wiring.go
+  - internal/app/pagestorage/execute.go
   - internal/capture/capture.go
   - internal/capture/syncruntime/handler.go
   - cmd/browser-agent/internal/asynccommand/handler.go
@@ -39,10 +54,17 @@ code_paths:
 test_paths:
   - internal/mcp/response_test.go
   - internal/mcp/errors_test.go
-  - internal/queries/dispatcher_test.go
-  - internal/queries/commands_test.go
-  - internal/queries/command_trace_test.go
-  - internal/queries/expire_signal_test.go
+  - internal/browsercommand/internal/dispatch/dispatcher_test.go
+  - internal/browsercommand/internal/dispatch/commands_test.go
+  - internal/browsercommand/internal/dispatch/command_trace_test.go
+  - internal/browsercommand/internal/dispatch/expire_signal_test.go
+  - internal/browsercommand/owner_test.go
+  - internal/browsercommand/local_test.go
+  - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command_test.go
+  - cmd/browser-agent/internal/toolinteract/interactbatch/batch_test.go
+  - internal/capture/syncruntime/sync_command_lifecycle_test.go
+  - internal/capture/syncruntime/sync_test.go
+  - scripts/contracts/layering/main_test.go
   - cmd/browser-agent/composition_test.go
   - cmd/browser-agent/internal/screenrec/screenrec_test.go
   - internal/capture/syncruntime/extension_state_unit_test.go
@@ -114,6 +136,56 @@ accepted unresolved command to make room for disposable history.
   - `internal/mcp/response.go` — marshal helpers plus the canonical `Succeed`/`SucceedText`/`Fail`/`ParseArgs` vocabulary
   - `internal/mcp/response_content.go` — image and warning content blocks
   - `internal/mcp/response_clamp.go` — JSON-aware payload clamping
+- Browser-command lifecycle owner (`internal/browsercommand`, kaboom-jdm5.2):
+  `Owner` wraps `QueryDispatcher` state and is the only path the transports use
+  for queueing (`Enqueue`), long-poll delivery (`AwaitPending`), results
+  (`SubmitResult` / `ApplySyncExchange`), expiry (`ExpireAll`), MCP disconnect
+  (`FailDisconnected`) and missing-progress reconciliation. `/sync`
+  (`syncruntime.Handler`), `/query-result` (`httpingest.HandleQueryResult`) and
+  MCP waits (`asynccommand.Handler`) are adapters over it. Each `ResultSource`
+  has one validation policy: `sync` results are accepted only inside
+  `ApplySyncExchange` while the connection owner's `GenerationGate` confirms the
+  exchange generation is current (results, ack, disconnect expiry and progress
+  reconciliation all run inside the gate, so superseded polls cannot mutate
+  current-generation commands); `query_result` is validated by identity and
+  client scope (its wire contract carries no generation); `daemon` transitions
+  need a correlation ID and are either a failure (`error` with an error) or the
+  completion of a daemon-local command registered with `RegisterLocal` (for
+  example annotation waits). Connection identity, liveness and generation
+  stay with `syncruntime.Runtime`. `scripts/contracts/layering` forbids the
+  command module (`internal/browsercommand`, `internal/queries`) from importing
+  `net/http`, `internal/mcp` or `internal/capture/**`.
+- Owner-only dispatcher access (kaboom-jdm5.5): every production caller —
+  interact (`toolinteract.Commands`, batch `WaitCommand`), observe
+  (`observecore.Deps.Commands`, storage/IndexedDB/waterfall), analyze annotation
+  waits (`annotationanalysis.Commands`), media/recording uploads
+  (`ports.ResultSink` in `internal/app/ports`, as `query_result`), QA fixtures,
+  health/doctor/operational traces (`Snapshot`, `PendingCommands`,
+  `CompletedCommands`, `FailedCommands`, `RecentTraces`) — goes through
+  `browsercommand.Owner` or a consumer interface it satisfies. `queries.QueryRunner`
+  is the shared "enqueue, then wait" port. The layering `command-owner` rule
+  (`scripts/contracts/layering/command_owner.go`) fails any production
+  `X.Queries()` call and any import of the dispatcher outside
+  `internal/browsercommand/**`. The dispatcher itself lives in
+  `internal/browsercommand/internal/dispatch`, so the Go compiler keeps every
+  other package off it; `browsercommand.NewOwner()` constructs it and
+  `Owner.Close()` stops its cleanup. `Capture.Queries()` was deleted. Client-scoped pending/result reads and the query-timeout setter were deleted from the dispatcher because no production path used them: the owner delivers every queued command on one heartbeat and results are consumed by query ID. Tests drive
+  the extension side through `internal/browsercommand/commandtest`, which uses only
+  the owner's public result-source API (`query_result` submissions and a gated
+  `ApplySyncExchange` acknowledgment). `ports.ResultSink` lives in
+  `internal/app/ports` because the ownership rule rejects a producer-owned
+  interface in `browsercommand` and `queries` cannot import `browsercommand`.
+- Capture is a composition-root concern (kaboom-jdm5.5): only `cmd/browser-agent`,
+  its `toolruntime` wiring, the `internal/capture` tree and test-support packages
+  import `internal/capture` (layering rule `capture-root`; `test-support` keeps
+  production code off `observe/testsupport`, `capturefixture` and `commandtest`).
+  Every other consumer receives the owners it uses: toolguard, insecureproxy,
+  mcpresponse take `syncruntime.Runtime`; configure clear, telemetryapi,
+  mcptelemetry and noise auto-detect take the telemetry/perf/log stores; asynccommand
+  takes the command owner plus extension/perf/telemetry stores; clientapi and
+  terminal take `clientstore.Owner`; mcphttp takes the diagnostic log; health,
+  doctor, dashboard and operational diagnostics take `healthreader.Owners`, built
+  by `Capture.HealthOwners()`.
 - Command lifecycle updates accept only `pending`, `complete`, `error`, `timeout`, `expired`, or `cancelled`; noncanonical status text is treated as protocol drift and recorded as an error.
 - Synchronous result consumers may bind waits to a caller context; cancellation
   and deadlines wake the canonical query condition through event-driven
@@ -132,12 +204,12 @@ accepted unresolved command to make room for disposable history.
 - Query IDs include a per-dispatcher process/time/sequence prefix, so a restarted
   daemon cannot reuse an ID that an attached extension still remembers for
   duplicate-delivery protection.
-- Queue capacity and concurrent admission are tested inside `internal/queries`
+- Queue capacity and concurrent admission are tested inside `internal/browsercommand/internal/dispatch`
   with an explicit start barrier and exact accepted/rejected counts. The former
   Capture-level polling/jitter simulation and duplicate wall-clock expiration
   loop were deleted; Capture retains only end-to-end composition coverage.
 - Query and command state is accessed through the canonical
-  `Capture.Queries()` owner. The former Capture forwarding layer and test-only
+  `Capture.Commands()` owner (`browsercommand.Owner`). The former Capture forwarding layer and test-only
   pending-query facade have been deleted; disconnect-aware queue reconciliation
   is owned by `capture.SyncHandler` because it composes extension liveness with
   query expiry. `Capture` retains no sync forwarding methods.
@@ -152,4 +224,4 @@ accepted unresolved command to make room for disposable history.
   interfaces.
 - Tests:
   - `internal/mcp/response_test.go`
-  - `internal/queries/dispatcher_test.go` and `internal/capture/no_facade_test.go` prevent compatibility-only command lifecycle APIs from returning.
+  - `internal/browsercommand/internal/dispatch/dispatcher_test.go` and `internal/capture/no_facade_test.go` prevent compatibility-only command lifecycle APIs from returning.

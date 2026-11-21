@@ -6,19 +6,23 @@ package combinedaudit
 
 import (
 	"encoding/json"
-	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
-	observesession "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/session"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/securityaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	observecore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 )
 
+// ModeHandler is one composed analyzer entry point.
+type ModeHandler func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
+
+// Deps names the analyzers the combined audit scores. Performance and
+// Accessibility are the composed observe adapters (CheckPerformance,
+// RunA11yAudit); the audit never reaches the whole observe dependency set.
 type Deps struct {
-	Analyze toolanalyze.Deps
-	Observe observecore.Deps
+	Analyze       toolanalyze.Deps
+	Performance   ModeHandler
+	Accessibility ModeHandler
 }
 
 // auditCategory defines a category for the combined audit.
@@ -32,10 +36,10 @@ type auditCategory struct {
 func defaultAuditCategories() []auditCategory {
 	return []auditCategory{
 		{Name: "performance", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return observesession.CheckPerformance(d.Observe, req, args)
+			return d.Performance(req, args)
 		}, Weight: 1.0},
 		{Name: "accessibility", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return observepage.RunA11yAudit(d.Observe, req, args)
+			return d.Accessibility(req, args)
 		}, Weight: 1.0},
 		{Name: "security", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return securityaudit.HandleSecurityAudit(d.Analyze, req, args)

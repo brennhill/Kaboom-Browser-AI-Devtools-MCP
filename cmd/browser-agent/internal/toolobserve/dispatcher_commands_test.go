@@ -54,7 +54,7 @@ func TestPilotModeDoesNotReceiveDisconnectWarning(t *testing.T) {
 	captured := capture.NewCapture()
 	defer captured.Close()
 	dispatcher := NewDispatcher(Config{
-		Observe:              observecore.Deps{Capture: captured},
+		Observe:              observecore.Deps{Extension: captured.Extension(), Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs()},
 		IsExtensionConnected: func() bool { return false },
 		InjectSummary:        func(args json.RawMessage) json.RawMessage { return args },
 		DrainAlerts:          func() []types.Alert { return nil },
@@ -76,15 +76,15 @@ type commandStoreStub struct {
 	command   *queries.CommandResult
 }
 
-func (s commandStoreStub) WaitForCommand(string, time.Duration) (*queries.CommandResult, bool) {
+func (s commandStoreStub) WaitCommand(string, time.Duration) (*queries.CommandResult, bool) {
 	return s.command, s.command != nil
 }
-func (s commandStoreStub) GetCommandResult(string) (*queries.CommandResult, bool) {
+func (s commandStoreStub) Command(string) (*queries.CommandResult, bool) {
 	return s.command, s.command != nil
 }
-func (s commandStoreStub) GetPendingCommands() []*queries.CommandResult   { return s.pending }
-func (s commandStoreStub) GetCompletedCommands() []*queries.CommandResult { return s.completed }
-func (s commandStoreStub) GetFailedCommands() []*queries.CommandResult    { return s.failed }
+func (s commandStoreStub) PendingCommands() []*queries.CommandResult   { return s.pending }
+func (s commandStoreStub) CompletedCommands() []*queries.CommandResult { return s.completed }
+func (s commandStoreStub) FailedCommands() []*queries.CommandResult    { return s.failed }
 
 func TestFailedCommandsProjectsEmptyAndFailedStates(t *testing.T) {
 	t.Parallel()
@@ -123,7 +123,7 @@ func TestServerSideCommandAndPilotResponseContracts(t *testing.T) {
 	captured := capture.NewCapture()
 	defer captured.Close()
 	dispatcher := NewDispatcher(Config{
-		Observe: observecore.Deps{Capture: captured}, Commands: commandStoreStub{},
+		Observe: observecore.Deps{Extension: captured.Extension(), Telemetry: captured.Telemetry(), Performance: captured.Performance(), ExtensionLogs: captured.ExtensionLogs()}, Commands: commandStoreStub{},
 		IsExtensionConnected: func() bool { return true },
 		InjectSummary:        func(args json.RawMessage) json.RawMessage { return args },
 		DrainAlerts:          func() []types.Alert { return nil },

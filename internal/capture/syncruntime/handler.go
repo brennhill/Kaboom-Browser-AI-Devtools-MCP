@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/featureusage"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/extclient"
@@ -26,7 +27,7 @@ import (
 // Dependencies declares the independently synchronized owners used by sync.
 type Dependencies struct {
 	Runtime        *Runtime
-	Queries        *queries.QueryDispatcher
+	Commands       *browsercommand.Owner
 	Lifecycle      *lifecycle.Observer
 	FeatureUsage   *featureusage.Observer
 	ExtensionLogs  *logstore.Extension
@@ -34,34 +35,47 @@ type Dependencies struct {
 	// Recorder is optional: when set, the command exchange is captured for
 	// offline replay. Nil in production.
 	Recorder ExchangeRecorder
+	// Clock is optional (defaults to time.Now); tests inject a controlled clock
+	// for deterministic missing-progress reconciliation.
+	Clock func() time.Time
 }
 
 // Handler owns the extension heartbeat, command transport, and
 // disconnect-reconciliation boundary.
 type Handler struct {
-	runtime               *Runtime
-	queries               *queries.QueryDispatcher
-	lifecycle             *lifecycle.Observer
-	featureUsage          *featureusage.Observer
-	extensionLogs         *logstore.Extension
-	diagnosticLogs        *logstore.Diagnostic
-	waitForPendingQueries func(time.Duration)
-	recorder              ExchangeRecorder
+	runtime        *Runtime
+	commands       *browsercommand.Owner
+	lifecycle      *lifecycle.Observer
+	featureUsage   *featureusage.Observer
+	extensionLogs  *logstore.Extension
+	diagnosticLogs *logstore.Diagnostic
+	awaitPending   func(time.Duration) []queries.PendingQueryResponse
+	recorder       ExchangeRecorder
+	now            func() time.Time
+	// beforeExchange is a test seam for controlled interleaving: it runs after
+	// connection state is adopted and before the generation-gated exchange.
+	beforeExchange func()
 }
 
 const maxSyncPostBody = 5 << 20
 
 // NewHandler binds extension sync transport to its canonical owners.
 func NewHandler(deps Dependencies) *Handler {
+	clock := deps.Clock
+	if clock == nil {
+		clock = time.Now
+	}
 	return &Handler{
-		runtime:               deps.Runtime,
-		queries:               deps.Queries,
-		lifecycle:             deps.Lifecycle,
-		featureUsage:          deps.FeatureUsage,
-		extensionLogs:         deps.ExtensionLogs,
-		diagnosticLogs:        deps.DiagnosticLogs,
-		waitForPendingQueries: deps.Queries.WaitForPendingQueries,
-		recorder:              deps.Recorder,
+		runtime:        deps.Runtime,
+		commands:       deps.Commands,
+		lifecycle:      deps.Lifecycle,
+		featureUsage:   deps.FeatureUsage,
+		extensionLogs:  deps.ExtensionLogs,
+		diagnosticLogs: deps.DiagnosticLogs,
+		awaitPending:   deps.Commands.AwaitPending,
+		recorder:       deps.Recorder,
+		now:            clock,
+		beforeExchange: func() {},
 	}
 }
 
@@ -131,7 +145,7 @@ func (h *Handler) HandleSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now()
+	now := h.now()
 	clientID := r.Header.Get("X-Kaboom-Client")
 
 	// A probe validates this endpoint's contract; it is not a browser. Adopting it
@@ -150,19 +164,15 @@ func (h *Handler) HandleSync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.emitExtensionConnected(state)
-	if currentGeneration, applied := h.runtime.applyIfCurrentSyncGeneration(
-		req.ExtSessionID,
-		state.connectionGeneration,
-		func() { h.reconcileSyncExchange(req, clientID, state.connectionGeneration) },
-	); !applied {
-		h.rejectStaleGeneration(w, req, currentGeneration, "extension_sync_apply")
+	h.beforeExchange()
+	report := h.applySyncExchange(req, state, clientID, now)
+	if !report.Applied {
+		h.rejectStaleGeneration(w, req, report.CurrentGeneration, "extension_sync_apply")
 		return
 	}
+	h.emitExchangeReport(report, state, clientID)
 
-	h.handleSyncDisconnect(state, clientID)
-	h.reconcileSyncProgress(req, state, now)
-
-	pendingQueries := h.awaitPendingQueries()
+	pendingQueries := h.awaitPending(syncLongPollTimeout())
 	if currentGeneration, current := h.runtime.isCurrentSyncGeneration(
 		req.ExtSessionID,
 		state.connectionGeneration,
@@ -218,57 +228,86 @@ func (h *Handler) emitExtensionConnected(state syncConnectionState) {
 	}
 }
 
-func (h *Handler) reconcileSyncExchange(req SyncRequest, clientID string, connectionGeneration uint64) {
-	// Only known UI-originated keys are forwarded to prevent unbounded cardinality.
-	if filtered := enabledFeatures(req.FeaturesUsed); len(filtered) > 0 {
-		h.featureUsage.Notify(filtered)
-	}
-	h.recordCompleted(req.CommandResults)
-	h.processSyncCommandResults(req.CommandResults, clientID, connectionGeneration)
-	if req.LastCommandAck != "" {
-		h.queries.AcknowledgePendingQuery(req.LastCommandAck)
-	}
-}
-
-func (h *Handler) handleSyncDisconnect(state syncConnectionState, clientID string) {
-	if !state.wasDisconnected {
-		return
-	}
-	telemetry.AppError(incident.CodeExtensionDisconnect)
-	h.queries.ExpireAllPendingQueries("extension_disconnected")
-	util.SafeGo(func() {
-		h.lifecycle.Emit(lifecycle.EventExtensionDisconnected, map[string]any{
-			"ext_session_id": state.extSessionID,
-			"client_id":      clientID,
+// applySyncExchange hands this heartbeat's command work to the command owner,
+// gated on the connection owner's generation so superseded work cannot mutate
+// current-generation commands.
+func (h *Handler) applySyncExchange(req SyncRequest, state syncConnectionState, clientID string, now time.Time) browsercommand.ExchangeReport {
+	gate := func(apply func()) (uint64, bool) {
+		return h.runtime.applyIfCurrentSyncGeneration(req.ExtSessionID, state.connectionGeneration, func() {
+			// Only known UI-originated keys are forwarded to prevent unbounded cardinality.
+			if filtered := enabledFeatures(req.FeaturesUsed); len(filtered) > 0 {
+				h.featureUsage.Notify(filtered)
+			}
+			h.recordCompleted(req.CommandResults)
+			apply()
 		})
+	}
+	return h.commands.ApplySyncExchange(gate, browsercommand.SyncExchange{
+		Generation:   state.connectionGeneration,
+		ClientID:     clientID,
+		Results:      syncResults(req.CommandResults),
+		LastAck:      req.LastCommandAck,
+		Disconnected: state.wasDisconnected,
+		InProgress:   syncProgress(req.InProgress),
+		Now:          now,
 	})
 }
 
-// Reconcile started commands against extension heartbeat state.
-// If a command disappears from heartbeat in_progress without a terminal result,
-// fail it fast instead of waiting for eventual timeout.
-func (h *Handler) reconcileSyncProgress(req SyncRequest, state syncConnectionState, now time.Time) {
-	currentInProgress := currentGenerationInProgress(req.InProgress, state.connectionGeneration)
-	for _, entry := range req.InProgress {
-		if entry.ConnectionGeneration != 0 && entry.ConnectionGeneration != state.connectionGeneration {
-			h.lifecycle.Emit(lifecycle.EventStaleGenerationRejected, map[string]any{
-				"correlation_id":      entry.CorrelationID,
-				"received_generation": entry.ConnectionGeneration,
-				"current_generation":  state.connectionGeneration,
-				"bridge":              "sync_command_progress",
-			})
-		}
+func syncResults(results []SyncCommandResult) []browsercommand.Result {
+	out := make([]browsercommand.Result, 0, len(results))
+	for _, result := range results {
+		out = append(out, browsercommand.Result{
+			QueryID: result.ID, CorrelationID: result.CorrelationID, Status: result.Status,
+			Payload: result.Result, Error: result.Error, Generation: result.ConnectionGeneration,
+		})
 	}
-	h.reconcileInProgressCommandState(currentInProgress, now)
+	return out
 }
 
-func (h *Handler) awaitPendingQueries() []queries.PendingQueryResponse {
-	pendingQueries := h.queries.GetPendingQueries()
-	if len(pendingQueries) == 0 {
-		h.waitForPendingQueries(syncLongPollTimeout())
-		pendingQueries = h.queries.GetPendingQueries()
+func syncProgress(entries []SyncInProgress) []browsercommand.Progress {
+	if entries == nil {
+		return nil
 	}
-	return pendingQueries
+	out := make([]browsercommand.Progress, 0, len(entries))
+	for _, entry := range entries {
+		out = append(out, browsercommand.Progress{CorrelationID: entry.CorrelationID, Generation: entry.ConnectionGeneration})
+	}
+	return out
+}
+
+// emitExchangeReport turns the command owner's report into lifecycle telemetry.
+func (h *Handler) emitExchangeReport(report browsercommand.ExchangeReport, state syncConnectionState, clientID string) {
+	h.emitStale(report.StaleResults, state.connectionGeneration, "sync_command_result")
+	h.emitStale(report.StaleProgress, state.connectionGeneration, "sync_command_progress")
+	if state.wasDisconnected {
+		telemetry.AppError(incident.CodeExtensionDisconnect)
+		util.SafeGo(func() {
+			h.lifecycle.Emit(lifecycle.EventExtensionDisconnected, map[string]any{
+				"ext_session_id": state.extSessionID,
+				"client_id":      clientID,
+			})
+		})
+	}
+	for _, lost := range report.Lost {
+		util.SafeGo(func() {
+			h.lifecycle.Emit(lifecycle.EventCommandStateDesync, map[string]any{
+				"correlation_id": lost.CorrelationID,
+				"query_id":       lost.QueryID,
+				"reason":         "missing_in_progress_heartbeat",
+			})
+		})
+	}
+}
+
+func (h *Handler) emitStale(stale []browsercommand.StaleWork, currentGeneration uint64, bridge string) {
+	for _, work := range stale {
+		h.lifecycle.Emit(lifecycle.EventStaleGenerationRejected, map[string]any{
+			"correlation_id":      work.CorrelationID,
+			"received_generation": work.Generation,
+			"current_generation":  currentGeneration,
+			"bridge":              bridge,
+		})
+	}
 }
 
 func syncNextPollMs(commandsOut int) int {
@@ -506,32 +545,11 @@ func (r *Runtime) adoptExtSession(req SyncRequest, now time.Time) string {
 }
 
 func (r *Runtime) applySyncSettingsLocked(settings *SyncSettings, now time.Time) {
-	trackingChanged := r.trackingChangedLocked(settings)
 	r.state.pilotEnabled = settings.PilotEnabled
 	r.state.pilotStatusKnown = true
 	r.state.pilotUpdatedAt = now
 	r.state.pilotSource = PilotSourceExtensionSync
-	r.state.trackingEnabled = settings.TrackingEnabled
-	r.state.trackedTabID = settings.TrackedTabID
-	r.state.trackedTabURL = settings.TrackedTabURL
-	r.state.trackedTabTitle = settings.TrackedTabTitle
-	r.state.trackingUpdated = now
-	r.state.tabStatus = normalizedTabStatus(settings.TabStatus)
-	r.state.trackedTabActive = settings.TrackedTabActive
-	r.state.cspRestricted = settings.CspRestricted
-	r.state.cspLevel = settings.CspLevel
-	if trackingChanged {
-		r.signalTrackingChangeLocked()
-	}
-}
-
-func (r *Runtime) trackingChangedLocked(settings *SyncSettings) bool {
-	return r.state.trackingEnabled != settings.TrackingEnabled ||
-		r.state.trackedTabID != settings.TrackedTabID ||
-		r.state.trackedTabURL != settings.TrackedTabURL ||
-		r.state.trackedTabTitle != settings.TrackedTabTitle ||
-		r.state.tabStatus != normalizedTabStatus(settings.TabStatus) ||
-		!optionalBoolEqual(r.state.trackedTabActive, settings.TrackedTabActive)
+	r.observeTrackingLocked(heartbeatTrackingObservation(settings), now)
 }
 
 func normalizedTabStatus(status string) string {
@@ -571,33 +589,6 @@ func (r *Runtime) applyIfCurrentSyncGeneration(
 	return r.state.connectionGeneration, true
 }
 
-func (h *Handler) processSyncCommandResults(results []SyncCommandResult, clientID string, currentGeneration uint64) {
-	for _, result := range results {
-		// EXPECTED_ABSENCE: a result without its own generation inherits the
-		// already-validated enclosing heartbeat generation; logging that normal
-		// compact form would create a false stale-work incident.
-		if result.ConnectionGeneration != 0 && result.ConnectionGeneration != currentGeneration {
-			h.lifecycle.Emit(lifecycle.EventStaleGenerationRejected, map[string]any{
-				"correlation_id":      result.CorrelationID,
-				"received_generation": result.ConnectionGeneration,
-				"current_generation":  currentGeneration,
-				"bridge":              "sync_command_result",
-			})
-			continue
-		}
-		if result.ID != "" {
-			if result.CorrelationID != "" {
-				h.queries.SetQueryResultWithClientNoCommandComplete(result.ID, result.Result, clientID)
-			} else {
-				h.queries.SetQueryResultWithClient(result.ID, result.Result, clientID)
-			}
-		}
-		if result.CorrelationID != "" {
-			h.queries.ApplyCommandResult(result.CorrelationID, result.Status, result.Result, result.Error)
-		}
-	}
-}
-
 func (h *Handler) updateSyncLogs(req SyncRequest, now time.Time, pilotEnabled bool, queryCount int) {
 	h.diagnosticLogs.AddPolling(types.PollingLogEntry{
 		Timestamp:    now,
@@ -620,10 +611,10 @@ func (h *Handler) GetPendingQueriesDisconnectAware() []queries.PendingQueryRespo
 	_, disconnected := h.runtime.Disconnected()
 
 	if disconnected {
-		h.queries.ExpireAllPendingQueries("extension_disconnected")
+		h.commands.ExpireAll("extension_disconnected")
 		return nil
 	}
-	return h.queries.GetPendingQueries()
+	return h.commands.Pending()
 }
 
 func normalizeInProgressList(in []SyncInProgress) []SyncInProgress {
@@ -680,94 +671,4 @@ func currentGenerationInProgress(in []SyncInProgress, generation uint64) []SyncI
 		}
 	}
 	return out
-}
-
-func commandHasStarted(command *queries.CommandResult) bool {
-	if command == nil {
-		return false
-	}
-	for _, event := range command.TraceEvents {
-		if event.Stage == "started" || event.Stage == "resolved" || event.Stage == "errored" || event.Stage == "timed_out" {
-			return true
-		}
-	}
-	return strings.Contains(command.TraceTimeline, "started")
-}
-
-const missingInProgressGrace = 2 * time.Second
-
-func (h *Handler) reconcileInProgressCommandState(inProgress []SyncInProgress, now time.Time) {
-	if inProgress == nil {
-		return
-	}
-
-	active := make(map[string]struct{}, len(inProgress))
-	for _, entry := range inProgress {
-		if entry.CorrelationID != "" {
-			active[entry.CorrelationID] = struct{}{}
-		}
-	}
-	pending := h.queries.GetPendingCommands()
-	toFail, toFailIDs := h.runtime.reconcileMissingCommands(pending, active, now)
-
-	for i, correlationID := range toFail {
-		queryID := ""
-		if i < len(toFailIDs) {
-			queryID = toFailIDs[i]
-		}
-		h.queries.ApplyCommandResult(
-			correlationID,
-			"error",
-			nil,
-			"extension_lost_command: command acknowledged by extension but missing from in_progress heartbeats",
-		)
-		util.SafeGo(func() {
-			h.lifecycle.Emit(lifecycle.EventCommandStateDesync, map[string]any{
-				"correlation_id": correlationID,
-				"query_id":       queryID,
-				"reason":         "missing_in_progress_heartbeat",
-			})
-		})
-	}
-}
-
-func (r *Runtime) reconcileMissingCommands(
-	pending []*queries.CommandResult,
-	active map[string]struct{},
-	now time.Time,
-) (toFail []string, toFailIDs []string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	pendingCorrelations := make(map[string]struct{}, len(pending))
-	for _, command := range pending {
-		if command == nil || command.CorrelationID == "" {
-			continue
-		}
-		correlationID := command.CorrelationID
-		pendingCorrelations[correlationID] = struct{}{}
-		if _, ok := active[correlationID]; ok {
-			delete(r.state.missingInProgressSince, correlationID)
-			continue
-		}
-		if !commandHasStarted(command) {
-			continue
-		}
-		missingSince, observedMissing := r.state.missingInProgressSince[correlationID]
-		if !observedMissing {
-			r.state.missingInProgressSince[correlationID] = now
-			continue
-		}
-		if now.Sub(missingSince) >= missingInProgressGrace {
-			toFail = append(toFail, correlationID)
-			toFailIDs = append(toFailIDs, command.QueryID)
-			delete(r.state.missingInProgressSince, correlationID)
-		}
-	}
-	for correlationID := range r.state.missingInProgressSince {
-		if _, stillPending := pendingCorrelations[correlationID]; !stillPending {
-			delete(r.state.missingInProgressSince, correlationID)
-		}
-	}
-	return toFail, toFailIDs
 }

@@ -6,6 +6,7 @@ package mediaapi
 import (
 	"encoding/base64"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -23,7 +24,7 @@ func postScreenshotBody(t *testing.T, queryID string, extra map[string]any) map[
 	t.Setenv(state.StateDirEnv, t.TempDir())
 	captured := capture.NewCapture()
 	t.Cleanup(captured.Close)
-	handler := New(captured, nil, nil)
+	handler := New(captured.Commands(), nil, nil)
 
 	body := map[string]any{
 		"data_url": "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString([]byte("pixels")),
@@ -46,7 +47,7 @@ func postScreenshotBody(t *testing.T, queryID string, extra map[string]any) map[
 		t.Fatalf("upload status = %d; body=%s", recorder.Code, recorder.Body.String())
 	}
 
-	raw, ok := captured.Queries().TakeQueryResult(queryID)
+	raw, ok := commandtest.Take(captured.Commands(), queryID)
 	if !ok {
 		t.Fatalf("query %q was never resolved; observe would time out", queryID)
 	}

@@ -5,6 +5,7 @@ package interactbatch
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"strings"
 	"sync"
 	"testing"
@@ -29,7 +30,7 @@ func newBatchFixture(t *testing.T) *batchFixture {
 	handler = New(Deps{
 		RequirePilot:     allow,
 		RequireExtension: allow,
-		Capture:          func() *capture.Capture { return fixture.store },
+		WaitCommand:      fixture.store.Commands().WaitCommand,
 		RecordAIAction:   func(string, string, map[string]any) { fixture.recorded++ },
 		ReplayMu:         &sync.Mutex{},
 		Now:              deterministicBatchClock(),
@@ -171,13 +172,13 @@ func TestHandleAggregatesCompletedExtensionCommand(t *testing.T) {
 	t.Cleanup(store.Close)
 	handler := New(Deps{
 		RequirePilot: allow, RequireExtension: allow,
-		Capture:        func() *capture.Capture { return store },
+		WaitCommand:    store.Commands().WaitCommand,
 		ReplayMu:       &sync.Mutex{},
 		RecordAIAction: func(string, string, map[string]any) {},
 		Now:            deterministicBatchClock(),
 		Interact: func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-			store.Queries().RegisterCommand("step-1", "", time.Second)
-			store.Queries().ApplyCommandResult("step-1", "complete", json.RawMessage(`{"success":true}`), "")
+			commandtest.Register(store.Commands(), "step-1", time.Second)
+			commandtest.Complete(store.Commands(), "step-1", "complete", json.RawMessage(`{"success":true}`), "")
 			return mcp.Succeed(req, "queued", map[string]any{"correlation_id": "step-1"})
 		},
 	})

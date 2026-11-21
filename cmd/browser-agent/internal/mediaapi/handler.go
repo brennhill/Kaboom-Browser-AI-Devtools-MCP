@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/ports"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
 
@@ -16,7 +18,7 @@ const maxPostBodySize = 10 << 20
 
 // Handler owns media ingest dependencies and per-client screenshot throttling.
 type Handler struct {
-	capture      *capture.Capture
+	results      ports.ResultSink
 	annotations  *annotation.Store
 	pushRouter   *push.Router
 	rateMu       sync.Mutex
@@ -24,9 +26,10 @@ type Handler struct {
 }
 
 // New constructs the complete media ingest boundary.
-func New(captureStore *capture.Capture, annotations *annotation.Store, pushRouter *push.Router) *Handler {
+// A nil results sink disables query/command completion (degraded composition).
+func New(results ports.ResultSink, annotations *annotation.Store, pushRouter *push.Router) *Handler {
 	return &Handler{
-		capture:      captureStore,
+		results:      results,
 		annotations:  annotations,
 		pushRouter:   pushRouter,
 		rateByClient: make(map[string]time.Time),
@@ -41,5 +44,16 @@ func (h *Handler) CleanupRateLimits(now time.Time, maxAge time.Duration) {
 		if now.Sub(lastUpload) > maxAge {
 			delete(h.rateByClient, clientID)
 		}
+	}
+}
+
+// submitUploadResult hands an uploaded extension result to the command owner.
+// The upload itself already succeeded, so a rejection is reported as a
+// structured diagnostic instead of failing the HTTP response.
+func (h *Handler) submitUploadResult(result browsercommand.Result) {
+	result.Source = browsercommand.SourceQueryResult
+	if outcome := h.results.SubmitResult(result); outcome != browsercommand.OutcomeApplied {
+		diag.Printf("[Kaboom] event=media_result_rejected outcome=%s query_id=%s correlation_id=%s\n",
+			outcome, result.QueryID, result.CorrelationID)
 	}
 }

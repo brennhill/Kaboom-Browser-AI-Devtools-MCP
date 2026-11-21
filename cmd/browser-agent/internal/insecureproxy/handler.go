@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
@@ -31,16 +30,16 @@ const (
 type JSONResponder func(http.ResponseWriter, int, any)
 
 type Handler struct {
-	capture       *capture.Capture
+	extension     *syncruntime.Runtime
 	respond       JSONResponder
 	client        *http.Client
 	responseLimit int64
 }
 
-func New(cap *capture.Capture, respond JSONResponder) *Handler {
+func New(extension *syncruntime.Runtime, respond JSONResponder) *Handler {
 	return &Handler{
-		capture: cap,
-		respond: respond,
+		extension: extension,
+		respond:   respond,
 		client: &http.Client{
 			Timeout:   insecureProxyTimeout,
 			Transport: uploadsec.NewSSRFSafeTransport(func() bool { return false }),
@@ -75,12 +74,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.respond(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
-	if h.capture == nil {
+	if h.extension == nil {
 		h.respond(w, http.StatusInternalServerError, map[string]string{"error": "Capture unavailable"})
 		return
 	}
 
-	mode, productionParity, rewrites := h.capture.Extension().GetSecurityMode()
+	mode, productionParity, rewrites := h.extension.GetSecurityMode()
 	if mode != syncruntime.SecurityModeInsecureProxy {
 		h.respond(w, http.StatusForbidden, map[string]string{
 			"error": "insecure proxy is disabled; enable configure(what='security_mode', mode='insecure_proxy', confirm=true)",

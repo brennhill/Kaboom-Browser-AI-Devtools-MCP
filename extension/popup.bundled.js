@@ -917,7 +917,6 @@
         applyRecordHighlight(els);
         pendingRecordingIntent = null;
         setApprovalPendingState(els, approvalEls, state, null);
-        persist(removeLocal(StorageKey.PENDING_RECORDING), "pending-recording-clear");
         return;
       }
       pendingRecordingIntent = pending && !pending.highlight ? pending : null;
@@ -928,7 +927,6 @@
     const clearPendingRecordingIntent = () => {
       pendingRecordingIntent = null;
       setApprovalPendingState(els, approvalEls, state, null);
-      persist(removeLocal(StorageKey.PENDING_RECORDING), "pending-recording-clear");
     };
     void readLocalState({
       key: StorageKey.RECORDING,
@@ -1446,17 +1444,25 @@
       fix: "Choose a tab from the extension popup to save a fresh tracking state."
     });
   }
-  async function setTrackedTab(tab) {
-    if (!tab.id)
-      return;
-    await setLocals({
-      [StorageKey.TRACKED_TAB_ID]: tab.id,
+  var writeQueue = Promise.resolve();
+  function serialized(write) {
+    const next = writeQueue.then(write, write);
+    writeQueue = next.catch(() => {
+    });
+    return next;
+  }
+  function setTrackedTab(tab) {
+    const id = tab.id;
+    if (!id)
+      return Promise.resolve();
+    return serialized(() => setLocals({
+      [StorageKey.TRACKED_TAB_ID]: id,
       [StorageKey.TRACKED_TAB_URL]: tab.url ?? "",
       [StorageKey.TRACKED_TAB_TITLE]: tab.title ?? ""
-    });
+    }));
   }
-  async function clearTrackedTab() {
-    await removeLocals(TRACKED_TAB_STORAGE_KEYS);
+  function clearTrackedTab() {
+    return serialized(() => removeLocals(TRACKED_TAB_STORAGE_KEYS));
   }
 
   // extension/lib/tabs/cloaked-domains.js

@@ -6,6 +6,7 @@ package capture
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"testing"
 	"time"
 
@@ -23,18 +24,18 @@ func TestNewCaptureDelegation_QueryDispatcher(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	id, _ := c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
+	id, _ := commandtest.Enqueue(c.Commands(), queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
 	if id == "" {
 		t.Fatal("CreatePendingQuery returned empty id")
 	}
 
-	pending := c.Queries().GetPendingQueries()
+	pending := c.Commands().Pending()
 	if len(pending) != 1 {
 		t.Fatalf("GetPendingQueries len = %d, want 1", len(pending))
 	}
 
-	c.Queries().SetQueryResult(id, json.RawMessage(`{"ok":true}`))
-	result, found := c.Queries().TakeQueryResult(id)
+	commandtest.Deliver(c.Commands(), id, json.RawMessage(`{"ok":true}`))
+	result, found := commandtest.Take(c.Commands(), id)
 	if !found {
 		t.Fatal("TakeQueryResult returned false")
 	}
@@ -42,14 +43,9 @@ func TestNewCaptureDelegation_QueryDispatcher(t *testing.T) {
 		t.Errorf("result = %s, want {\"ok\":true}", string(result))
 	}
 
-	c.Queries().SetQueryTimeout(5 * time.Second)
-	if got := c.Queries().GetQueryTimeout(); got != 5*time.Second {
-		t.Errorf("GetQueryTimeout = %v, want 5s", got)
-	}
-
-	c.Queries().RegisterCommand("c-1", "q-1", 30*time.Second)
-	c.Queries().ApplyCommandResult("c-1", "complete", json.RawMessage(`{"done":true}`), "")
-	cmd, cmdFound := c.Queries().GetCommandResult("c-1")
+	commandtest.Register(c.Commands(), "c-1", 30*time.Second)
+	commandtest.Complete(c.Commands(), "c-1", "complete", json.RawMessage(`{"done":true}`), "")
+	cmd, cmdFound := c.Commands().Command("c-1")
 	if !cmdFound {
 		t.Fatal("GetCommandResult returned false")
 	}
@@ -57,12 +53,12 @@ func TestNewCaptureDelegation_QueryDispatcher(t *testing.T) {
 		t.Errorf("cmd.Status = %q, want complete", cmd.Status)
 	}
 
-	c.Queries().RegisterCommand("c-2", "q-2", 30*time.Second)
-	c.Queries().ExpireCommand("c-2")
+	commandtest.Register(c.Commands(), "c-2", 30*time.Second)
+	commandtest.Expire(c.Commands(), "c-2")
 
-	_ = c.Queries().GetPendingCommands()
-	_ = c.Queries().GetCompletedCommands()
-	failed := c.Queries().GetFailedCommands()
+	_ = c.Commands().PendingCommands()
+	_ = c.Commands().CompletedCommands()
+	failed := c.Commands().FailedCommands()
 	if len(failed) == 0 {
 		t.Error("GetFailedCommands should contain expired command")
 	}
@@ -78,7 +74,7 @@ func TestNewCapture_GetPendingQueriesDisconnectAware_NeverSynced(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
+	commandtest.Enqueue(c.Commands(), queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
 
 	pending := newSyncHandlerForTest(c).GetPendingQueriesDisconnectAware()
 	if len(pending) != 1 {
@@ -94,7 +90,7 @@ func TestNewCapture_GetPendingQueriesDisconnectAware_RecentSync(t *testing.T) {
 
 	runSyncRequest(t, c, syncruntime.SyncRequest{ExtSessionID: "recent-sync"})
 
-	c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
+	commandtest.Enqueue(c.Commands(), queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
 
 	pending := newSyncHandlerForTest(c).GetPendingQueriesDisconnectAware()
 	if len(pending) != 1 {
@@ -111,7 +107,7 @@ func TestNewCapture_GetPendingQueriesDisconnectAware_Disconnected(t *testing.T) 
 	runSyncRequest(t, c, syncruntime.SyncRequest{ExtSessionID: "disconnect-sync"})
 	c.Extension().MarkDisconnected()
 
-	c.Queries().CreatePendingQuery(queries.PendingQuery{
+	commandtest.Enqueue(c.Commands(), queries.PendingQuery{
 		Type:          "dom",
 		Params:        json.RawMessage(`{}`),
 		CorrelationID: "corr-disc",

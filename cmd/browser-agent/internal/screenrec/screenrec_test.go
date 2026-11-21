@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -26,8 +28,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
 )
 
-func lastPendingQuerySnapshot(dispatcher *queries.QueryDispatcher) *queries.PendingQueryResponse {
-	pending := dispatcher.GetPendingQueries()
+func lastPendingQuerySnapshot(commands *browsercommand.Owner) *queries.PendingQueryResponse {
+	pending := commands.Pending()
 	if len(pending) == 0 {
 		return nil
 	}
@@ -137,7 +139,7 @@ func newVideoTestEnv(t *testing.T) *videoTestEnv {
 func testDeps(cap *capture.Capture) Deps {
 	return Deps{
 		EnqueuePendingQuery: func(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
-			if _, err := cap.Queries().CreatePendingQueryWithTimeout(query, timeout, req.ClientID); err != nil {
+			if _, err := cap.Commands().Enqueue(query, timeout, req.ClientID); err != nil {
 				return mcp.Fail(req, mcp.ErrQueueFull, err.Error(), "Wait for in-flight commands to complete, then retry."), true
 			}
 			return mcp.JSONRPCResponse{}, false
@@ -158,7 +160,7 @@ func testDeps(cap *capture.Capture) Deps {
 		},
 		RecordAIAction:   func(action, url string, extra map[string]any) {},
 		DiagnosticHint:   func() func(*mcp.StructuredError) { return func(*mcp.StructuredError) {} },
-		GetCommandResult: cap.Queries().GetCommandResult,
+		GetCommandResult: cap.Commands().Command,
 	}
 }
 
@@ -319,7 +321,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	// Method guard.
 	methodReq := httptest.NewRequest(http.MethodGet, "/recordings/save", nil)
 	methodRR := httptest.NewRecorder()
-	HandleSave(methodRR, methodReq, env.capture.Queries(), nil)
+	HandleSave(methodRR, methodReq, env.capture.Commands(), nil)
 	if methodRR.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("method guard status = %d, want 405", methodRR.Code)
 	}
@@ -327,7 +329,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	// Missing metadata.
 	missingMetaReq := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes"), "", "")
 	missingMetaRR := httptest.NewRecorder()
-	HandleSave(missingMetaRR, missingMetaReq, env.capture.Queries(), nil)
+	HandleSave(missingMetaRR, missingMetaReq, env.capture.Commands(), nil)
 	if missingMetaRR.Code != http.StatusBadRequest {
 		t.Fatalf("missing metadata status = %d, want 400", missingMetaRR.Code)
 	}
@@ -335,7 +337,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	// Invalid metadata JSON.
 	invalidMetaReq := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes"), "{bad json", "")
 	invalidMetaRR := httptest.NewRecorder()
-	HandleSave(invalidMetaRR, invalidMetaReq, env.capture.Queries(), nil)
+	HandleSave(invalidMetaRR, invalidMetaReq, env.capture.Commands(), nil)
 	if invalidMetaRR.Code != http.StatusBadRequest {
 		t.Fatalf("invalid metadata status = %d, want 400", invalidMetaRR.Code)
 	}
@@ -344,7 +346,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	traversalMeta := `{"name":"../escape","created_at":"2026-01-01T00:00:00Z"}`
 	traversalReq := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes"), traversalMeta, "")
 	traversalRR := httptest.NewRecorder()
-	HandleSave(traversalRR, traversalReq, env.capture.Queries(), nil)
+	HandleSave(traversalRR, traversalReq, env.capture.Commands(), nil)
 	if traversalRR.Code != http.StatusBadRequest {
 		t.Fatalf("path traversal status = %d, want 400", traversalRR.Code)
 	}
@@ -353,7 +355,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	okMeta := `{"name":"e2e-checkout","display_name":"Checkout","created_at":"2026-01-01T00:00:00Z","duration_seconds":7,"url":"https://app.example.com/checkout"}`
 	req := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes-123"), okMeta, "query-1")
 	rr := httptest.NewRecorder()
-	HandleSave(rr, req, env.capture.Queries(), nil)
+	HandleSave(rr, req, env.capture.Commands(), nil)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("success status = %d, want 200; body=%s", rr.Code, rr.Body.String())
@@ -388,7 +390,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 		t.Fatalf("metadata file missing: %v", err)
 	}
 
-	queryResult, found := env.capture.Queries().TakeQueryResult("query-1")
+	queryResult, found := commandtest.Take(env.capture.Commands(), "query-1")
 	if !found {
 		t.Fatal("expected query result to be set for query-1")
 	}
@@ -414,7 +416,7 @@ func TestHandleVideoRecordingSaveRejectsOversizedUpload(t *testing.T) {
 	meta := `{"name":"oversized-recording","created_at":"2026-01-01T00:00:00Z"}`
 	req := buildRecordingSaveRequest(t, http.MethodPost, largeVideo, meta, "")
 	rr := httptest.NewRecorder()
-	HandleSave(rr, req, env.capture.Queries(), nil)
+	HandleSave(rr, req, env.capture.Commands(), nil)
 
 	if rr.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("oversized upload status = %d, want %d (body=%q)", rr.Code, http.StatusRequestEntityTooLarge, rr.Body.String())
@@ -674,7 +676,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 		t.Fatalf("screen_recording_start path = %q, want .webm suffix", startData["path"])
 	}
 
-	lastQuery := lastPendingQuerySnapshot(env.capture.Queries())
+	lastQuery := lastPendingQuerySnapshot(env.capture.Commands())
 	if lastQuery == nil {
 		t.Fatal("expected pending query for screen_recording_start")
 	}
@@ -703,7 +705,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 		t.Fatal("screen_recording_start response missing correlation_id")
 	}
 
-	env.capture.Queries().ApplyCommandResult(startCorrelationID, "complete", json.RawMessage(`{"status":"recording","name":"My Video"}`), "")
+	commandtest.Complete(env.capture.Commands(), startCorrelationID, "complete", json.RawMessage(`{"status":"recording","name":"My Video"}`), "")
 
 	stopResp := env.handler.HandleRecordStop(req, json.RawMessage(`{"tab_id":7}`))
 	stopResult := parseToolResult(t, stopResp)
@@ -715,7 +717,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 		t.Fatalf("screen_recording_stop recording_state = %v, want %q", stopData["recording_state"], recordingStateStopping)
 	}
 
-	stopQuery := lastPendingQuerySnapshot(env.capture.Queries())
+	stopQuery := lastPendingQuerySnapshot(env.capture.Commands())
 	if stopQuery == nil {
 		t.Fatal("expected pending query for screen_recording_stop")
 	}

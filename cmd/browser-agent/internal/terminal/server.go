@@ -14,7 +14,7 @@ import (
 
 	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -25,9 +25,9 @@ const PortOffset = 1
 // SetupMux creates a new ServeMux with only terminal routes.
 // No AuthMiddleware — terminal uses its own session token validation.
 // Returns the mux and the relay map for use in shutdown.
-func SetupMux(deps Deps, server ServerDeps, intentRuntime terminalintent.Runtime, mgr *pty.Manager, cap *capture.Capture) (*http.ServeMux, *sessionrelay.Map) {
+func SetupMux(deps Deps, server ServerDeps, intentRuntime terminalintent.Runtime, mgr *pty.Manager, clients *clientstore.Owner) (*http.ServeMux, *sessionrelay.Map) {
 	mux := http.NewServeMux()
-	relays := RegisterRoutes(mux, deps, server, mgr, cap)
+	relays := RegisterRoutes(mux, deps, server, mgr, clients)
 	terminalintent.RegisterRoutes(mux, terminalintent.HTTPDeps{
 		JSONResponse: deps.JSONResponse, CORSMiddleware: deps.CORSMiddleware, MaxPostBody: deps.MaxPostBody,
 	}, intentRuntime)

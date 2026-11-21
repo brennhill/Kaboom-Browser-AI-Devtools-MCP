@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 )
@@ -45,7 +44,7 @@ type RootOptions struct {
 type StatusOptions struct {
 	Version      string
 	StartedAt    time.Time
-	Capture      *capture.Capture
+	Owners       healthreader.Owners
 	Logs         func() (entries, capacity int)
 	Terminal     func() (port, sessions int, sessionIDs []string)
 	ListenPort   func() int
@@ -93,10 +92,10 @@ func Status(options StatusOptions) http.HandlerFunc {
 		logEntries, logCapacity := options.Logs()
 		buffers := map[string]any{"console_entries": logEntries, "console_capacity": logCapacity}
 
-		if options.Capture != nil {
-			snap := healthreader.New(options.Capture).Snapshot()
+		if options.Owners.Available() {
+			snap := healthreader.New(options.Owners).Snapshot()
 
-			resp["extension_connected"] = options.Capture.Extension().IsExtensionConnected()
+			resp["extension_connected"] = options.Owners.Extension.IsExtensionConnected()
 			resp["pilot_enabled"] = snap.PilotEnabled
 			if !snap.LastPollTime.IsZero() {
 				resp["last_poll_at"] = snap.LastPollTime.Format(time.RFC3339)
@@ -109,7 +108,7 @@ func Status(options StatusOptions) http.HandlerFunc {
 			buffers["action_entries"] = snap.ActionCount
 			buffers["action_capacity"] = snap.ActionCapacity
 
-			resp["recent_commands"] = buildRecentCommands(options.Capture.DiagnosticLogs().HTTPEntries())
+			resp["recent_commands"] = buildRecentCommands(options.Owners.DiagnosticLogs.HTTPEntries())
 		} else {
 			resp["extension_connected"] = false
 			resp["pilot_enabled"] = false

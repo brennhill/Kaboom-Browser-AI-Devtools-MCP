@@ -14,7 +14,7 @@ code_paths:
   - src/background/ui/tracked-tab-state.ts
   - cmd/browser-agent/internal/mediaapi/screenshots.go
   - internal/capture/healthreader/reader.go
-  - internal/queries/dispatcher_queries.go
+  - internal/browsercommand/internal/dispatch/dispatcher_queries.go
   - internal/capture/syncruntime/handler.go
   - internal/capture/telemetrystore/store.go
   - internal/capture/waterfallstore/store.go
@@ -42,11 +42,19 @@ code_paths:
   - internal/tools/observe/session/session.go
   - internal/tools/observe/timeline/correlation.go
   - internal/tools/observe/page/page_state.go
+  - internal/tools/observe/page/page_screenshot.go
+  - internal/app/screenshot/screenshot.go
+  - internal/app/pageinfo/pageinfo.go
+  - internal/app/pagestorage/storage.go
+  - internal/app/pagestorage/sections.go
+  - internal/app/a11yaudit/a11yaudit.go
+  - internal/capture/waterfallstore/store.go
+  - cmd/browser-agent/internal/toolruntime/usecase_wiring.go
   - cmd/browser-agent/internal/mcphttp/handler.go
   - cmd/browser-agent/internal/telemetryapi/handler.go
   - internal/tools/observe/hints/hints.go
-  - internal/tools/observe/idbquery/execute.go
-  - internal/tools/observe/idbquery/scripts.go
+  - internal/app/pagestorage/execute.go
+  - internal/app/pagestorage/scripts.go
   - src/background.ts
   - src/background/commands/observe.ts
   - src/background/commands/helpers.ts
@@ -80,7 +88,7 @@ test_paths:
   - internal/tools/observe/network/network_test.go
   - internal/tools/observe/timeline/correlation_test.go
   - internal/tools/observe/logs/logs_edge_test.go
-  - internal/tools/observe/idbquery/execute_test.go
+  - internal/app/pagestorage/execute_test.go
   - internal/capture/healthreader/reader_test.go
   - tests/extension/dom/command-element-results.test.js
   - tests/extension/dom/page-query-targeting.test.js
@@ -88,7 +96,7 @@ test_paths:
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
   - internal/tools/observe/page/page_readiness_test.go
   - cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go
-  - internal/tools/observe/idbquery/execute_test.go
+  - internal/app/pagestorage/execute_test.go
   - extension/background/commands/observe.fullpage.test.js
   - internal/a11ysummary/summary_test.go
   - internal/capture/websockettest/websocket_test.go
@@ -107,7 +115,15 @@ test_paths:
   - internal/tools/observe/page/page_state_test.go
   - cmd/browser-agent/internal/mcphttp/handler_test.go
   - internal/tools/observe/page/page_state_storage_test.go
-  - internal/tools/observe/page/page_state_screenshot_test.go
+  - internal/tools/observe/page/page_screenshot_test.go
+  - internal/app/screenshot/screenshot_test.go
+  - internal/app/screenshot/save_test.go
+  - internal/app/pageinfo/pageinfo_test.go
+  - internal/app/pagestorage/storage_test.go
+  - internal/app/pagestorage/sections_test.go
+  - internal/app/a11yaudit/a11yaudit_test.go
+  - internal/capture/waterfallstore/store_test.go
+  - scripts/contracts/layering/main_test.go
   - internal/capture/waterfallstore/store_test.go
   - tests/extension/capture/observe-screenshot.test.js
   - tests/extension/capture/background/background-tab-capture.test.js
@@ -216,6 +232,45 @@ parsing logic.
 Element collection, visibility filtering, limits, and tab metadata use the
 shared command helpers also consumed by `interact-explore`; viewport screenshot
 capture/upload has one implementation for both normal capture and CDP fallback.
+The screenshot workflow is a transport-independent use case in
+`internal/app/screenshot` (`Service.Capture(ctx, Options) (Result, error)`). It
+validates options, enqueues and awaits the extension query through the
+`internal/browsercommand` owner (via the shared `queries.QueryRunner` port), splits
+the data URL from the result fields, and applies `save_to`. It accepts no MCP
+types and no `*capture.Capture`; failures are typed `*screenshot.Failure` kinds.
+`internal/tools/observe/page/page_screenshot.go` is the MCP adapter: it parses
+arguments, maps failure kinds to canonical `mcp.Fail` codes
+(`ScreenshotFailure`) and assembles the text + inline image blocks
+(`ScreenshotSuccess`). interact `include_screenshot` and analyze
+`visual_baseline`/`visual_diff` call the same use case (composed in
+`cmd/browser-agent/internal/toolruntime/usecase_wiring.go`). The
+`scripts/contracts/layering` rule `app->transport` forbids `internal/app/**`
+from importing `net/http`, `internal/mcp`, `internal/capture/**` or
+`internal/tools/**`.
+The tracked-page projection is the `internal/app/pageinfo` use case
+(`Service.Read() Info`: URL with waterfall fallback, title with log fallback,
+CSP, tab status, command readiness, tab focus) over a seven-method
+`ExtensionState` port, `waterfallstore.Store.LastPageURL` and the log buffer.
+`observe(what="page")` (`page.GetPageInfo`) only assembles the MCP payload,
+metadata and CSP blocked actions; interact page-context enrichment consumes the
+typed `Info` (`PageDeps.PageInfo`) instead of re-parsing the observe MCP
+response. Storage and IndexedDB reads are the `internal/app/pagestorage` use
+case (tracking gate + `queries.QueryRunner`; section filtering/summaries and the
+generated IndexedDB scripts live there, typed `*pagestorage.Failure` kinds), and
+the accessibility audit is `internal/app/a11yaudit` (tracking gate + audit port,
+partial results on extension failure, summary projection). `page.GetStorage`,
+`page.GetIndexedDB` and `page.RunA11yAudit` only parse arguments, map failure
+kinds to the unchanged MCP errors and add metadata; services are composed in
+`toolruntime/usecase_wiring.go`. The combined audit
+(`toolanalyze/combinedaudit`) takes composed `Performance`/`Accessibility`
+mode handlers instead of `observecore.Deps`.
+Observe modes no longer receive the whole `*capture.Capture`: `observecore.Deps`
+carries the read owners (`Extension` = `syncruntime.Runtime`, `Telemetry`,
+`Performance`, `ExtensionLogs`), so logs/network/session/timeline read their
+stores directly with unchanged buffer ownership and retention. Response metadata
+takes a one-method `core.Connection`. The layering rule `observe->capture`
+forbids `internal/tools/observe/**` (except `testsupport`) from importing
+`internal/capture`.
 Live-page storage, IndexedDB, screenshot, and accessibility failures use the
 canonical `mcp.Fail` response boundary; queue saturation guidance is built once
 with the canonical `pending_commands` recovery call.

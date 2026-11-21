@@ -1,13 +1,20 @@
-// interact_workflow_test.go — Tests for form, navigate, and a11y workflow handlers.
+// interact_workflow_test.go — Tests for form, navigate, a11y workflows and page/screenshot response enrichment.
 package toolinteract
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/a11yaudit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pageinfo"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -289,64 +296,45 @@ func TestHandleRunA11yAndExportSARIF_Success(t *testing.T) {
 	assertOK(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{"scope":"page"}`)))
 }
 
-func TestHandleRunA11yAndExportSARIFReusesSingleAnalyzePayload(t *testing.T) {
+func TestHandleRunA11yAndExportSARIFReusesSingleAuditPayload(t *testing.T) {
 	h, state := newFakeWorkflowActions(t)
-	analyzeCalls := 0
-	state.analyzeFn = func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		analyzeCalls++
-		var input map[string]any
-		if err := json.Unmarshal(args, &input); err != nil {
-			t.Fatalf("decode analyze args: %v", err)
+	auditCalls := 0
+	state.auditFn = func(scope string) (a11yaudit.Result, error) {
+		auditCalls++
+		if scope != "body" {
+			t.Fatalf("audit scope = %q", scope)
 		}
-		if input["what"] != "accessibility" || input["scope"] != "body" || input["tab_id"] != float64(42) {
-			t.Fatalf("analyze args = %#v", input)
-		}
-		return mcp.Succeed(req, "audit", map[string]any{"violations": []any{map[string]any{"id": "color-contrast"}}})
+		return a11yaudit.Result{Data: map[string]any{"violations": []any{map[string]any{"id": "color-contrast"}}}}, nil
 	}
-	state.sarifFn = func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		var input struct {
-			Scope      string          `json:"scope"`
-			SaveTo     string          `json:"save_to"`
-			A11yResult json.RawMessage `json:"a11y_result"`
+	state.sarifFn = func(a11yResult json.RawMessage, scope, saveTo string) (map[string]any, error) {
+		if scope != "body" || saveTo != "/tmp/audit.sarif" || !strings.Contains(string(a11yResult), "color-contrast") {
+			t.Fatalf("SARIF input = %s scope=%q saveTo=%q", a11yResult, scope, saveTo)
 		}
-		if err := json.Unmarshal(args, &input); err != nil {
-			t.Fatalf("decode SARIF args: %v", err)
-		}
-		if input.Scope != "body" || input.SaveTo != "/tmp/audit.sarif" || !strings.Contains(string(input.A11yResult), "color-contrast") {
-			t.Fatalf("SARIF args = %#v", input)
-		}
-		return mcp.Succeed(req, "sarif", map[string]any{"status": "exported"})
+		return map[string]any{"status": "exported"}, nil
 	}
 	assertOK(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{"scope":"body","save_to":"/tmp/audit.sarif","tab_id":42}`)))
-	if analyzeCalls != 1 {
-		t.Fatalf("analyze calls = %d, want 1", analyzeCalls)
+	if auditCalls != 1 {
+		t.Fatalf("audit calls = %d, want 1", auditCalls)
 	}
 }
 
 func TestHandleRunA11yAndExportSARIF_A11yError(t *testing.T) {
 	h, fs := newFakeWorkflowActions(t)
-	fs.analyzeFn = func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return mcp.Fail(req, mcp.ErrExtError, "audit failed", "retry")
-	}
+	fs.auditFn = func(string) (a11yaudit.Result, error) { return a11yaudit.Result{}, errors.New("audit failed") }
 	assertErr(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{}`)), mcp.ErrExtError)
+}
+
+func TestHandleRunA11yAndExportSARIF_SARIFError(t *testing.T) {
+	h, fs := newFakeWorkflowActions(t)
+	fs.sarifFn = func(json.RawMessage, string, string) (map[string]any, error) {
+		return nil, errors.New("SARIF export failed: bad")
+	}
+	assertErr(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{}`)), mcp.ErrNoData)
 }
 
 func TestHandleRunA11yAndExportSARIF_InvalidJSON(t *testing.T) {
 	h, _ := newFakeWorkflowActions(t)
 	assertErr(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
-}
-
-func TestExtractMCPResponseJSONPayload(t *testing.T) {
-	resp := mcp.Succeed(testReq(), "summary", map[string]any{"k": "v"})
-	payload := extractMCPResponseJSONPayload(resp)
-	if payload == nil || !contains(string(payload), "\"k\":\"v\"") {
-		t.Fatalf("expected extracted payload, got %s", payload)
-	}
-	// Non-JSON content returns nil.
-	plain := mcp.JSONRPCResponse{Result: json.RawMessage(`{"content":[{"type":"text","text":"no json here"}]}`)}
-	if extractMCPResponseJSONPayload(plain) != nil {
-		t.Fatal("expected nil for text without JSON")
-	}
 }
 
 func TestWorkflowFieldLabel(t *testing.T) {
@@ -420,5 +408,103 @@ func TestBuildRetryEvidenceSummaryPrefersEffectiveURL(t *testing.T) {
 	})
 	if resolved["url"] != "https://resolved.example.test" {
 		t.Fatalf("resolved fallback = %#v", resolved)
+	}
+}
+
+func TestAppendScreenshotToResponseAddsFirstImageBlock(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	fs.screenshot = func(screenshot.Options) (screenshot.Result, error) {
+		return screenshot.Result{Fields: map[string]any{"path": "/s.jpg"}, DataURL: "data:image/jpeg;base64,ZmFrZS1pbWFnZQ=="}, nil
+	}
+
+	got := h.AppendScreenshotToResponse(mcp.SucceedText(testReq(), "clicked"), testReq())
+	result := parseToolResult(t, got)
+	if len(result.Content) != 2 || result.Content[1].Type != "image" ||
+		result.Content[1].Data != "ZmFrZS1pbWFnZQ==" || result.Content[1].MimeType != "image/jpeg" {
+		t.Fatalf("enriched screenshot result = %#v", result.Content)
+	}
+}
+
+func TestAppendScreenshotToResponseKeepsBaseWithoutUsableImage(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	base := mcp.SucceedText(testReq(), "clicked")
+	for _, outcome := range []struct {
+		result screenshot.Result
+		err    error
+	}{
+		{err: &screenshot.Failure{Kind: screenshot.KindTimeout, Detail: "slow"}},
+		{result: screenshot.Result{Fields: map[string]any{"path": "/s.jpg"}}},
+		{result: screenshot.Result{Fields: map[string]any{}, DataURL: "not-a-data-url"}},
+	} {
+		fs.screenshot = func(screenshot.Options) (screenshot.Result, error) { return outcome.result, outcome.err }
+		got := h.AppendScreenshotToResponse(base, testReq())
+		if string(got.Result) != string(base.Result) {
+			t.Fatalf("unusable screenshot changed base: %s", got.Result)
+		}
+	}
+}
+
+func trackingOf(store *capture.Capture) func() bool {
+	return func() bool {
+		enabled, _, _ := store.Extension().GetTrackingStatus()
+		return enabled
+	}
+}
+
+// diagnosticRecorder is a statediag.Reporter/Resolver fake.
+type diagnosticRecorder struct {
+	mu       sync.Mutex
+	reported []statediag.Diagnostic
+	resolved []string
+}
+
+func (r *diagnosticRecorder) Report(d statediag.Diagnostic) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.reported = append(r.reported, d)
+}
+
+func (r *diagnosticRecorder) Resolve(name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.resolved = append(r.resolved, name)
+}
+
+func TestAppendScreenshotFailureReportsDiagnosticAndKeepsAction(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	base := mcp.SucceedText(testReq(), "clicked")
+	fs.screenshot = func(screenshot.Options) (screenshot.Result, error) {
+		return screenshot.Result{}, &screenshot.Failure{Kind: screenshot.KindTimeout, Detail: "slow"}
+	}
+	if got := h.AppendScreenshotToResponse(base, testReq()); string(got.Result) != string(base.Result) {
+		t.Fatalf("failed screenshot changed the successful action response: %s", got.Result)
+	}
+	if len(fs.diagnostics.reported) != 1 {
+		t.Fatalf("reported diagnostics = %+v, want one", fs.diagnostics.reported)
+	}
+	reported := fs.diagnostics.reported[0]
+	if reported.Name != includeScreenshotDiagnostic || !strings.Contains(reported.Detail, "timeout") || reported.Fix == "" {
+		t.Fatalf("diagnostic = %+v", reported)
+	}
+
+	fs.screenshot = nil
+	h.AppendScreenshotToResponse(base, testReq())
+	if len(fs.diagnostics.resolved) != 1 || fs.diagnostics.resolved[0] != includeScreenshotDiagnostic {
+		t.Fatalf("resolved = %v, want the diagnostic resolved after a successful capture", fs.diagnostics.resolved)
+	}
+}
+
+func TestAppendPageContextUsesTypedPageInfo(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	base := mcp.SucceedText(testReq(), "clicked")
+	fs.pageInfo = func() pageinfo.Info { return pageinfo.Info{} }
+	if got := h.AppendPageContextToResponse(base, testReq()); string(got.Result) != string(base.Result) {
+		t.Fatalf("unknown page changed the response: %s", got.Result)
+	}
+	fs.pageInfo = func() pageinfo.Info { return pageinfo.Info{URL: "https://typed.test", TabID: 9} }
+	result := parseToolResult(t, h.AppendPageContextToResponse(base, testReq()))
+	last := result.Content[len(result.Content)-1].Text
+	if !strings.Contains(last, `"url":"https://typed.test"`) || !strings.Contains(last, `"tab_id":9`) || strings.Contains(last, "title") {
+		t.Fatalf("page context block = %q", last)
 	}
 }

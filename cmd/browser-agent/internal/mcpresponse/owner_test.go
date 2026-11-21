@@ -109,7 +109,7 @@ func TestOwnerAddsAlteredEnvironmentWarningAndMetadata(t *testing.T) {
 	captured := capture.NewCapture()
 	captured.Extension().SetSecurityMode(syncruntime.SecurityModeInsecureProxy, []string{"csp_headers"})
 	owner := New(Config{})
-	owner.SetCapture(captured)
+	owner.SetExtension(captured.Extension())
 
 	response := owner.Augment(textResponse(), true)
 	if text := responseText(t, response); !strings.Contains(text, "[ALTERED ENVIRONMENT]") {

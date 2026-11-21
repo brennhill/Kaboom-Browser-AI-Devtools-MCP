@@ -38,7 +38,7 @@ func send(state *capture.Capture, syncRequest syncruntime.SyncRequest) {
 func newSyncHandler(state *capture.Capture) *syncruntime.Handler {
 	return syncruntime.NewHandler(syncruntime.Dependencies{
 		Runtime:        state.Extension(),
-		Queries:        state.Queries(),
+		Commands:       state.Commands(),
 		Lifecycle:      state.Lifecycle(),
 		FeatureUsage:   state.FeatureUsage(),
 		ExtensionLogs:  state.ExtensionLogs(),

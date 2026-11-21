@@ -1,5 +1,6 @@
-// analysis_save_test.go — Tests for saveScreenshotToPath.
-package page
+// save_test.go — Tests for the use case save_to file handling (saveToPath).
+
+package screenshot
 
 import (
 	"encoding/base64"
@@ -29,7 +30,7 @@ func TestSaveScreenshotToPath_PNG(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shot.png")
 
-	err := saveScreenshotToPath(path, validPNGDataURL())
+	err := saveToPath(path, validPNGDataURL())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -52,7 +53,7 @@ func TestSaveScreenshotToPath_JPG(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shot.jpg")
 
-	err := saveScreenshotToPath(path, validJPEGDataURL())
+	err := saveToPath(path, validJPEGDataURL())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -71,7 +72,7 @@ func TestSaveScreenshotToPath_JPEG(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shot.jpeg")
 
-	err := saveScreenshotToPath(path, validJPEGDataURL())
+	err := saveToPath(path, validJPEGDataURL())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -90,7 +91,7 @@ func TestSaveScreenshotToPath_InvalidExtension_BMP(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shot.bmp")
 
-	err := saveScreenshotToPath(path, validPNGDataURL())
+	err := saveToPath(path, validPNGDataURL())
 	if err == nil {
 		t.Fatal("expected error for .bmp extension, got nil")
 	}
@@ -104,7 +105,7 @@ func TestSaveScreenshotToPath_InvalidExtension_GIF(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shot.gif")
 
-	err := saveScreenshotToPath(path, validPNGDataURL())
+	err := saveToPath(path, validPNGDataURL())
 	if err == nil {
 		t.Fatal("expected error for .gif extension, got nil")
 	}
@@ -115,7 +116,7 @@ func TestSaveScreenshotToPath_InvalidExtension_TXT(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shot.txt")
 
-	err := saveScreenshotToPath(path, validPNGDataURL())
+	err := saveToPath(path, validPNGDataURL())
 	if err == nil {
 		t.Fatal("expected error for .txt extension, got nil")
 	}
@@ -126,7 +127,7 @@ func TestSaveScreenshotToPath_InvalidExtension_None(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "screenshot")
 
-	err := saveScreenshotToPath(path, validPNGDataURL())
+	err := saveToPath(path, validPNGDataURL())
 	if err == nil {
 		t.Fatal("expected error for no extension, got nil")
 	}
@@ -141,7 +142,7 @@ func TestSaveScreenshotToPath_InvalidDataURL_NoDataPrefix(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shot.png")
 
-	err := saveScreenshotToPath(path, "image/png;base64,iVBORw0KGgo=")
+	err := saveToPath(path, "image/png;base64,iVBORw0KGgo=")
 	if err == nil {
 		t.Fatal("expected error for data URL without data: prefix, got nil")
 	}
@@ -152,7 +153,7 @@ func TestSaveScreenshotToPath_InvalidDataURL_NoBase64Marker(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shot.png")
 
-	err := saveScreenshotToPath(path, "data:image/png;charset=utf-8,plaintext")
+	err := saveToPath(path, "data:image/png;charset=utf-8,plaintext")
 	if err == nil {
 		t.Fatal("expected error for data URL without base64 marker, got nil")
 	}
@@ -163,7 +164,7 @@ func TestSaveScreenshotToPath_InvalidDataURL_Empty(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shot.png")
 
-	err := saveScreenshotToPath(path, "")
+	err := saveToPath(path, "")
 	if err == nil {
 		t.Fatal("expected error for empty data URL, got nil")
 	}
@@ -174,7 +175,7 @@ func TestSaveScreenshotToPath_InvalidDataURL_NoSemicolon(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shot.png")
 
-	err := saveScreenshotToPath(path, "data:image/pngbase64,iVBORw0KGgo=")
+	err := saveToPath(path, "data:image/pngbase64,iVBORw0KGgo=")
 	if err == nil {
 		t.Fatal("expected error for data URL without semicolon, got nil")
 	}
@@ -190,7 +191,7 @@ func TestSaveScreenshotToPath_InvalidBase64(t *testing.T) {
 	path := filepath.Join(dir, "shot.png")
 
 	// "!!not-valid-base64!!" is not valid base64
-	err := saveScreenshotToPath(path, "data:image/png;base64,!!not-valid-base64!!")
+	err := saveToPath(path, "data:image/png;base64,!!not-valid-base64!!")
 	if err == nil {
 		t.Fatal("expected error for invalid base64, got nil")
 	}
@@ -205,7 +206,7 @@ func TestSaveScreenshotToPath_CreatesParentDirectories(t *testing.T) {
 	dir := t.TempDir()
 	nested := filepath.Join(dir, "a", "b", "c", "shot.png")
 
-	err := saveScreenshotToPath(nested, validPNGDataURL())
+	err := saveToPath(nested, validPNGDataURL())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -233,7 +234,7 @@ func TestSaveScreenshotToPath_OverwritesExistingFile(t *testing.T) {
 		t.Fatalf("failed to create initial file: %v", err)
 	}
 
-	err := saveScreenshotToPath(path, validPNGDataURL())
+	err := saveToPath(path, validPNGDataURL())
 	if err != nil {
 		t.Fatalf("unexpected error on overwrite: %v", err)
 	}
@@ -259,7 +260,7 @@ func TestSaveScreenshotToPath_UppercaseExtension(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shot.PNG")
 
-	err := saveScreenshotToPath(path, validPNGDataURL())
+	err := saveToPath(path, validPNGDataURL())
 	if err != nil {
 		t.Fatalf("uppercase .PNG should be accepted: %v", err)
 	}
@@ -274,7 +275,7 @@ func TestSaveScreenshotToPath_MixedCaseExtension(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shot.Jpeg")
 
-	err := saveScreenshotToPath(path, validJPEGDataURL())
+	err := saveToPath(path, validJPEGDataURL())
 	if err != nil {
 		t.Fatalf("mixed-case .Jpeg should be accepted: %v", err)
 	}
