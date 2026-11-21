@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"net"
 	"net/http/httptest"
 	"os"
@@ -75,7 +76,7 @@ func freePort(t *testing.T) int {
 // ---------------------------------------------------------------------------
 
 func TestBuildCommandExecutionInfo_NilCapture(t *testing.T) {
-	info := BuildCommandExecutionInfo(nil)
+	info := BuildCommandExecutionInfo(healthreader.Owners{})
 	if info.Ready {
 		t.Error("nil capture should not be ready")
 	}
@@ -89,7 +90,7 @@ func TestBuildCommandExecutionInfo_NilCapture(t *testing.T) {
 
 func TestBuildCommandExecutionInfoAt_Empty(t *testing.T) {
 	c := newTestCapture(t)
-	info := BuildCommandExecutionInfoAt(c, time.Now())
+	info := BuildCommandExecutionInfoAt(c.HealthOwners(), time.Now())
 	if !info.Ready || info.Status != "pass" {
 		t.Errorf("empty capture: want ready/pass, got ready=%v status=%s", info.Ready, info.Status)
 	}
@@ -109,7 +110,7 @@ func TestBuildCommandExecutionInfoAt_SuccessCounted(t *testing.T) {
 	commandtest.Register(c.Commands(), "ok-1", time.Minute)
 	commandtest.Complete(c.Commands(), "ok-1", "complete", json.RawMessage(`{"done":true}`), "")
 
-	info := BuildCommandExecutionInfoAt(c, time.Now())
+	info := BuildCommandExecutionInfoAt(c.HealthOwners(), time.Now())
 	if info.RecentSuccessCount != 1 {
 		t.Errorf("RecentSuccessCount: want 1, got %d", info.RecentSuccessCount)
 	}
@@ -126,7 +127,7 @@ func TestBuildCommandExecutionInfoAt_WarnOnSingleFailure(t *testing.T) {
 	commandtest.Register(c.Commands(), "f-1", time.Minute)
 	commandtest.Expire(c.Commands(), "f-1")
 
-	info := BuildCommandExecutionInfoAt(c, time.Now())
+	info := BuildCommandExecutionInfoAt(c.HealthOwners(), time.Now())
 	if info.Status != "warn" {
 		t.Errorf("Status: want warn for 1 failure, got %s", info.Status)
 	}
@@ -154,7 +155,7 @@ func TestBuildCommandExecutionInfoAt_FailOnManyFailures(t *testing.T) {
 	commandtest.Register(c.Commands(), "f-cxl", time.Minute)
 	commandtest.Complete(c.Commands(), "f-cxl", "cancelled", nil, "user cancelled")
 
-	info := BuildCommandExecutionInfoAt(c, time.Now())
+	info := BuildCommandExecutionInfoAt(c.HealthOwners(), time.Now())
 	if info.Status != "fail" {
 		t.Fatalf("Status: want fail for >=3 failures, got %s", info.Status)
 	}
@@ -177,7 +178,7 @@ func TestBuildCommandExecutionInfoAt_PendingStallFail(t *testing.T) {
 	commandtest.Register(c.Commands(), "p-1", 10*time.Minute) // long timeout so it stays pending
 
 	now := time.Now().Add(3 * time.Minute)
-	info := BuildCommandExecutionInfoAt(c, now)
+	info := BuildCommandExecutionInfoAt(c.HealthOwners(), now)
 	if info.Status != "fail" {
 		t.Errorf("Status: want fail for stalled pending backlog, got %s", info.Status)
 	}
@@ -197,7 +198,7 @@ func TestBuildCommandExecutionInfoAt_PendingStallWarn(t *testing.T) {
 	commandtest.Register(c.Commands(), "p-1", 10*time.Minute)
 
 	now := time.Now().Add(1 * time.Minute) // between 45s warn and 2m fail
-	info := BuildCommandExecutionInfoAt(c, now)
+	info := BuildCommandExecutionInfoAt(c.HealthOwners(), now)
 	if info.Status != "warn" {
 		t.Errorf("Status: want warn for aging pending backlog, got %s", info.Status)
 	}
@@ -214,7 +215,7 @@ func TestBuildCommandExecutionInfoAt_NegativeAgesClamped(t *testing.T) {
 
 	// now in the past relative to command creation -> ages clamp to 0 / are skipped.
 	past := time.Now().Add(-1 * time.Minute)
-	info := BuildCommandExecutionInfoAt(c, past)
+	info := BuildCommandExecutionInfoAt(c.HealthOwners(), past)
 	if info.Status != "pass" {
 		t.Errorf("Status: want pass when events are in the future, got %s", info.Status)
 	}
@@ -479,7 +480,7 @@ func TestRunDoctorChecks_HealthyState(t *testing.T) {
 	capturefixture.SetPilot(c, true)
 	capturefixture.Track(c, 42, "https://example.com")
 
-	checks := RunDoctorChecks(c)
+	checks := RunDoctorChecks(c.HealthOwners())
 	if got := findCheck(t, checks, "extension_connected").Status; got != "pass" {
 		t.Errorf("extension_connected: want pass, got %s", got)
 	}
@@ -504,7 +505,7 @@ func TestRunDoctorChecks_RejectsSameVersionCommandContractSkew(t *testing.T) {
 	c := newTestCapture(t)
 	capturefixture.ConnectWithCommandContract(c, "sha256:stale-extension")
 
-	check := findCheck(t, RunDoctorChecks(c), "command_contract")
+	check := findCheck(t, RunDoctorChecks(c.HealthOwners()), "command_contract")
 	if check.Status != "fail" || !strings.Contains(check.Detail, "does not match") || !strings.Contains(check.Fix, "Reload") {
 		t.Fatalf("command contract check = %#v", check)
 	}
@@ -513,7 +514,7 @@ func TestRunDoctorChecks_RejectsSameVersionCommandContractSkew(t *testing.T) {
 func TestRunDoctorChecks_DegradedDefaults(t *testing.T) {
 	c := newTestCapture(t) // not connected, pilot assumed, no tracked tab
 
-	checks := RunDoctorChecks(c)
+	checks := RunDoctorChecks(c.HealthOwners())
 	if got := findCheck(t, checks, "extension_connected").Status; got != "fail" {
 		t.Errorf("extension_connected: want fail, got %s", got)
 	}
@@ -530,7 +531,7 @@ func TestRunDoctorChecks_PilotExplicitlyDisabled(t *testing.T) {
 	c := newTestCapture(t)
 	capturefixture.SetPilot(c, false) // explicitly disabled
 
-	pilot := findCheck(t, RunDoctorChecks(c), "pilot_enabled")
+	pilot := findCheck(t, RunDoctorChecks(c.HealthOwners()), "pilot_enabled")
 	if pilot.Status != "warn" {
 		t.Errorf("pilot_enabled: want warn, got %s", pilot.Status)
 	}
@@ -546,7 +547,7 @@ func TestRunDoctorChecks_CommandQueuePendingPass(t *testing.T) {
 			t.Fatalf("CreatePendingQuery: %v", err)
 		}
 	}
-	cq := findCheck(t, RunDoctorChecks(c), "command_queue")
+	cq := findCheck(t, RunDoctorChecks(c.HealthOwners()), "command_queue")
 	if cq.Status != "pass" {
 		t.Errorf("command_queue with 2 pending: want pass, got %s", cq.Status)
 	}
@@ -562,7 +563,7 @@ func TestRunDoctorChecks_CommandQueueWarn(t *testing.T) {
 			t.Fatalf("CreatePendingQuery: %v", err)
 		}
 	}
-	cq := findCheck(t, RunDoctorChecks(c), "command_queue")
+	cq := findCheck(t, RunDoctorChecks(c.HealthOwners()), "command_queue")
 	if cq.Status != "warn" {
 		t.Errorf("command_queue with 6 pending: want warn, got %s", cq.Status)
 	}
@@ -577,7 +578,7 @@ func TestRunDoctorChecks_CommandExecutionFailSetsFix(t *testing.T) {
 		commandtest.Register(c.Commands(), id, time.Minute)
 		commandtest.Complete(c.Commands(), id, "error", nil, "boom")
 	}
-	ce := findCheck(t, RunDoctorChecks(c), "command_execution")
+	ce := findCheck(t, RunDoctorChecks(c.HealthOwners()), "command_execution")
 	if ce.Status == "pass" {
 		t.Errorf("command_execution should not be pass with 3 errors, got %s", ce.Status)
 	}
@@ -589,7 +590,7 @@ func TestRunDoctorChecks_CommandExecutionFailSetsFix(t *testing.T) {
 func TestHandleDoctorHTTP_Unhealthy(t *testing.T) {
 	c := newTestCapture(t) // extension not connected -> fail
 	w := httptest.NewRecorder()
-	HandleDoctorHTTP(w, c, "9.9.9")
+	HandleDoctorHTTP(w, c.HealthOwners(), "9.9.9")
 
 	var body struct {
 		Status              string        `json:"status"`
@@ -621,7 +622,7 @@ func TestHandleDoctorHTTP_Healthy(t *testing.T) {
 	capturefixture.Track(c, 1, "https://example.com")
 
 	w := httptest.NewRecorder()
-	HandleDoctorHTTP(w, c, "1.0")
+	HandleDoctorHTTP(w, c.HealthOwners(), "1.0")
 
 	var body struct {
 		Status              string `json:"status"`
@@ -645,7 +646,7 @@ func TestHandleDoctorHTTP_Degraded(t *testing.T) {
 	// No tracked tab -> tracked_tab warn (no fail) -> degraded.
 
 	w := httptest.NewRecorder()
-	HandleDoctorHTTP(w, c, "1.0")
+	HandleDoctorHTTP(w, c.HealthOwners(), "1.0")
 
 	var body struct {
 		Status string `json:"status"`
@@ -708,7 +709,7 @@ func TestGetHealth_FullResponse(t *testing.T) {
 		return LaunchModeInfo{Mode: "cli", Reason: "manual", ParentProcess: "sh"}
 	}
 
-	resp := m.GetHealth(c, server, up, getLaunch, nil, "8.8.8")
+	resp := m.GetHealth(c.HealthOwners(), server, up, getLaunch, nil, "8.8.8")
 	if resp.Server.Version != "8.8.8" {
 		t.Errorf("Server.Version: want 8.8.8, got %s", resp.Server.Version)
 	}
@@ -737,7 +738,7 @@ func TestGetHealth_NilServerAndUpgrade(t *testing.T) {
 	c := newTestCapture(t)
 	getLaunch := func() LaunchModeInfo { return LaunchModeInfo{Mode: "auto"} }
 
-	resp := m.GetHealth(c, nil, nil, getLaunch, nil, "1.0")
+	resp := m.GetHealth(c.HealthOwners(), nil, nil, getLaunch, nil, "1.0")
 	if resp.Server.TerminalPort != 0 {
 		t.Errorf("nil server: TerminalPort should be 0, got %d", resp.Server.TerminalPort)
 	}
@@ -751,7 +752,7 @@ func TestGetHealth_NilServerAndUpgrade(t *testing.T) {
 }
 
 func TestBuildBuffersInfo_NilCaptureAndServer(t *testing.T) {
-	info := BuildBuffersInfo(nil, nil)
+	info := BuildBuffersInfo(healthreader.Owners{}, nil)
 	if info.Console.Capacity != serverdefaults.MaxLogEntries {
 		t.Errorf("Console.Capacity: want %d, got %d", serverdefaults.MaxLogEntries, info.Console.Capacity)
 	}
@@ -764,7 +765,7 @@ func TestBuildBuffersInfo_NilCaptureAndServer(t *testing.T) {
 }
 
 func TestBuildRateLimitInfo(t *testing.T) {
-	nilInfo := BuildRateLimitInfo(nil)
+	nilInfo := BuildRateLimitInfo(healthreader.Owners{})
 	if nilInfo.Threshold <= 0 {
 		t.Errorf("Threshold should be positive even for nil capture, got %d", nilInfo.Threshold)
 	}
@@ -773,7 +774,7 @@ func TestBuildRateLimitInfo(t *testing.T) {
 	}
 
 	c := newTestCapture(t)
-	info := BuildRateLimitInfo(c)
+	info := BuildRateLimitInfo(c.HealthOwners())
 	if info.Threshold <= 0 {
 		t.Errorf("Threshold should be positive, got %d", info.Threshold)
 	}
@@ -783,13 +784,13 @@ func TestBuildRateLimitInfo(t *testing.T) {
 }
 
 func TestBuildPilotInfo(t *testing.T) {
-	if got := BuildPilotInfo(nil); got.Source != "never_connected" {
+	if got := BuildPilotInfo(healthreader.Owners{}); got.Source != "never_connected" {
 		t.Errorf("nil capture: Source want never_connected, got %s", got.Source)
 	}
 
 	c := newTestCapture(t)
 	capturefixture.SetPilot(c, true)
-	info := BuildPilotInfo(c)
+	info := BuildPilotInfo(c.HealthOwners())
 	if !info.Enabled {
 		t.Error("pilot should be enabled")
 	}

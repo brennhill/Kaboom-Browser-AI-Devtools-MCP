@@ -175,7 +175,7 @@ func TestHealthResponseIncludesCommandExecution(t *testing.T) {
 	commandtest.Register(captured.Commands(), "warn-timeout", time.Minute)
 	commandtest.Complete(captured.Commands(), "warn-timeout", "timeout", nil, "synthetic-timeout")
 
-	response := getHealthResponse(hm, captured, ServerState{}, nil, nil, "test")
+	response := getHealthResponse(hm, captured.HealthOwners(), ServerState{}, nil, nil, "test")
 	if response.CommandExecution.Status != "warn" || response.CommandExecution.Ready {
 		t.Fatalf("command execution = %#v, want non-ready warning", response.CommandExecution)
 	}

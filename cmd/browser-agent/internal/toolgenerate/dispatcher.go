@@ -124,7 +124,7 @@ func (h *Dispatcher) getReproductionScript(req mcp.JSONRPCRequest, args json.Raw
 		// recovery advice retried forever on a value that could never work.
 		return mcp.Fail(req, mcp.ErrInvalidParam, err, "Use 'kaboom-agentic-browser' or 'playwright'", mcp.WithParam("output_format"))
 	}
-	allActions := h.deps.Capture.Telemetry().Actions().Snapshot().Actions
+	allActions := h.deps.Telemetry.Actions().Snapshot().Actions
 	actions := reproduction.FilterLastN(allActions, params.LastN)
 	script := reproduction.GenerateScript(actions, params)
 	result := reproduction.BuildResult(script, params, actions, allActions)

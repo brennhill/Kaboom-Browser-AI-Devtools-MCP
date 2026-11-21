@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,7 +26,7 @@ func TestHandleDoctorMCPReportsReadinessExtraChecksAndHint(t *testing.T) {
 	response := HandleDoctorMCP(
 		DoctorMCPDeps{
 			Metrics:        NewMetrics(),
-			Capture:        captureStore,
+			Owners:         captureStore.HealthOwners(),
 			DiagnosticHint: func() string { return "inspect local lifecycle logs" },
 			ExtraChecks:    []DoctorCheck{{Name: "fixture_recovery", Status: "warn", Detail: "recovery pending"}},
 		},
@@ -58,7 +59,7 @@ func TestRunDoctorChecksSurfacesExtensionStateRecovery(t *testing.T) {
 		Data: json.RawMessage(`{"name":"tracked_tab_state","detail":"","fix":"","lifecycle":"recovered"}`),
 	}})
 
-	check := findCheck(t, RunDoctorChecks(c), "tracked_tab_state")
+	check := findCheck(t, RunDoctorChecks(c.HealthOwners()), "tracked_tab_state")
 	if check.Status != "pass" || check.Lifecycle != "recovered" || check.RecoveredAt == "" {
 		t.Fatalf("extension recovery check = %#v, want recovered lifecycle", check)
 	}
@@ -79,7 +80,7 @@ func TestRunDoctorChecksIgnoresRecoveryWithoutPriorFailure(t *testing.T) {
 		Data: json.RawMessage(`{"name":"popup_state","detail":"","fix":"","lifecycle":"recovered"}`),
 	}})
 
-	for _, check := range RunDoctorChecks(c) {
+	for _, check := range RunDoctorChecks(c.HealthOwners()) {
 		if check.Name == "popup_state" {
 			t.Fatalf("recovery-only transition created historical failure: %#v", check)
 		}
@@ -102,7 +103,7 @@ func TestRunDoctorChecksIncludesExtensionDiagnosticLifecycle(t *testing.T) {
 		Data: json.RawMessage(`{"event":"sync_connected","correlation_id":"ext-1","lifecycle_sequence":["worker_suspend","worker_started","sync_connected"]}`),
 	}})
 
-	check := findCheck(t, RunDoctorChecks(c), "extension_diagnostics")
+	check := findCheck(t, RunDoctorChecks(c.HealthOwners()), "extension_diagnostics")
 	if check.Status != "warn" {
 		t.Fatalf("extension diagnostics status = %q, want warn", check.Status)
 	}
@@ -112,7 +113,7 @@ func TestRunDoctorChecksIncludesExtensionDiagnosticLifecycle(t *testing.T) {
 }
 
 func TestDoctorExtensionDiagnosticsRejectMalformedAndMapLegacyEvents(t *testing.T) {
-	if _, ok := extensionDiagnosticLifecycleCheck(nil); ok {
+	if _, ok := extensionDiagnosticLifecycleCheck(healthreader.Owners{}); ok {
 		t.Fatal("nil capture produced extension diagnostics")
 	}
 	c := newTestCapture(t)
@@ -122,14 +123,14 @@ func TestDoctorExtensionDiagnosticsRejectMalformedAndMapLegacyEvents(t *testing.
 		{Category: "connection", Message: "Sync disconnected", Data: json.RawMessage(`{}`)},
 		{Category: "connection", Message: "[Sync] Sync failed, retrying", Data: json.RawMessage(`{}`)},
 	})
-	check, ok := extensionDiagnosticLifecycleCheck(c)
+	check, ok := extensionDiagnosticLifecycleCheck(c.HealthOwners())
 	if !ok || check.Status != "pass" || !strings.Contains(check.Detail, "sync_connected -> sync_disconnected -> sync_failed") {
 		t.Fatalf("legacy lifecycle check = %#v, %t", check, ok)
 	}
 }
 
 func TestDoctorStateRecoveryDefaultsAndBoundsHistory(t *testing.T) {
-	if checks := extensionStateRecoveryChecks(nil); checks != nil {
+	if checks := extensionStateRecoveryChecks(healthreader.Owners{}); checks != nil {
 		t.Fatalf("nil capture checks = %#v", checks)
 	}
 	c := newTestCapture(t)
@@ -146,7 +147,7 @@ func TestDoctorStateRecoveryDefaultsAndBoundsHistory(t *testing.T) {
 		})
 	}
 	c.ExtensionLogs().Add(logs)
-	checks := extensionStateRecoveryChecks(c)
+	checks := extensionStateRecoveryChecks(c.HealthOwners())
 	if len(checks) != 1 || checks[0].Status != "warn" || checks[0].ExpectedNextTransition != "state_verified" ||
 		checks[0].RecoveryOutcome != "pending" || checks[0].RecoveryAttempt != 22 || len(checks[0].History) != 20 {
 		t.Fatalf("bounded recovery = %#v", checks)
@@ -496,7 +497,7 @@ func TestSummarizeFastPathTelemetryLog_ValidFile(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestBuildMemoryInfo_NilCapture(t *testing.T) {
-	info := BuildMemoryInfo(nil)
+	info := BuildMemoryInfo(healthreader.Owners{})
 	// Should still return valid info from runtime.MemStats
 	if info.SysMB <= 0 {
 		t.Error("expected positive SysMB from runtime stats")
@@ -523,7 +524,7 @@ func TestMCPHealthResponse_Construction(t *testing.T) {
 func TestBuildResourcePressureChecksDistinguishesDisposableDropsFromActiveSaturation(t *testing.T) {
 	cap := capture.NewCapture()
 	cap.Telemetry().AddNetworkBodies(make([]types.NetworkBody, cap.Telemetry().Pressure().Network.Capacity+1))
-	checks := BuildResourcePressureChecks(cap, nil)
+	checks := BuildResourcePressureChecks(cap.HealthOwners(), nil)
 	if len(checks) != 1 || checks[0].Name != "resource_pressure_network" || checks[0].Status != "pass" {
 		t.Fatalf("disposable pressure checks = %#v, want one recovered/pass network check", checks)
 	}
@@ -533,7 +534,7 @@ func TestBuildResourcePressureChecksDistinguishesDisposableDropsFromActiveSatura
 			t.Fatal(err)
 		}
 	}
-	checks = BuildResourcePressureChecks(cap, nil)
+	checks = BuildResourcePressureChecks(cap.HealthOwners(), nil)
 	foundWarn := false
 	for _, check := range checks {
 		if check.Name == "resource_pressure_pending_commands" && check.Status == "warn" {

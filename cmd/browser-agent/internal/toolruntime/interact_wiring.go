@@ -23,7 +23,7 @@ import (
 
 func initializeInteractActionOwners(h *ToolHandler) {
 	if h.Guards == nil {
-		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())
+		h.Guards = toolguard.New(extensionOf(h), h.shutdownCtx, defaultExtensionReadinessTimeout())
 	}
 	var (
 		interactCommands toolinteract.Commands

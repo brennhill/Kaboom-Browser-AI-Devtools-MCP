@@ -47,7 +47,7 @@ func TestStatusWithConnectedCaptureAndMethodValidation(t *testing.T) {
 	store := capture.NewCapture()
 	store.Extension().UpdateTrackedTab(7, "https://example.test", "Example")
 	handler := Status(StatusOptions{
-		Version: "test", StartedAt: time.Now(), Capture: store, JSONResponse: testJSONResponse,
+		Version: "test", StartedAt: time.Now(), Owners: store.HealthOwners(), JSONResponse: testJSONResponse,
 		Logs: func() (int, int) { return 0, 100 },
 		Terminal: func() (int, int, []string) {
 			return 0, 0, nil

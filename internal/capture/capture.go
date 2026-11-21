@@ -11,6 +11,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/featureusage"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
@@ -123,6 +124,16 @@ func NewCapture() *Capture {
 // Commands returns the browser-command lifecycle owner shared by every transport.
 func (c *Capture) Commands() *browsercommand.Owner {
 	return c.commands
+}
+
+// HealthOwners bundles the state owners health and doctor reporting read, so
+// those consumers receive owners from the composition root instead of Capture.
+func (c *Capture) HealthOwners() healthreader.Owners {
+	return healthreader.Owners{
+		Extension: c.extension, Commands: c.commands, Telemetry: c.telemetry, Circuit: c.circuit,
+		ExtensionLogs: c.extensionLogs, Performance: c.perf, Recordings: c.recordingManager,
+		DiagnosticLogs: c.diagnosticLogs,
+	}
 }
 
 // Recordings returns the canonical independently synchronized recording manager.

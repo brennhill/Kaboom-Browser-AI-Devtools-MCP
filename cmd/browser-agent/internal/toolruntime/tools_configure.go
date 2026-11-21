@@ -27,7 +27,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qualitygates"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
@@ -121,7 +120,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			return h.configureSessions.Diff(req, args)
 		},
 		"health": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-			return handleConfigureHealth(h.healthMetrics, h.capture, h.state, h.alertBuffer, h.stateRecovery, req)
+			return handleConfigureHealth(h.healthMetrics, healthOwners(h), h.state, h.alertBuffer, h.stateRecovery, req)
 		},
 		"restart": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 			return handleConfigureRestart(req)
@@ -139,7 +138,7 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 			}
 			doctorDeps := health.DoctorMCPDeps{
 				Metrics:        h.healthMetrics,
-				Capture:        h.capture,
+				Owners:         healthOwners(h),
 				Alerts:         h.alertBuffer,
 				DiagnosticHint: h.Guards.DiagnosticHintString,
 				ExtraChecks:    checks,
@@ -155,8 +154,8 @@ func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
 		},
 		"clear": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return toolconfigure.HandleClear(toolconfigure.ClearTargets{
-				Capture:  h.capture,
-				Resetter: NewRuntimeResetter(h.capture),
+				Telemetry: telemetryOf(h),
+				Resetter:  NewRuntimeResetter(h.capture),
 				ClearLogs: func() int {
 					count := h.state.Logs.EntryCount()
 					h.state.Logs.ClearEntries()
@@ -243,7 +242,7 @@ func configureLocal(
 
 func handleConfigureHealth(
 	metrics *health.Metrics,
-	captureStore *capture.Capture,
+	owners healthreader.Owners,
 	state ServerState,
 	alerts *alertbuf.AlertBuffer,
 	recovery recoveryDiagnostics,
@@ -252,7 +251,7 @@ func handleConfigureHealth(
 	if metrics == nil {
 		return mcp.Fail(req, mcp.ErrInternal, "Health metrics not initialized", "Internal server error — do not retry")
 	}
-	response := getHealthResponse(metrics, captureStore, state, alerts, recovery, state.Version)
+	response := getHealthResponse(metrics, owners, state, alerts, recovery, state.Version)
 	return mcp.Succeed(req, "Server health", response)
 }
 
@@ -277,13 +276,13 @@ type recoveryDiagnostics interface {
 	Stats() statediag.CollectorStats
 }
 
-func getHealthResponse(hm *health.Metrics, cap *capture.Capture, state ServerState, alerts *alertbuf.AlertBuffer, recovery recoveryDiagnostics, ver string) health.MCPHealthResponse {
+func getHealthResponse(hm *health.Metrics, owners healthreader.Owners, state ServerState, alerts *alertbuf.AlertBuffer, recovery recoveryDiagnostics, ver string) health.MCPHealthResponse {
 	var serverDeps health.ServerDeps = &serverDepsAdapter{state: state}
 	var upgrade health.UpgradeProvider
 	if state.Runtime != nil && state.Runtime.Upgrade() != nil {
 		upgrade = state.Runtime.Upgrade()
 	}
-	response := hm.GetHealth(cap, serverDeps, upgrade, getLaunchModeInfo, alerts, ver)
+	response := hm.GetHealth(owners, serverDeps, upgrade, getLaunchModeInfo, alerts, ver)
 	if recovery != nil {
 		stats := recovery.Stats()
 		oldestAge := int64(0)
@@ -375,8 +374,8 @@ func buildIssueReportDeps(h *ToolHandler) issuereport.HandlerDeps {
 				report.Diagnostics.Server.TotalErrors = audit.TotalErrors
 				report.Diagnostics.Server.ErrorRatePct = audit.ErrorRatePct
 			}
-			if h.capture != nil {
-				health := healthreader.New(h.capture).Snapshot()
+			if owners := healthOwners(h); owners.Available() {
+				health := healthreader.New(owners).Snapshot()
 				report.Diagnostics.Extension.Connected = health.ConnectionCount > 0
 				report.Diagnostics.Extension.Source = health.ExtSessionID
 				report.Diagnostics.Buffers.NetworkEntries = health.NetworkBodyCount

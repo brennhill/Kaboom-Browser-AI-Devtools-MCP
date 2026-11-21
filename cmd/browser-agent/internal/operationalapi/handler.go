@@ -16,7 +16,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -37,7 +36,7 @@ type TerminalStatus struct {
 // Options supplies the runtime-owned state needed by operational endpoints.
 type Options struct {
 	Logs             *logstore.Store
-	Capture          *capture.Capture
+	Owners           healthreader.Owners
 	Version          string
 	StartedAt        time.Time
 	TerminalStatus   func() TerminalStatus
@@ -82,14 +81,14 @@ func (h *Handler) ServeHealth(w http.ResponseWriter, r *http.Request) {
 	if info := h.upgradeInfo(); info != nil {
 		response["upgrade_pending"] = info
 	}
-	if h.options.Capture != nil {
-		extension := h.options.Capture.Extension().GetExtensionStatus()
-		pilot, _ := h.options.Capture.Extension().GetPilotStatus().(map[string]any)
+	if h.options.Owners.Available() {
+		extension := h.options.Owners.Extension.GetExtensionStatus()
+		pilot, _ := h.options.Owners.Extension.GetPilotStatus().(map[string]any)
 		pilotState, _ := pilot["state"].(string)
-		securityMode, productionParity, rewrites := h.options.Capture.Extension().GetSecurityMode()
+		securityMode, productionParity, rewrites := h.options.Owners.Extension.GetSecurityMode()
 		response["capture"] = map[string]any{
-			"available": true, "pilot_enabled": h.options.Capture.Extension().IsPilotActionAllowed(), "pilot_state": pilotState,
-			"extension_connected": h.options.Capture.Extension().IsExtensionConnected(), "extension_last_seen": extension["last_seen"],
+			"available": true, "pilot_enabled": h.options.Owners.Extension.IsPilotActionAllowed(), "pilot_state": pilotState,
+			"extension_connected": h.options.Owners.Extension.IsExtensionConnected(), "extension_last_seen": extension["last_seen"],
 			"extension_client_id": extension["client_id"], "security_mode": securityMode,
 			"production_parity": productionParity, "insecure_rewrites": rewrites,
 		}
@@ -215,8 +214,8 @@ func (h *Handler) ServeDiagnostics(w http.ResponseWriter, r *http.Request) {
 		"telemetry_delivery": telemetry.DeliveryDiagnostics(),
 	}
 
-	if h.options.Capture != nil {
-		appendCaptureDiagnostics(resp, h.options.Capture)
+	if h.options.Owners.Available() {
+		appendCaptureDiagnostics(resp, h.options.Owners)
 	}
 
 	lastEvents := map[string]any{}
@@ -225,8 +224,8 @@ func (h *Handler) ServeDiagnostics(w http.ResponseWriter, r *http.Request) {
 	}
 	resp["last_events"] = lastEvents
 
-	if h.options.Capture != nil {
-		httpDebugLog := h.options.Capture.DiagnosticLogs().HTTPEntries()
+	if h.options.Owners.Available() {
+		httpDebugLog := h.options.Owners.DiagnosticLogs.HTTPEntries()
 		resp["http_debug_log"] = map[string]any{
 			"count":   len(httpDebugLog),
 			"entries": httpDebugLog,
@@ -237,9 +236,9 @@ func (h *Handler) ServeDiagnostics(w http.ResponseWriter, r *http.Request) {
 }
 
 // appendCaptureDiagnostics adds capture-related diagnostic fields to response map.
-func appendCaptureDiagnostics(resp map[string]any, cap *capture.Capture) {
-	snap := healthreader.New(cap).Snapshot()
-	health := cap.Circuit().GetHealthStatus()
+func appendCaptureDiagnostics(resp map[string]any, owners healthreader.Owners) {
+	snap := healthreader.New(owners).Snapshot()
+	health := owners.Circuit.GetHealthStatus()
 
 	resp["buffers"] = map[string]any{
 		"websocket_events": snap.WebSocketCount,
@@ -249,7 +248,7 @@ func appendCaptureDiagnostics(resp map[string]any, cap *capture.Capture) {
 		"query_results":    snap.QueryResultCount,
 	}
 
-	wsStatus := cap.Telemetry().WebSockets().Status(types.WebSocketStatusFilter{})
+	wsStatus := owners.Telemetry.WebSockets().Status(types.WebSocketStatusFilter{})
 	conns := make([]map[string]any, 0, len(wsStatus.Connections))
 	for _, c := range wsStatus.Connections {
 		conns = append(conns, map[string]any{
@@ -264,7 +263,7 @@ func appendCaptureDiagnostics(resp map[string]any, cap *capture.Capture) {
 	}
 
 	const defaultTraceLimit = 25
-	traces := cap.Commands().RecentTraces(defaultTraceLimit)
+	traces := owners.Commands.RecentTraces(defaultTraceLimit)
 	traceEntries := make([]map[string]any, 0, len(traces))
 	for _, trace := range traces {
 		if trace == nil {

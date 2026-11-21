@@ -32,7 +32,7 @@ func TestRuntimeGuardsIncludeDiagnosticStateHints(t *testing.T) {
 	request := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
 
 	disconnectedCapture := capture.NewCapture()
-	disconnected := New(disconnectedCapture, context.Background(), time.Millisecond)
+	disconnected := New(disconnectedCapture.Extension(), context.Background(), time.Millisecond)
 	response, blocked := disconnected.RequireExtension(request)
 	if !blocked {
 		t.Fatal("disconnected extension passed its guard")
@@ -46,20 +46,20 @@ func TestRuntimeGuardsIncludeDiagnosticStateHints(t *testing.T) {
 
 	pilotCapture := capture.NewCapture()
 	capturefixture.SetPilot(pilotCapture, false)
-	response, blocked = New(pilotCapture, context.Background(), time.Millisecond).RequirePilot(request)
+	response, blocked = New(pilotCapture.Extension(), context.Background(), time.Millisecond).RequirePilot(request)
 	if !blocked || !strings.Contains(guardError(t, response).Hint, "pilot=DISABLED") {
 		t.Fatalf("pilot guard response = %#v, %t", response, blocked)
 	}
 
 	trackingCapture := capture.NewCapture()
-	response, blocked = New(trackingCapture, context.Background(), time.Millisecond).RequireTabTracking(request)
+	response, blocked = New(trackingCapture.Extension(), context.Background(), time.Millisecond).RequireTabTracking(request)
 	if !blocked || !strings.Contains(guardError(t, response).Hint, "tracked_tab=NONE") {
 		t.Fatalf("tracking guard response = %#v, %t", response, blocked)
 	}
 
 	cspCapture := capture.NewCapture()
 	capturefixture.SetCSP(cspCapture, true, "script_exec")
-	response, blocked = New(cspCapture, context.Background(), time.Millisecond).RequireCSPClear(request, "main")
+	response, blocked = New(cspCapture.Extension(), context.Background(), time.Millisecond).RequireCSPClear(request, "main")
 	if !blocked || !strings.Contains(guardError(t, response).Hint, "csp=RESTRICTED(script_exec)") {
 		t.Fatalf("CSP guard response = %#v, %t", response, blocked)
 	}
@@ -75,7 +75,7 @@ func TestRuntimeGuardPassAndRecoveryContracts(t *testing.T) {
 	request := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
 	captured := capture.NewCapture()
 	capturefixture.SetPilot(captured, false)
-	guards := New(captured, context.Background(), time.Millisecond)
+	guards := New(captured.Extension(), context.Background(), time.Millisecond)
 
 	pilotResponse, blocked := guards.RequirePilot(request)
 	if !blocked || guardError(t, pilotResponse).RecoveryToolCall["tool"] != "observe" {
@@ -122,7 +122,7 @@ func TestRuntimeGuardPassAndRecoveryContracts(t *testing.T) {
 
 func TestExtensionReadinessUnblocksOnConnectionEvent(t *testing.T) {
 	captured := capture.NewCapture()
-	guards := New(captured, context.Background(), 500*time.Millisecond)
+	guards := New(captured.Extension(), context.Background(), 500*time.Millisecond)
 	done := make(chan bool, 1)
 	go func() {
 		_, blocked := guards.RequireExtension(mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1})
@@ -148,7 +148,7 @@ func TestInjectCSPBlockedActionsUsesCanonicalRestrictionMatrix(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			captured := capture.NewCapture()
 			capturefixture.SetCSP(captured, testCase.restricted, testCase.level)
-			response := New(captured, context.Background(), time.Millisecond).InjectCSPBlockedActions(
+			response := New(captured.Extension(), context.Background(), time.Millisecond).InjectCSPBlockedActions(
 				mcp.Succeed(request(), "queued", map[string]any{"status": "queued"}),
 			)
 			data := guardResultData(t, response)

@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"fmt"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/ports"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/warningqueue"
 	"net/http"
 	"os"
@@ -325,7 +326,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	mux.HandleFunc("/mcp", httpguard.CORS(newMCPHTTPHandler(mcpHandler).ServeHTTP))
 	operations := operationalapi.New(operationalapi.Options{
 		Logs:      server.logs,
-		Capture:   captured,
+		Owners:    healthOwnersOf(captured),
 		Version:   version,
 		StartedAt: server.runtime.StartedAt(),
 		TerminalStatus: func() operationalapi.TerminalStatus {
@@ -350,7 +351,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	})
 
 	mux.HandleFunc("/api/status", httpguard.CORS(dashboard.Status(dashboard.StatusOptions{
-		Version: version, StartedAt: server.runtime.StartedAt(), Capture: captured, JSONResponse: httpapi.JSON,
+		Version: version, StartedAt: server.runtime.StartedAt(), Owners: healthOwnersOf(captured), JSONResponse: httpapi.JSON,
 		Logs: func() (int, int) {
 			return server.logs.EntryCount(), server.logs.MaxEntries()
 		},
@@ -371,7 +372,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 	mux.HandleFunc("/doctor", httpguard.CORS(func(w http.ResponseWriter, _ *http.Request) {
 		var extraChecks []health.DoctorCheck
 		extraChecks = doctorsupport.Checks(mcpHandler.StateRecovery(), server.incidents)
-		health.HandleDoctorHTTP(w, captured, version, extraChecks...)
+		health.HandleDoctorHTTP(w, healthOwnersOf(captured), version, extraChecks...)
 	}))
 	mux.HandleFunc("/api/token-savings", httpguard.CORS(tracking.HandleRecordTokenSavings(server.tokenTracker)))
 
@@ -427,4 +428,13 @@ func newMCPHTTPHandler(handler *toolruntime.ToolHandler) *mcphttp.Handler {
 		HandleRequest: handler.HandleRequest,
 		Capture:       handler.Capture,
 	})
+}
+
+// healthOwnersOf returns the health/doctor state owners, or the zero value
+// (degraded composition) without a capture.
+func healthOwnersOf(captured *capture.Capture) healthreader.Owners {
+	if captured == nil {
+		return healthreader.Owners{}
+	}
+	return captured.HealthOwners()
 }

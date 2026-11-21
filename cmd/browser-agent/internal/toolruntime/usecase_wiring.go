@@ -12,6 +12,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pageinfo"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pagestorage"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
@@ -28,6 +31,31 @@ func trackingEnabled(h *ToolHandler) func() bool {
 		enabled, _, _ := h.capture.Extension().GetTrackingStatus()
 		return enabled
 	}
+}
+
+// extensionOf returns the extension connection owner, or nil without a capture.
+func extensionOf(h *ToolHandler) *syncruntime.Runtime {
+	if h.capture == nil {
+		return nil
+	}
+	return h.capture.Extension()
+}
+
+// healthOwners returns the health/doctor state owners, or the zero value
+// (degraded composition) without a capture.
+func healthOwners(h *ToolHandler) healthreader.Owners {
+	if h.capture == nil {
+		return healthreader.Owners{}
+	}
+	return h.capture.HealthOwners()
+}
+
+// telemetryOf returns the telemetry store, or nil without a capture.
+func telemetryOf(h *ToolHandler) *telemetrystore.Store {
+	if h.capture == nil {
+		return nil
+	}
+	return h.capture.Telemetry()
 }
 
 // queryRunner returns the browser-command owner, or nil without a capture.

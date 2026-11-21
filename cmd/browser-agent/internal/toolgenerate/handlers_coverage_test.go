@@ -50,7 +50,7 @@ func (fakeTestGenerator) HandleGenerateTestClassify(req mcp.JSONRPCRequest, _ js
 
 func (f *fakeGenerateDeps) deps() Deps {
 	return Deps{
-		Capture:         f.cap,
+		Telemetry: f.cap.Telemetry(), ExtensionLogs: f.cap.ExtensionLogs(), CommandHistory: f.cap.Commands(), TrackingStatus: f.cap.Extension().GetTrackingStatus,
 		AnnotationStore: f.annStore,
 		Version:         f.version,
 		IsExtensionConnected: func() bool {

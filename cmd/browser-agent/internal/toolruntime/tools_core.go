@@ -297,7 +297,7 @@ func initToolHandlerCore(state ServerState, captureStore *capture.Capture) *Tool
 		networkRecording: &netrecord.NetworkRecordingState{},
 		testBoundaries:   cfg.NewBoundaryHandler(),
 	}
-	handler.Guards = toolguard.New(captureStore, shutdownContext, defaultExtensionReadinessTimeout())
+	handler.Guards = toolguard.New(extensionOf(handler), shutdownContext, defaultExtensionReadinessTimeout())
 	var recordingStore toolrecording.Store
 	if captureStore != nil {
 		recordingStore = captureStore.Recordings()
@@ -616,8 +616,7 @@ func (d visualAnalyzeDeps) HandleSessionStore(args persistence.SessionStoreArgs)
 }
 
 func buildGenerateDeps(h *ToolHandler) toolgenerate.Deps {
-	return toolgenerate.Deps{
-		Capture:          h.capture,
+	deps := toolgenerate.Deps{
 		AnnotationStore:  h.annotationStore,
 		Version:          h.state.Version,
 		ExecuteA11yQuery: h.asyncCommands.ExecuteA11yQuery,
@@ -625,6 +624,12 @@ func buildGenerateDeps(h *ToolHandler) toolgenerate.Deps {
 			return h.capture.Extension().IsExtensionConnected()
 		},
 	}
+	if h.capture != nil {
+		deps.Telemetry, deps.ExtensionLogs = h.capture.Telemetry(), h.capture.ExtensionLogs()
+		deps.CommandHistory = h.capture.Commands()
+		deps.TrackingStatus = h.capture.Extension().GetTrackingStatus
+	}
+	return deps
 }
 
 func buildTestGenerationDeps(h *ToolHandler) testgenhandler.Deps {
@@ -732,7 +737,7 @@ func buildObserveReadDeps(h *ToolHandler) observecore.Deps {
 
 func buildScreenrecDeps(h *ToolHandler) screenrec.Deps {
 	if h.Guards == nil {
-		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())
+		h.Guards = toolguard.New(extensionOf(h), h.shutdownCtx, defaultExtensionReadinessTimeout())
 	}
 	getCommandResult := func(string) (*queries.CommandResult, bool) { return nil, false }
 	if h.capture != nil {
