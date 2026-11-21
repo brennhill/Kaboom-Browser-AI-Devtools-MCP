@@ -178,7 +178,7 @@ export async function handleTrackedTabUrlChange(
   try {
     title = (await chrome.tabs.get(updatedTabId))?.title
   } catch {
-    // EXPECTED_ABSENCE: the tab can close mid-navigation; the URL is still recorded
+    // EXPECTED_ABSENCE: the tab can close mid-navigation (normal); the URL is still recorded
     // below and the close lifecycle clears tracking, so logging would be noise.
   }
   try {

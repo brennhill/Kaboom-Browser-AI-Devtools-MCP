@@ -74,8 +74,9 @@ let writeQueue: Promise<unknown> = Promise.resolve()
 function serialized<T>(write: () => Promise<T>): Promise<T> {
   const next = writeQueue.then(write, write)
   writeQueue = next.catch(() => {
-    // EXPECTED_ABSENCE: the failure is surfaced to this write's own caller via `next`;
-    // the queue only needs to keep running for later writes.
+    // EXPECTED_ABSENCE: the failure is surfaced to this write's own caller via `next`, so
+    // swallowing it here is expected; logging it again would double-report one failure.
+    // The queue only needs to keep running for later writes.
   })
   return next
 }
