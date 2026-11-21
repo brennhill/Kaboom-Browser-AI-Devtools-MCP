@@ -7,6 +7,7 @@
 package toolinteract
 
 import (
+	"context"
 	cryptorand "crypto/rand"
 	"encoding/json"
 	"math/big"
@@ -14,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
@@ -431,34 +433,17 @@ func isResponseQueued(resp mcp.JSONRPCResponse) bool {
 	return false
 }
 
-// appendScreenshotToResponse captures a screenshot and appends it as an inline image block.
-func (h *PageActions) AppendScreenshotToResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-	screenshotReq := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: req.ID}
-	screenshotResp := h.deps.GetScreenshot(screenshotReq, nil)
-
-	var screenshotResult mcp.MCPToolResult
-	if err := json.Unmarshal(screenshotResp.Result, &screenshotResult); err != nil {
-		return resp // best effort: keep original response on parse failure
+// AppendScreenshotToResponse captures a screenshot and appends it as an inline image block.
+// The action already succeeded, so a failed capture leaves resp unchanged: the
+// screenshot is optional enrichment (include_screenshot), not the action result.
+func (h *PageActions) AppendScreenshotToResponse(resp mcp.JSONRPCResponse, _ mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+	result, err := h.deps.CaptureScreenshot(context.Background(), screenshot.Options{})
+	if err != nil {
+		// EXPECTED_ABSENCE: enrichment is best effort; the caller can observe(what='screenshot') for the error.
+		return resp
 	}
-
-	for _, block := range screenshotResult.Content {
-		if block.Type != "image" || block.Data == "" {
-			continue
-		}
-		var result mcp.MCPToolResult
-		if err := json.Unmarshal(resp.Result, &result); err != nil {
-			return resp
-		}
-		result.Content = append(result.Content, block)
-		resultJSON, err := json.Marshal(result)
-		if err != nil {
-			return resp
-		}
-		resp.Result = json.RawMessage(resultJSON)
-		break
-	}
-
-	return resp
+	base64Data, mimeType := result.Image()
+	return mcp.AppendImageToResponse(resp, base64Data, mimeType)
 }
 
 // appendInteractiveToResponse appends list_interactive text to the response.

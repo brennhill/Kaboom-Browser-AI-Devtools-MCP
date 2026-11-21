@@ -12,6 +12,9 @@
 //	                     (internal/browsercommand and internal/queries own the
 //	                     browser-command lifecycle independent of the HTTP and
 //	                     MCP transports that adapt it)
+//	internal/app/**      ↛ net/http/**, internal/mcp, internal/capture/**, internal/tools/**
+//	                     (application use cases take narrow ports, never MCP
+//	                     request/response types or the whole *capture.Capture)
 //	capture.NewCapture   only from cmd/browser-agent (ports are wired by the
 //	                     composition root; detection resolves import ALIASES
 //	                     and package-level var initializers, not the literal
@@ -386,6 +389,10 @@ func evaluateMatrix(scan *treeScan) []string {
 				violations = append(violations, fmt.Sprintf("command->transport: %s imports %s", file, imp))
 				continue
 			}
+			if applicationModule(srcPkg) && applicationModuleForbidden(imp) {
+				violations = append(violations, fmt.Sprintf("app->transport: %s imports %s", file, imp))
+				continue
+			}
 			internal, ok := strings.CutPrefix(imp, modulePrefix)
 			if !ok {
 				continue
@@ -425,6 +432,18 @@ func commandModuleForbidden(imp string) bool {
 	return isPkgOrSub(imp, "net/http") ||
 		isPkgOrSub(imp, modulePrefix+"internal/mcp") ||
 		isPkgOrSub(imp, modulePrefix+"internal/capture")
+}
+
+// applicationModule reports whether pkg is a transport-independent application
+// use case (internal/app/**).
+func applicationModule(pkg string) bool {
+	return isPkgOrSub(pkg, modulePrefix+"internal/app")
+}
+
+// applicationModuleForbidden reports whether imp is a transport, the broad
+// capture composition object, or an MCP tool adapter a use case must not see.
+func applicationModuleForbidden(imp string) bool {
+	return commandModuleForbidden(imp) || isPkgOrSub(imp, modulePrefix+"internal/tools")
 }
 
 // leafImportViolations reports internal/types files importing internal

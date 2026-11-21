@@ -4,10 +4,12 @@
 package toolinteract
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/elemindex"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -45,7 +47,7 @@ type PageDeps struct {
 	EnqueuePendingQuery                                func(mcp.JSONRPCRequest, queries.PendingQuery, time.Duration) (mcp.JSONRPCResponse, bool)
 	RecordAIAction                                     func(string, string, map[string]any)
 	MarkDrawStarted                                    func()
-	GetScreenshot                                      func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+	CaptureScreenshot                                  func(context.Context, screenshot.Options) (screenshot.Result, error)
 	GetPageInfo                                        func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
 }
 

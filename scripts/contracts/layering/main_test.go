@@ -278,6 +278,35 @@ func TestInterfaceKeyIsStableAcrossImplMoves(t *testing.T) {
 // TestCommandModuleHasNoTransportDependencies pins kaboom-jdm5.2: the
 // browser-command lifecycle owner must not import HTTP, MCP or the capture
 // transport adapters; transports depend on it, never the reverse.
+func TestApplicationUseCasesHaveNoTransportDependencies(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{
+		"internal/app/screenshot/http.go":    "package screenshot\n\nimport _ \"net/http\"\n",
+		"internal/app/screenshot/mcp.go":     "package screenshot\n\nimport _ \"" + modulePrefix + "internal/mcp\"\n",
+		"internal/app/screenshot/capture.go": "package screenshot\n\nimport _ \"" + modulePrefix + "internal/capture\"\n",
+		"internal/app/other/adapter.go":      "package other\n\nimport _ \"" + modulePrefix + "internal/tools/observe/page\"\n",
+		// Clean: use cases may depend on the command module and leaf utilities.
+		"internal/app/screenshot/service.go": "package screenshot\n\nimport (\n\t_ \"context\"\n\t_ \"" + modulePrefix + "internal/queries\"\n)\n",
+		// Clean: adapters depending on the use case.
+		"internal/tools/observe/page/p.go": "package page\n\nimport (\n\t_ \"" + modulePrefix + "internal/mcp\"\n\t_ \"" + modulePrefix + "internal/app/screenshot\"\n)\n",
+		// Test files are exempt.
+		"internal/app/screenshot/x_test.go": "package screenshot\n\nimport _ \"" + modulePrefix + "internal/capture\"\n",
+	})
+	scan, err := scanTree(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	violations := evaluateMatrix(scan)
+	if len(violations) != 4 {
+		t.Fatalf("violations = %v\nwant 4 app->transport breaches", violations)
+	}
+	for _, v := range violations {
+		if !contains(v, "app->transport") {
+			t.Errorf("unexpected violation kind: %s", v)
+		}
+	}
+}
+
 func TestCommandModuleHasNoTransportDependencies(t *testing.T) {
 	root := t.TempDir()
 	writeTree(t, root, map[string]string{

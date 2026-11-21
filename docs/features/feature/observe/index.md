@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - internal/screenshotframe/wire_screenshot.go
   - src/lib/screenshot/coordinate-frame.ts
@@ -42,6 +42,9 @@ code_paths:
   - internal/tools/observe/session/session.go
   - internal/tools/observe/timeline/correlation.go
   - internal/tools/observe/page/page_state.go
+  - internal/tools/observe/page/page_screenshot.go
+  - internal/app/screenshot/screenshot.go
+  - cmd/browser-agent/internal/toolruntime/screenshot_wiring.go
   - cmd/browser-agent/internal/mcphttp/handler.go
   - cmd/browser-agent/internal/telemetryapi/handler.go
   - internal/tools/observe/hints/hints.go
@@ -107,7 +110,10 @@ test_paths:
   - internal/tools/observe/page/page_state_test.go
   - cmd/browser-agent/internal/mcphttp/handler_test.go
   - internal/tools/observe/page/page_state_storage_test.go
-  - internal/tools/observe/page/page_state_screenshot_test.go
+  - internal/tools/observe/page/page_screenshot_test.go
+  - internal/app/screenshot/screenshot_test.go
+  - internal/app/screenshot/save_test.go
+  - scripts/contracts/layering/main_test.go
   - internal/capture/waterfallstore/store_test.go
   - tests/extension/capture/observe-screenshot.test.js
   - tests/extension/capture/background/background-tab-capture.test.js
@@ -216,6 +222,21 @@ parsing logic.
 Element collection, visibility filtering, limits, and tab metadata use the
 shared command helpers also consumed by `interact-explore`; viewport screenshot
 capture/upload has one implementation for both normal capture and CDP fallback.
+The screenshot workflow is a transport-independent use case in
+`internal/app/screenshot` (`Service.Capture(ctx, Options) (Result, error)`). It
+validates options, enqueues and awaits the extension query through the
+`internal/browsercommand` owner (via its own two-method `Commands` port), splits
+the data URL from the result fields, and applies `save_to`. It accepts no MCP
+types and no `*capture.Capture`; failures are typed `*screenshot.Failure` kinds.
+`internal/tools/observe/page/page_screenshot.go` is the MCP adapter: it parses
+arguments, maps failure kinds to canonical `mcp.Fail` codes
+(`ScreenshotFailure`) and assembles the text + inline image blocks
+(`ScreenshotSuccess`). interact `include_screenshot` and analyze
+`visual_baseline`/`visual_diff` call the same use case (composed in
+`cmd/browser-agent/internal/toolruntime/screenshot_wiring.go`). The
+`scripts/contracts/layering` rule `app->transport` forbids `internal/app/**`
+from importing `net/http`, `internal/mcp`, `internal/capture/**` or
+`internal/tools/**`.
 Live-page storage, IndexedDB, screenshot, and accessibility failures use the
 canonical `mcp.Fail` response boundary; queue saturation guidance is built once
 with the canonical `pending_commands` recovery call.

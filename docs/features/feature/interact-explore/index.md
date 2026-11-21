@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-09-05
+last_reviewed: 2026-11-21
 code_paths:
   - src/content/provenance/collect.ts
   - src/lib/provenance/classify.ts
@@ -17,6 +17,7 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/action_runtime.go
+  - internal/app/screenshot/screenshot.go
   - cmd/browser-agent/internal/toolinteract/interact_dom.go
   - cmd/browser-agent/internal/toolinteract/interact_browser.go
   - cmd/browser-agent/internal/toolinteract/interact_page.go

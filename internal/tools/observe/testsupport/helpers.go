@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
@@ -20,12 +21,24 @@ import (
 func Deps(captured *capture.Capture) core.Deps {
 	return core.Deps{
 		Capture:              captured,
+		Screenshots:          newScreenshots(captured),
 		LogEntries:           func() ([]types.LogEntry, []time.Time) { return nil, nil },
 		LogTotalAdded:        func() int64 { return 0 },
 		IsConsoleNoise:       func(types.LogEntry) bool { return false },
 		ExecuteA11yQuery:     func(string, []string, any, bool) (json.RawMessage, error) { return nil, nil },
 		DiagnosticHintString: func() string { return "doctor hint" },
 	}
+}
+
+// newScreenshots wires the screenshot use case to a capture's command owner and tracking state.
+func newScreenshots(captured *capture.Capture) *screenshot.Service {
+	return screenshot.New(screenshot.Deps{
+		Commands: captured.Commands(),
+		TrackingEnabled: func() bool {
+			enabled, _, _ := captured.Extension().GetTrackingStatus()
+			return enabled
+		},
+	})
 }
 
 // DecodeToolResult decodes a JSON-RPC response's MCP tool result.

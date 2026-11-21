@@ -3,6 +3,7 @@
 package visual
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"image"
@@ -13,29 +14,38 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
 type fakeDeps struct {
-	stored         persistence.SessionStoreArgs
-	screenshotPath string
-	hasStore       bool
-	storeResult    json.RawMessage
-	storeErr       error
-	screenshotResp *mcp.JSONRPCResponse
+	stored           persistence.SessionStoreArgs
+	screenshotPath   string
+	hasStore         bool
+	storeResult      json.RawMessage
+	storeErr         error
+	screenshotErr    error
+	screenshotNoPath bool
 }
 
-func (f *fakeDeps) CaptureScreenshot(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-	if f.screenshotResp != nil {
-		return *f.screenshotResp
+func (f *fakeDeps) CaptureScreenshot(context.Context) (screenshot.Result, error) {
+	if f.screenshotErr != nil {
+		return screenshot.Result{}, f.screenshotErr
+	}
+	if f.screenshotNoPath {
+		return screenshot.Result{Fields: map[string]any{"status": "ok"}}, nil
 	}
 	path := f.screenshotPath
 	if path == "" {
 		path = "/tmp/current.png"
 	}
-	return mcp.Succeed(req, "Screenshot captured", map[string]any{"path": path})
+	return screenshot.Result{Fields: map[string]any{"path": path}}, nil
+}
+
+func (f *fakeDeps) ScreenshotFailure(req mcp.JSONRPCRequest, err error) mcp.JSONRPCResponse {
+	return mcp.Fail(req, mcp.ErrExtError, err.Error(), "retry")
 }
 
 func TestVisualHandlersSurfaceCaptureAndArtifactFailures(t *testing.T) {
@@ -43,12 +53,10 @@ func TestVisualHandlersSurfaceCaptureAndArtifactFailures(t *testing.T) {
 	if resp := SaveBaseline(&fakeDeps{}, req, json.RawMessage(`{}`)); !strings.Contains(string(resp.Result), "missing_param") {
 		t.Fatalf("missing-name response = %s", resp.Result)
 	}
-	captureFailure := mcp.Fail(req, mcp.ErrExtError, "capture unavailable", "retry")
-	if resp := SaveBaseline(&fakeDeps{screenshotResp: &captureFailure}, req, json.RawMessage(`{"name":"home"}`)); !strings.Contains(string(resp.Result), "capture unavailable") {
+	if resp := SaveBaseline(&fakeDeps{screenshotErr: errors.New("capture unavailable")}, req, json.RawMessage(`{"name":"home"}`)); !strings.Contains(string(resp.Result), "capture unavailable") {
 		t.Fatalf("capture-failure response = %s", resp.Result)
 	}
-	missingPath := mcp.Succeed(req, "Screenshot captured", map[string]any{"status": "ok"})
-	if resp := SaveBaseline(&fakeDeps{screenshotResp: &missingPath}, req, json.RawMessage(`{"name":"home"}`)); !strings.Contains(string(resp.Result), "path not available") {
+	if resp := SaveBaseline(&fakeDeps{screenshotNoPath: true}, req, json.RawMessage(`{"name":"home"}`)); !strings.Contains(string(resp.Result), "path not available") {
 		t.Fatalf("missing-path response = %s", resp.Result)
 	}
 	if resp := SaveBaseline(&fakeDeps{hasStore: true, storeErr: errors.New("disk full")}, req, json.RawMessage(`{"name":"home"}`)); !strings.Contains(string(resp.Result), "disk full") {

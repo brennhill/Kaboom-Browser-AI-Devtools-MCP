@@ -5,12 +5,15 @@
 package toolruntime
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -23,6 +26,7 @@ import (
 	terminalstatus "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/status"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/activecodebase"
 	annotationruntime "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation/runtime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
@@ -335,10 +339,13 @@ func TestVisualAnalyzeDepsExposeScreenshotGuardAndSessionStore(t *testing.T) {
 	if !deps.HasSessionStore() {
 		t.Fatal("handler with a session project path must report a session store")
 	}
-	resp := deps.CaptureScreenshot(request)
-	result := decodeMCPToolResult(t, resp)
-	if !result.IsError {
-		t.Fatal("screenshot without a tracked tab must fail, not hang")
+	_, err := deps.CaptureScreenshot(context.Background())
+	var failure *screenshot.Failure
+	if !errors.As(err, &failure) || failure.Kind != screenshot.KindNotTracking {
+		t.Fatalf("screenshot without a tracked tab must fail fast with not_tracking, got %v", err)
+	}
+	if result := decodeMCPToolResult(t, deps.ScreenshotFailure(request, err)); !result.IsError || !strings.Contains(result.Content[0].Text, "No tab is being tracked") {
+		t.Fatalf("mapped failure = %+v", result)
 	}
 
 	bare := visualAnalyzeDeps{h: &ToolHandler{state: runtimeState}}

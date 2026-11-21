@@ -9,13 +9,16 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // Deps names the canonical read owners and operations used by observe modes.
 type Deps struct {
-	Capture              *capture.Capture
+	Capture *capture.Capture
+	// Screenshots runs the transport-independent screenshot use case.
+	Screenshots          *screenshot.Service
 	LogEntries           func() ([]types.LogEntry, []time.Time)
 	LogTotalAdded        func() int64
 	ExecuteA11yQuery     func(string, []string, any, bool) (json.RawMessage, error)

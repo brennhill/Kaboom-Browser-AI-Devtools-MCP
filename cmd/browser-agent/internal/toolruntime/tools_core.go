@@ -582,10 +582,6 @@ func buildMCPToolBackend(handler *ToolHandler) mcpcall.Backend {
 	}
 }
 
-func (d visualAnalyzeDeps) CaptureScreenshot(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-	return observepage.GetScreenshot(buildObserveReadDeps(d.h), req, json.RawMessage(`{}`))
-}
-
 func (d visualAnalyzeDeps) GetTrackingStatus() (bool, int, string) {
 	return d.h.capture.Extension().GetTrackingStatus()
 }
@@ -690,7 +686,7 @@ func buildObserveLocalDeps(h *ToolHandler) toolobserve.Deps {
 
 func buildObserveReadDeps(h *ToolHandler) observecore.Deps {
 	return observecore.Deps{
-		Capture: h.capture,
+		Capture: h.capture, Screenshots: newScreenshotService(h),
 		LogEntries: func() ([]types.LogEntry, []time.Time) {
 			return h.state.Logs.EntriesWithAddedAt()
 		},
@@ -736,9 +732,7 @@ func initializeInteractActionOwners(h *ToolHandler) {
 				h.annotationStore.MarkDrawStarted()
 			}
 		},
-		GetScreenshot: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return observepage.GetScreenshot(buildObserveReadDeps(h), req, args)
-		},
+		CaptureScreenshot: newScreenshotService(h).Capture,
 		GetPageInfo: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return observepage.GetPageInfo(buildObserveReadDeps(h), req, args)
 		},

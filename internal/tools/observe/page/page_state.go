@@ -1,4 +1,4 @@
-// Purpose: The live-page observe modes — page, storage, indexeddb, screenshot — plus analyze's accessibility audit.
+// Purpose: The live-page observe modes — page, storage, indexeddb — plus analyze's accessibility audit.
 // Why: Unlike the buffer readers, each of these round-trips to the tracked tab to ask the page what it looks
 // like right now, so they share the tracking gate and the "no tab is being tracked" error path.
 // Docs: docs/features/feature/observe/index.md
@@ -6,14 +6,9 @@
 package page
 
 import (
-	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
-	"os"
-	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/a11ysummary"
@@ -22,7 +17,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/idbquery"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // GetPageInfo returns information about the currently tracked page.
@@ -432,204 +426,6 @@ func toInt(v any) (int, bool) {
 	}
 }
 
-type screenshotParams struct {
-	Format        string `json:"format,omitempty"`
-	Quality       int    `json:"quality,omitempty"`
-	FullPage      bool   `json:"full_page,omitempty"`
-	Selector      string `json:"selector,omitempty"`
-	WaitForStable bool   `json:"wait_for_stable,omitempty"`
-	SaveTo        string `json:"save_to,omitempty"`
-}
-
-// GetScreenshot captures a screenshot of the current page via the extension.
-func GetScreenshot(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	cap := deps.Capture
-	enabled, _, _ := cap.Extension().GetTrackingStatus()
-	if !enabled {
-		return mcp.Fail(req, mcp.ErrNoData, "No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab' on the page you want to monitor. Check observe with what='pilot' for extension status.", "", mcp.WithHint(deps.DiagnosticHintString()))
-	}
-
-	var params screenshotParams
-	mcp.LenientUnmarshal(args, &params)
-	if resp := screenshotParamsError(req, params); resp != nil {
-		return *resp
-	}
-
-	screenshotResult, errResp := fetchScreenshotResult(deps, req, cap, buildScreenshotQueryParams(params))
-	if errResp != nil {
-		return *errResp
-	}
-
-	// Extract data_url before building text block to avoid duplicating
-	// the large base64 payload in both text and image content blocks.
-	dataURL := extractDataURL(screenshotResult)
-
-	// #386: save_to — copy screenshot to user-specified path
-	applyScreenshotSaveTo(screenshotResult, params, dataURL)
-
-	// Build text response with file path info (backward compatible)
-	resp := mcp.Succeed(req, "Screenshot captured", screenshotResult)
-
-	return appendImageBlock(resp, dataURL)
-}
-
-func screenshotParamsError(req mcp.JSONRPCRequest, params screenshotParams) *mcp.JSONRPCResponse {
-	if params.Format != "" && params.Format != "png" && params.Format != "jpeg" {
-		resp := mcp.Fail(req,
-			mcp.ErrInvalidParam, "Invalid screenshot format: "+params.Format,
-			"Use 'png' or 'jpeg'", mcp.WithParam("format"),
-		)
-		return &resp
-	}
-
-	if params.Quality != 0 && (params.Quality < 1 || params.Quality > 100) {
-		resp := mcp.Fail(req,
-			mcp.ErrInvalidParam, fmt.Sprintf("Invalid quality: %d (must be 1-100)", params.Quality),
-			"Use a value between 1 and 100", mcp.WithParam("quality"),
-		)
-		return &resp
-	}
-
-	return nil
-}
-
-func buildScreenshotQueryParams(params screenshotParams) []byte {
-	screenshotParamsMap := map[string]any{}
-	if params.Format != "" {
-		screenshotParamsMap["format"] = params.Format
-	}
-	if params.Quality > 0 {
-		screenshotParamsMap["quality"] = params.Quality
-	}
-	if params.FullPage {
-		screenshotParamsMap["full_page"] = true
-	}
-	if params.Selector != "" {
-		screenshotParamsMap["selector"] = params.Selector
-	}
-	if params.WaitForStable {
-		screenshotParamsMap["wait_for_stable"] = true
-	}
-
-	queryParams, _ := json.Marshal(screenshotParamsMap)
-	return queryParams
-}
-
-func fetchScreenshotResult(deps core.Deps, req mcp.JSONRPCRequest, cap *capture.Capture, queryParams []byte) (map[string]any, *mcp.JSONRPCResponse) {
-	queryID, qerr := cap.Queries().CreatePendingQueryWithTimeout(
-		queries.PendingQuery{
-			Type:   "screenshot",
-			Params: queryParams,
-		},
-		20*time.Second,
-		"",
-	)
-	if qerr != nil {
-		resp := queueFullResponse(req, qerr)
-		return nil, &resp
-	}
-
-	result, err := cap.Queries().WaitForResult(queryID, 20*time.Second)
-	if err != nil {
-		resp := mcp.Fail(req, mcp.ErrExtTimeout, "Screenshot capture timeout: "+err.Error(), "Ensure the extension is connected and the page has loaded. Try refreshing the page, then retry.", mcp.WithHint(deps.DiagnosticHintString()))
-		return nil, &resp
-	}
-
-	var screenshotResult map[string]any
-	if err := json.Unmarshal(result, &screenshotResult); err != nil {
-		resp := mcp.Fail(req, mcp.ErrInvalidJSON, "Failed to parse screenshot result: "+err.Error(), "Check extension logs for errors")
-		return nil, &resp
-	}
-
-	if errMsg, ok := screenshotResult["error"].(string); ok {
-		resp := mcp.Fail(req, mcp.ErrExtError, "Screenshot capture failed: "+errMsg, "Check that the tab is visible and accessible. The extension reported an error.", mcp.WithHint(deps.DiagnosticHintString()))
-		return nil, &resp
-	}
-
-	return screenshotResult, nil
-}
-
-func extractDataURL(screenshotResult map[string]any) string {
-	var dataURL string
-	if du, ok := screenshotResult["data_url"].(string); ok && du != "" {
-		dataURL = du
-		delete(screenshotResult, "data_url")
-	}
-	return dataURL
-}
-
-func applyScreenshotSaveTo(screenshotResult map[string]any, params screenshotParams, dataURL string) {
-	if params.SaveTo == "" || dataURL == "" {
-		return
-	}
-	if saveErr := saveScreenshotToPath(params.SaveTo, dataURL); saveErr != nil {
-		screenshotResult["save_to_error"] = saveErr.Error()
-		return
-	}
-	screenshotResult["save_to"] = params.SaveTo
-}
-
-func appendImageBlock(resp mcp.JSONRPCResponse, dataURL string) mcp.JSONRPCResponse {
-	if dataURL == "" {
-		return resp
-	}
-	base64Data, mimeType := util.SplitDataURL(dataURL)
-	if base64Data == "" {
-		return resp
-	}
-	return mcp.AppendImageToResponse(resp, base64Data, mimeType)
-}
-
-func queueFullResponse(req mcp.JSONRPCRequest, err error) mcp.JSONRPCResponse {
-	return mcp.Fail(req,
-		mcp.ErrQueueFull,
-		"Command queue full: "+err.Error(),
-		"Wait for in-flight commands to complete, then retry.",
-		mcp.WithRecoveryToolCall(map[string]any{"tool": "observe", "arguments": map[string]any{"what": "pending_commands"}}),
-	)
-}
-
-// saveScreenshotToPath saves a screenshot data URL to a user-specified file path (#386).
-// Creates parent directories if needed. Only allows .png and .jpeg/.jpg extensions.
-func saveScreenshotToPath(saveTo string, dataURL string) error {
-	// Validate the path is absolute
-	absPath, err := filepath.Abs(saveTo)
-	if err != nil {
-		return fmt.Errorf("invalid save_to path: %w", err)
-	}
-
-	// Validate file extension
-	ext := strings.ToLower(filepath.Ext(absPath))
-	if ext != ".png" && ext != ".jpg" && ext != ".jpeg" {
-		return fmt.Errorf("save_to must have .png, .jpg, or .jpeg extension, got %q", ext)
-	}
-
-	// Decode the data URL
-	b64Data, _ := util.SplitDataURL(dataURL)
-	if b64Data == "" {
-		return fmt.Errorf("screenshot_save: invalid data URL format. Expected 'data:image/...;base64,...'")
-	}
-
-	imageData, err := base64.StdEncoding.DecodeString(b64Data)
-	if err != nil {
-		return fmt.Errorf("failed to decode image data: %w", err)
-	}
-
-	// Create parent directories
-	dir := filepath.Dir(absPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("failed to create directory %s: %w", dir, err)
-	}
-
-	// Write the file
-	// #nosec G306 -- user-specified path for screenshot save
-	if err := os.WriteFile(absPath, imageData, 0o644); err != nil {
-		return fmt.Errorf("failed to write screenshot: %w", err)
-	}
-
-	return nil
-}
-
 // RunA11yAudit executes an accessibility audit via the extension.
 func RunA11yAudit(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
@@ -729,4 +525,13 @@ func buildA11ySummary(auditResult map[string]any) map[string]any {
 		"incomplete": len(incomplete),
 		"top_issues": topIssues,
 	}
+}
+
+func queueFullResponse(req mcp.JSONRPCRequest, err error) mcp.JSONRPCResponse {
+	return mcp.Fail(req,
+		mcp.ErrQueueFull,
+		"Command queue full: "+err.Error(),
+		"Wait for in-flight commands to complete, then retry.",
+		mcp.WithRecoveryToolCall(map[string]any{"tool": "observe", "arguments": map[string]any{"what": "pending_commands"}}),
+	)
 }
