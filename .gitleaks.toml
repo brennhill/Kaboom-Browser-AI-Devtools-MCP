@@ -34,6 +34,14 @@ paths = [
   # Redaction / scanner / sanitizer self-test fixtures (fake keys by design).
   # Anchored: an unanchored internal/... regex also matches vendor-nested paths.
   '''^internal/platform/redaction/.*_test\.go$''',
+  # Pre-context-layout paths: gitleaks scans full history, so fixtures committed
+  # before the kaboom-us7o move must stay allowlisted at their historical paths.
+  '''^internal/redaction/.*_test\.go$''',
+  '''^internal/security/.*_test\.go$''',
+  '''^internal/issuereport/.*_test\.go$''',
+  '''^internal/audit/.*_test\.go$''',
+  '''^internal/capture/.*_test\.go$''',
+  '''^cmd/browser-agent/internal/httpguard/.*_test\.go$''',
   '''^internal/analysis/security/scan/.*_test\.go$''',
   '''^internal/tools/issuereport/.*_test\.go$''',
   '''^internal/tools/audit/.*_test\.go$''',
