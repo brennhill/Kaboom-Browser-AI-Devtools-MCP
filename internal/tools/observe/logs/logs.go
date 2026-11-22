@@ -13,7 +13,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/buffers"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/buffers"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/pagination"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/errorcluster"

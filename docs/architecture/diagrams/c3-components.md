@@ -94,7 +94,7 @@ graph TB
             Cursor --> PaginationL
         end
 
-        subgraph Buffers["**Buffers** (internal/buffers/)<br/>Data structures"]
+        subgraph Buffers["**Buffers** (internal/observation/buffers/)<br/>Data structures"]
             RingBuf["ring_buffer.go<br/>FIFO circular buffer<br/>Cursor-based reads"]
         end
 
@@ -272,7 +272,7 @@ graph TB
 
 **Used By:** All observe queries with pagination
 
-#### **Buffers** (`internal/buffers/`)
+#### **Buffers** (`internal/observation/buffers/`)
 **Purpose:** Generic ring buffer data structure
 - **Ring Buffer** - Fixed-size circular FIFO
 - **Cursor-based Reads** - Safe concurrent reads

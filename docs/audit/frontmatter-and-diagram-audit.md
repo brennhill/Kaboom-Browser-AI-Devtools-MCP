@@ -114,7 +114,7 @@ package packagename
 | Security Analysis Pipeline | Flowchart | internal/analysis/security/csp.go, sri.go, flagging.go |
 | Error Clustering | Flowchart | internal/analysis/clustering.go |
 | Session/Registry Management | Sequence + State | internal/analysis/snapshots/*, client_registry.go |
-| Buffer Architecture | State Machine | internal/buffers/ring_buffer.go, ttl.go |
+| Buffer Architecture | State Machine | internal/observation/buffers/ring_buffer.go, ttl.go |
 | Test Generation | Flowchart | cmd/browser-agent/testgen*.go |
 
 #### Features (84 SPECS WITH ZERO DIAGRAMS)

@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/buffers"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/buffers"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
 )

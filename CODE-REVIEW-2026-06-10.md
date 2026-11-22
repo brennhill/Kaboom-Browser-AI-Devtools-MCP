@@ -129,7 +129,7 @@ dev server on those 22 ports dies. `server/scripts/install.js:94-107` does the s
 ## MEDIUM (rolled up)
 
 - **Go:** `RingBuffer.positionToIndex` wrong after `Clear()` — latent panic in unused cursor API
-  (`internal/buffers/ring_buffer.go:222-241`; fix or delete). `internal/server` is a drifted copy of
+  (`internal/observation/buffers/ring_buffer.go:222-241`; fix or delete). `internal/server` is a drifted copy of
   the live LogStore incl. a `0o644` world-readable log regression (`main_storage_io.go:79`) — dedupe.
   VS Code MCP config likely needs key `"servers"` not `"mcpServers"` in `mcp.json`
   (`native_install.go:117-147`; verify against VS Code docs).

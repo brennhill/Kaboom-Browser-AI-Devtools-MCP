@@ -10,7 +10,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/buffers"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/buffers"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/performance"
 	performance_navigation "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/performance/navigation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/performance/tracecorr"

@@ -1,9 +1,9 @@
 // THIS FILE IS GENERATED — do not edit by hand.
-// Source: internal/types/wire_enhanced_action.go
+// Source: internal/platform/types/wire_enhanced_action.go
 // Generator: scripts/build/generate-wire-types.js
 
 /**
- * @fileoverview Wire type for enhanced actions — matches internal/types/wire_enhanced_action.go
+ * @fileoverview Wire type for enhanced actions — matches internal/platform/types/wire_enhanced_action.go
  *
  * This is the canonical TypeScript definition for the EnhancedAction HTTP payload.
  * Changes here MUST be mirrored in the Go counterpart. Run `make check-wire-drift`.

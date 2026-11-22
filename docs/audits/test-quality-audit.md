@@ -299,7 +299,7 @@ Marked "DO NOT MODIFY" -- good. Integration test that builds binary and starts s
 
 ## Part 4: Go Unit Tests (`internal/`)
 
-### File: `internal/buffers/ring_buffer_test.go` (from session summary)
+### File: `internal/observation/buffers/ring_buffer_test.go` (from session summary)
 
 Well-structured tests with good edge case coverage (capacity 1, multiple wraparounds, empty buffer, concurrent access).
 

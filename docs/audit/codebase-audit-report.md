@@ -651,7 +651,7 @@ afterEach(() => {
 ### Medium Issues
 
 #### 7.1 Inefficient Array Operations
-**File:** [`internal/buffers/ring_buffer.go`](internal/buffers/ring_buffer.go:130-134)  
+**File:** [`internal/observation/buffers/ring_buffer.go`](internal/observation/buffers/ring_buffer.go:130-134)  
 **Severity:** Medium  
 **Type:** Performance
 
@@ -886,7 +886,7 @@ export const DOM_QUERY_MAX_ELEMENTS = 100  // Why 100?
 - `internal/analysis/snapshots/types.go`
 - `internal/analysis/snapshots/client_registry.go`
 - `internal/analysis/security/policy/mode.go`
-- `internal/buffers/ring_buffer.go`
+- `internal/observation/buffers/ring_buffer.go`
 
 ### TypeScript/JavaScript Frontend
 - `src/background/message-handlers.ts`

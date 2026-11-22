@@ -1081,15 +1081,15 @@
       "mutable_globals": 0,
       "exports": 6
     },
-    "internal/buffers/filter.go": {
+    "internal/observation/buffers/filter.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "internal/buffers/ring_buffer.go": {
+    "internal/observation/buffers/ring_buffer.go": {
       "mutable_globals": 0,
       "exports": 13
     },
-    "internal/buffers/ring_buffer_filter.go": {
+    "internal/observation/buffers/ring_buffer_filter.go": {
       "mutable_globals": 0,
       "exports": 2
     },

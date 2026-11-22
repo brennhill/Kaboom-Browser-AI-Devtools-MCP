@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """apply-moves.py — Relocate Go package directories per scripts/migrate/context-moves.tsv and rewrite every path reference.
 
-Usage: scripts/migrate/apply-moves.py [--dry-run] [--skip PATH ...]
+Usage: scripts/migrate/apply-moves.py [--dry-run] [--skip PATH ...] | --help
+Rows listed in scripts/migrate/applied-moves.txt are already done and ignored, so re-running is safe
+(a moved package's old path can be reused as a new context root, e.g. internal/lifecycle).
 Rows whose note contains REVIEW are skipped (package stays put). Rows with old == new are no-ops
 but still shadow shorter parent rows. Directory moves use git mv per directory (files only) via a
 temp staging area so a destination never collides with a source still in place.
@@ -15,7 +17,14 @@ ROOT = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=Tru
 os.chdir(ROOT)
 TSV = "scripts/migrate/context-moves.tsv"
 MODULE = "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP"
+if "--help" in sys.argv or "-h" in sys.argv:
+    print(__doc__)
+    sys.exit(0)
 DRY = "--dry-run" in sys.argv
+APPLIED_FILE = "scripts/migrate/applied-moves.txt"
+APPLIED = set()
+if os.path.exists(APPLIED_FILE):
+    APPLIED = {l.strip() for l in open(APPLIED_FILE, encoding="utf-8") if l.strip() and not l.startswith("#")}
 EXTRA_SKIP = set()
 if "--skip" in sys.argv:
     EXTRA_SKIP = set(sys.argv[sys.argv.index("--skip") + 1:])
@@ -33,6 +42,8 @@ def load_rows():
         parts = line.rstrip("\n").split("\t")
         old, new = parts[0], parts[1]
         note = parts[3] if len(parts) > 3 else ""
+        if old in APPLIED:
+            continue  # already moved; its old path may now be a new context root
         if "REVIEW" in note or old in EXTRA_SKIP:
             rows[old] = old  # stays; still shadows parent rows
             skipped.append(old)
@@ -142,7 +153,7 @@ def rewrite_text():
         try:
             src = open(f, encoding="utf-8").read()
         except UnicodeDecodeError:
-            continue
+            continue  # EXPECTED_ABSENCE: is_text() heuristics passed a non-UTF-8 file; it holds no path references
         out = _RX.sub(_sub, src)
         if out != src:
             changed.append(f)
@@ -156,5 +167,8 @@ if __name__ == "__main__":
     move_dirs()
     changed = rewrite_text()
     if not DRY:
-        with open(os.path.join(ROOT, ".migrate_changed.txt"), "w") as fh:
-            fh.write("\n".join(changed))
+        moved = sorted(old for old, new in ROWS.items() if new != old)
+        if moved:
+            with open(APPLIED_FILE, "a", encoding="utf-8") as fh:
+                fh.write("\n".join(moved) + "\n")
+            print(f"recorded {len(moved)} applied rows in {APPLIED_FILE}")
