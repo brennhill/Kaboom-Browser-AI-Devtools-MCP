@@ -35,7 +35,7 @@ func sourceDirectory() string {
 	if !ok {
 		return ""
 	}
-	return filepath.Clean(filepath.Join(filepath.Dir(filename), "..", ".."))
+	return filepath.Clean(filepath.Join(filepath.Dir(filename), "..", "..", "..", "..", "cmd", "browser-agent"))
 }
 
 func buildArgs(outputPath string, collectSubprocessCoverage bool) []string {

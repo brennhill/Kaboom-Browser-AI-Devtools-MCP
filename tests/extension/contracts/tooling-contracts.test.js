@@ -289,7 +289,7 @@ describe('Tooling contracts', () => {
       'internal/browsercommand/owner.go',
       'internal/browsercommand/internal/dispatch/dispatcher_results.go',
       'internal/sync/runtime/handler.go',
-      'internal/toolobserve/dispatcher.go',
+      'internal/tools/observe/handler/dispatcher.go',
       'internal/tools/interact/handler/interact_browser.go',
       'internal/lifecycle/bridge/bridge.go'
     ]) {

@@ -490,7 +490,7 @@ func TestTelemetryHTTPDoesNotReturnToRootServer(t *testing.T) {
 }
 
 func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "toolruntime", "tools_core.go"))
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "internal", "composition", "toolruntime", "tools_core.go"))
 	if err != nil {
 		t.Fatalf("read tools_core.go: %v", err)
 	}
@@ -500,7 +500,7 @@ func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
 }
 
 func TestConfigureLifecycleDoesNotReturnToToolHandler(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "toolruntime", "tools_configure.go"))
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "internal", "composition", "toolruntime", "tools_configure.go"))
 	if err != nil {
 		t.Fatalf("read tools_configure.go: %v", err)
 	}
@@ -519,7 +519,7 @@ func TestConfigureLifecycleDoesNotReturnToToolHandler(t *testing.T) {
 }
 
 func TestToolCatalogDoesNotReturnToCompositionRoot(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "toolruntime", "tools_core.go"))
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "internal", "composition", "toolruntime", "tools_core.go"))
 	if err != nil {
 		t.Fatalf("read tools_core.go: %v", err)
 	}
