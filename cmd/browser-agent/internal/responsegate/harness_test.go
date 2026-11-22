@@ -38,25 +38,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asynccommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcptelemetry"
 	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 	terminalstatus "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/status"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/activecodebase"
 	annotationruntime "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation/runtime"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/listenport"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/appruntime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/incident"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/listenport"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/adapters/mcptelemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/paths"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/warningqueue"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/warningqueue"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/asynccommand"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/scripts/contracts/responsecontract"
 )
 
@@ -390,7 +390,7 @@ func runSweep(t *testing.T) *sweepResult {
 	return result
 }
 
-// pinStateRoot points every handler that resolves paths through internal/state
+// pinStateRoot points every handler that resolves paths through internal/platform/state/paths
 // (screenshots, evidence, recordings, draw sessions) at the sweep's temp root
 // and seeds one draw session. Without it analyze/draw_history listed the real
 // user state dir: an empty CI runner dropped the sessions[] fields and a dev

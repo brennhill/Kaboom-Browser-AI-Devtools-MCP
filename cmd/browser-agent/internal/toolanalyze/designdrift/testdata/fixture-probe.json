@@ -1,5 +1,5 @@
 {
- "_comment": "Real computed-style payloads captured from cmd/browser-agent/internal/testpages/pages/design-drift.html in Chrome. Keyed by selector. This is what the page actually renders, so the analyzers can be tested against the fixture without a browser; UAT category 36 covers the live extension path. _source records the digests of that page's <style> and <body>: TestDesignDriftFixtureMatchesItsPage fails the moment either changes, because an edited page leaves this capture stale while every Go test stays green. Regenerate by loading the fixture, re-running the probe with include_custom_properties, keeping only the properties recorded here, and re-recording both digests.",
+ "_comment": "Real computed-style payloads captured from internal/composition/http/testpages/pages/design-drift.html in Chrome. Keyed by selector. This is what the page actually renders, so the analyzers can be tested against the fixture without a browser; UAT category 36 covers the live extension path. _source records the digests of that page's <style> and <body>: TestDesignDriftFixtureMatchesItsPage fails the moment either changes, because an edited page leaves this capture stale while every Go test stays green. Regenerate by loading the fixture, re-running the probe with include_custom_properties, keeping only the properties recorded here, and re-recording both digests.",
  ".step-card__header": {
   "elements": [
    {
@@ -1077,7 +1077,7 @@
   }
  },
  "_source": {
-  "page": "cmd/browser-agent/internal/testpages/pages/design-drift.html",
+  "page": "internal/composition/http/testpages/pages/design-drift.html",
   "style_sha256": "e018e01297c3b17140abfb4279d0da3ce03eec6dd0b4cf8d2b1d3f15a96eb597",
   "body_sha256": "830c6d2c98020375bcb4b77cee0a4ea0a6c56512fde62574c7fae52661697658"
  }

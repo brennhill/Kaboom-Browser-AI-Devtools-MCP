@@ -225,8 +225,8 @@ The agent can do this as part of the PR creation workflow (see workflow integrat
 
 ## File Locations
 
-MCP handler: `cmd/browser-agent/internal/toolgenerate/artifacts_sarif_impl.go` (`HandleExportSARIF`, dispatched from `generate({format: "sarif"})`).
+MCP handler: `internal/tools/generate/handler/artifacts_sarif_impl.go` (`HandleExportSARIF`, dispatched from `generate({format: "sarif"})`).
 
-SARIF conversion and file writing: `internal/export/sarif/export.go` (`ExportSARIF`), `internal/export/sarif/conversion.go`, `internal/export/sarif/types.go`, `internal/export/sarif/file.go` (save-path validation).
+SARIF conversion and file writing: `internal/analysis/export/sarif/export.go` (`ExportSARIF`), `internal/analysis/export/sarif/conversion.go`, `internal/analysis/export/sarif/types.go`, `internal/analysis/export/sarif/file.go` (save-path validation).
 
-Tests: `internal/export/sarif/export_test.go`, `internal/export/sarif/unit_test.go`, `internal/export/sarif/golden_test.go`, `internal/export/sarif/file_test.go`.
+Tests: `internal/analysis/export/sarif/export_test.go`, `internal/analysis/export/sarif/unit_test.go`, `internal/analysis/export/sarif/golden_test.go`, `internal/analysis/export/sarif/file_test.go`.

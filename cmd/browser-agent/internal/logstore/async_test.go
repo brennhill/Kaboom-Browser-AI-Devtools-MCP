@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )
 
 // newAsyncLogStoreForTest builds a Store with a running worker, mirroring

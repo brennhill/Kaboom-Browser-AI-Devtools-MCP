@@ -85,7 +85,7 @@ _resolve_harness_root() {
         return 1
     fi
 
-    local candidate="$SMOKE_FRAMEWORK_DIR/../../../cmd/browser-agent/internal/testpages/pages"
+    local candidate="$SMOKE_FRAMEWORK_DIR/../../../internal/composition/http/testpages/pages"
     if [ -d "$candidate" ]; then
         _smoke_abs_dir "$candidate"
         return 0

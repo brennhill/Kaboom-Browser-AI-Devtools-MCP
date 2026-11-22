@@ -6,15 +6,15 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
-  - internal/pagination/pagination.go
-  - internal/pagination/entries.go
+  - internal/observation/pagination/pagination.go
+  - internal/observation/pagination/entries.go
 test_paths:
-  - internal/pagination/cursor_test.go
-  - internal/pagination/pagination_test.go
-  - internal/pagination/entries_actions_test.go
-  - internal/pagination/entries_websocket_test.go
-  - internal/pagination/pagination_bench_test.go
-  - internal/pagination/test_helpers_test.go
+  - internal/observation/pagination/cursor_test.go
+  - internal/observation/pagination/pagination_test.go
+  - internal/observation/pagination/entries_actions_test.go
+  - internal/observation/pagination/entries_websocket_test.go
+  - internal/observation/pagination/pagination_bench_test.go
+  - internal/observation/pagination/test_helpers_test.go
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-05
 ---
@@ -42,8 +42,8 @@ last_verified_date: 2026-08-05
 
 ## Code and Tests
 
-`internal/pagination/pagination.go` is the single generic cursor engine. Domain
-adaptation is isolated in `internal/pagination/entries.go`, which consumes the
+`internal/observation/pagination/pagination.go` is the single generic cursor engine. Domain
+adaptation is isolated in `internal/observation/pagination/entries.go`, which consumes the
 canonical telemetry wire types without re-exporting them. Correctness,
 property, fuzz, performance, and adapter suites exercise the same public
 boundary, while a package regression test enforces the ten-file architecture

@@ -191,7 +191,7 @@ func GetErrorBundles(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessag
 
 The observe dispatcher maps `"error_bundles"` to `observetimeline.GetErrorBundles`.
 
-#### 3. `internal/schema/observe.go`
+#### 3. `internal/tools/schema/observe.go`
 
 `"error_bundles"` is in the observe `what` enum; `window_seconds`, `scope`, `url` and `summary` parameter descriptions mention it.
 

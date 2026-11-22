@@ -8,10 +8,10 @@ last_reviewed: 2026-08-03
 code_paths:
   - scripts/ci/run-flake-detection.mjs
   - .github/workflows/flake-detection.yml
-  - internal/flakerepro/runner.go
+  - internal/analysis/flakerepro/runner.go
 test_paths:
   - scripts/ci/run-flake-detection.test.mjs
-  - internal/flakerepro/runner_test.go
+  - internal/analysis/flakerepro/runner_test.go
 ---
 
 # Continuous Flake Detection

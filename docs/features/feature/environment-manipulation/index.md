@@ -6,26 +6,26 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/cli/parser/generate_configure.go
-  - cmd/browser-agent/internal/playbooks/resources/guides.go
-  - cmd/browser-agent/internal/toolconfigure/qafixture/handler.go
-  - cmd/browser-agent/internal/toolconfigure/qafixture/startup.go
-  - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command.go
-  - cmd/browser-agent/internal/toolconfigure/qafixture/shutdown/recovery.go
+  - internal/tools/cli/parser/generate_configure.go
+  - internal/tools/playbooks/resources/guides.go
+  - internal/tools/configure/handler/qafixture/handler.go
+  - internal/tools/configure/handler/qafixture/startup.go
+  - internal/tools/configure/handler/qafixture/transport/command.go
+  - internal/tools/configure/handler/qafixture/shutdown/recovery.go
   - cmd/browser-agent/internal/health/doctor_live_checks.go
-  - cmd/browser-agent/internal/toolinteract/action_owners.go
-  - cmd/browser-agent/internal/toolinteract/interact_page.go
+  - internal/tools/interact/handler/action_owners.go
+  - internal/tools/interact/handler/interact_page.go
   - cmd/browser-agent/internal/toolruntime/tools_configure.go
   - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - internal/qafixture/wire_fixture.go
-  - internal/qafixture/transaction.go
-  - internal/qafixture/registry.go
-  - internal/qafixture/registry_store.go
-  - internal/statefile/statefile.go
-  - internal/statefile/directory_sync_unix.go
-  - internal/statefile/directory_sync_windows.go
-  - internal/schema/configure/properties_fixture.go
-  - internal/statediag/collector.go
+  - internal/testgen/qafixture/wire_fixture.go
+  - internal/testgen/qafixture/transaction.go
+  - internal/testgen/qafixture/registry.go
+  - internal/testgen/qafixture/registry_store.go
+  - internal/platform/state/file/statefile.go
+  - internal/platform/state/file/directory_sync_unix.go
+  - internal/platform/state/file/directory_sync_windows.go
+  - internal/tools/schema/configure/properties_fixture.go
+  - internal/lifecycle/doctor/statediag/collector.go
   - internal/tools/configure/capabilities/modespecs_configure.go
   - scripts/build/generate-wire-types.js
   - scripts/contracts/check-wire-drift.js
@@ -41,23 +41,23 @@ code_paths:
   - src/types/runtime/queries.ts
   - src/types/wire/wire-qa-fixture.ts
 test_paths:
-  - internal/schema/invariants_test.go
-  - cmd/browser-agent/internal/mcpprotocol/responses_test.go
+  - internal/tools/schema/invariants_test.go
+  - internal/tools/mcpserver/protocol/responses_test.go
   - cmd/browser-agent/testdata/mcp-tools-list.golden.json
   - cmd/browser-agent/internal/doctorsupport/projections_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_browser_test.go
-  - cmd/browser-agent/internal/toolconfigure/qafixture/handler_test.go
-  - cmd/browser-agent/internal/toolconfigure/qafixture/startup_test.go
-  - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command_test.go
-  - cmd/browser-agent/internal/toolconfigure/qafixture/shutdown/recovery_test.go
-  - internal/qafixture/fixture_test.go
-  - internal/qafixture/transaction_test.go
-  - internal/qafixture/registry_test.go
-  - internal/qafixture/model_test.go
-  - internal/qafixture/registry_store_test.go
-  - internal/statefile/statefile_test.go
-  - internal/schema/configure/schema_test.go
-  - internal/statediag/collector_test.go
+  - internal/tools/interact/handler/interact_browser_test.go
+  - internal/tools/configure/handler/qafixture/handler_test.go
+  - internal/tools/configure/handler/qafixture/startup_test.go
+  - internal/tools/configure/handler/qafixture/transport/command_test.go
+  - internal/tools/configure/handler/qafixture/shutdown/recovery_test.go
+  - internal/testgen/qafixture/fixture_test.go
+  - internal/testgen/qafixture/transaction_test.go
+  - internal/testgen/qafixture/registry_test.go
+  - internal/testgen/qafixture/model_test.go
+  - internal/testgen/qafixture/registry_store_test.go
+  - internal/platform/state/file/statefile_test.go
+  - internal/tools/schema/configure/schema_test.go
+  - internal/lifecycle/doctor/statediag/collector_test.go
   - tests/extension/environment-transaction/browser-state-driver.test.js
   - tests/extension/environment-transaction/chrome-state-adapter.test.js
   - tests/extension/environment-transaction/snapshot-store.test.js
@@ -114,7 +114,7 @@ last_verified_date: 2026-08-02
 - The daemon recovery registry persists only opaque transaction, snapshot,
   correlation, extension-generation, lifecycle, timestamp, and mutation-count
   fields. It is bounded, rejects stale generations, and delegates replacement
-  and quarantine durability to the canonical `internal/statefile` owner. That
+  and quarantine durability to the canonical `internal/platform/state/file` owner. That
   owner uses same-directory temporary writes, file sync, atomic rename, and
   directory sync where supported, with stable redacted failure stages and
   deterministic cleanup coverage. Windows' unsupported directory-sync

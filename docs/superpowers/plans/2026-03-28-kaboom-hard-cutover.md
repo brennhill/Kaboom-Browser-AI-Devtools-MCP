@@ -98,13 +98,13 @@
 - `src/inject/index.ts`
 - `src/inject/settings.ts`
 - `src/options.ts`
-- `cmd/browser-agent/internal/playbooks/resource_catalog.go`
+- `internal/tools/playbooks/resource_catalog.go`
 - `cmd/browser-agent/openapi.json`
 - `cmd/browser-agent/openapi.go`
 - `cmd/browser-agent/setup.html`
 - `cmd/browser-agent/docs.html`
 - `cmd/browser-agent/logs.html`
-- `internal/diag/debug_file.go`
+- `internal/platform/diag/debug_file.go`
 - `cmd/browser-agent/native_install.go`
 - `cmd/browser-agent/main_connection_stop.go`
 - `cmd/browser-agent/native_install_config_test.go`
@@ -482,13 +482,13 @@
 **Budget:** <=500 changed LOC
 
 **Files:**
-- Modify: `cmd/browser-agent/internal/playbooks/resource_catalog.go`
+- Modify: `internal/tools/playbooks/resource_catalog.go`
 - Modify: `cmd/browser-agent/openapi.go`
 - Modify: `cmd/browser-agent/openapi.json`
 - Modify: `cmd/browser-agent/setup.html`
 - Modify: `cmd/browser-agent/docs.html`
 - Modify: `cmd/browser-agent/logs.html`
-- Modify: `internal/diag/debug_file.go`
+- Modify: `internal/platform/diag/debug_file.go`
 - Test: `cmd/browser-agent/handler_unit_test.go`
 - Test: `cmd/browser-agent/native_install_config_test.go`
 

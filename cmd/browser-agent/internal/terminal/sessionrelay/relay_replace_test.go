@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty"
 )
 
 func TestMap_ReplaceRelay_BindsFreshSessionUnderConcurrency(t *testing.T) {

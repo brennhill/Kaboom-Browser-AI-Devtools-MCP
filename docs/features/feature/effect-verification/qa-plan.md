@@ -11,7 +11,7 @@ last_reviewed: 2026-09-05
 
 ## Automated coverage
 
-### Window boundary — `cmd/browser-agent/internal/actioneffects/effects_test.go`
+### Window boundary — `internal/tools/interact/effects/effects_test.go`
 
 Every test drives a fake clock through an injected `Wait`; nothing sleeps.
 
@@ -31,7 +31,7 @@ Every test drives a fake clock through an injected `Wait`; nothing sleeps.
 | The attribution note names the window and disclaims causation | `TestEffectsDeclareAttributionIsTemporalNotCausal` |
 | No readers wired reports unevaluated, not effect-free | `TestCollectWithNoReadersReportsNotEvaluatedRatherThanNoEffect` |
 
-### Classification — `cmd/browser-agent/internal/actioneffects/classify_test.go`
+### Classification — `internal/tools/interact/effects/classify_test.go`
 
 | Behaviour | Test |
 | --- | --- |
@@ -44,7 +44,7 @@ Every test drives a fake clock through an injected `Wait`; nothing sleeps.
 | An explicit decision is not overwritten | `TestApplyRetryAdviceNeverOverridesAnExplicitDecision` |
 | The DOM report is read at top level, from counts, and nested under `result` | `TestDOMChangeReadsTheSummaryEveryDOMPrimitiveAlreadyReturns` |
 
-### Dispatcher integration — `cmd/browser-agent/internal/interactdispatch/effects_test.go`
+### Dispatcher integration — `internal/tools/interact/dispatch/effects_test.go`
 
 | Behaviour | Test |
 | --- | --- |
@@ -62,7 +62,7 @@ Every test drives a fake clock through an injected `Wait`; nothing sleeps.
 | Effect-blind actions get no block and no retry advice | `TestDispatchOpensNoWindowForActionsItsSignalsCannotSee` |
 | Every exclusion is still a mutation action, so it excludes something | `TestEveryEffectBlindActionIsStillAMutationAction` |
 
-### Payload accessors — `internal/mcp/response_test.go`
+### Payload accessors — `internal/tools/mcp/response_test.go`
 
 | Behaviour | Test |
 | --- | --- |
@@ -73,7 +73,7 @@ Every test drives a fake clock through an injected `Wait`; nothing sleeps.
 | An unreadable response passes through untouched | `TestMutateResultPayloadPassesUnreadableResponsesThroughUntouched` |
 | Blocks after the first (e.g. an appended screenshot) survive | `TestMutateResultPayloadKeepsBlocksAfterTheFirst` |
 
-### CLI — `cmd/browser-agent/internal/cli/parser/commands_test.go`
+### CLI — `internal/tools/cli/parser/commands_test.go`
 
 `TestParseInteractArgs_EffectWindowControls` covers `--no-effects` and `--effect-window-ms`.
 `TestEverySchemaPropertyHasACLIFlag` holds `effects` and `effect_window_ms` to having flags.

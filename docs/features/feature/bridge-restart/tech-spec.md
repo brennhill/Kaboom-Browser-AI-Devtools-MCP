@@ -36,15 +36,15 @@ LLM calls configure(what="restart")
 
 ### `ExtractToolAction(req mcp.JSONRPCRequest) (toolName, action string)`
 
-Defined in `cmd/browser-agent/internal/bridge/bridge_transport.go`; delegates to `internal/bridge` (`ExtractToolAction(method, params)`). Lightweight JSON parse of `req.Params` to extract the tool name and action field from a `tools/call` request. Returns empty strings for non-matching methods or parse failures.
+Defined in `internal/lifecycle/bridge/bridge_transport.go`; delegates to `internal/lifecycle/bridge/framing` (`ExtractToolAction(method, params)`). Lightweight JSON parse of `req.Params` to extract the tool name and action field from a `tools/call` request. Returns empty strings for non-matching methods or parse failures.
 
 ### `Runner.forceKillOnPort(port int)`
 
-Sends SIGCONT (via `processsignal.Resume`; no-op on Windows) to all processes bound to the port. This unfreezes SIGSTOP'd processes so that subsequent SIGTERM/SIGKILL from `StopServerForUpgrade` (`cmd/browser-agent/internal/daemonrecovery/primitives.go`) can be delivered. Without this, a frozen daemon would appear "released" to HTTP health checks but still hold the socket.
+Sends SIGCONT (via `processsignal.Resume`; no-op on Windows) to all processes bound to the port. This unfreezes SIGSTOP'd processes so that subsequent SIGTERM/SIGKILL from `StopServerForUpgrade` (`internal/lifecycle/daemon/recovery/primitives.go`) can be delivered. Without this, a frozen daemon would appear "released" to HTTP health checks but still hold the socket.
 
 ### `Runner.handleBridgeRestart(req, state, port, framing) bool`
 
-Main orchestrator, in `cmd/browser-agent/internal/bridge/bridge_transport.go`. Returns true if the request was handled (i.e., it was `configure`+`restart`). Steps:
+Main orchestrator, in `internal/lifecycle/bridge/bridge_transport.go`. Returns true if the request was handled (i.e., it was `configure`+`restart`). Steps:
 1. Extract tool action — bail if not configure+restart
 2. `forceKillOnPort()` — unfreeze any stopped processes
 3. `r.lifecycle.StopServerForUpgrade()` — kill daemon (HTTP → PID → lsof)
@@ -59,7 +59,7 @@ Daemon-side handler in `cmd/browser-agent/internal/toolruntime/tools_configure.g
 
 ## Insertion Point
 
-In `Runner.StdioToHTTPFast()` (`cmd/browser-agent/internal/bridge/bridge.go`), the restart intercept sits **between** `handleFastPath()` and `checkDaemonStatus()`:
+In `Runner.StdioToHTTPFast()` (`internal/lifecycle/bridge/bridge.go`), the restart intercept sits **between** `handleFastPath()` and `checkDaemonStatus()`:
 
 ```go
 // FAST PATH: initialize, tools/list, etc.
@@ -87,10 +87,10 @@ Bridge startup now uses a single-host, lock-file startup leader election to conv
 
 Reference implementation:
 
-- `cmd/browser-agent/internal/bridge/bridge_startup.go`
-- `cmd/browser-agent/internal/bridge/startuplock/lock.go`
-- `cmd/browser-agent/internal/bridge/bridge_startup_state.go`
-- `cmd/browser-agent/internal/bridge/bridge.go`
+- `internal/lifecycle/bridge/bridge_startup.go`
+- `internal/lifecycle/bridge/startuplock/lock.go`
+- `internal/lifecycle/bridge/bridge_startup_state.go`
+- `internal/lifecycle/bridge/bridge.go`
 
 ## Response Format
 

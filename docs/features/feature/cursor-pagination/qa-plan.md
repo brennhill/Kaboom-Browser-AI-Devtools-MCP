@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 # QA Plan: Cursor-Based Pagination
 
 **Status:** COMPLETED (shipped in v5.3)
-**Canonical Test Reference:** `internal/pagination/pagination_test.go`, `internal/pagination/cursor_test.go`, `internal/tools/observe/logs/logs_edge_test.go` (the v5.3 UAT checklist has been retired)
+**Canonical Test Reference:** `internal/observation/pagination/pagination_test.go`, `internal/observation/pagination/cursor_test.go`, `internal/tools/observe/logs/logs_edge_test.go` (the v5.3 UAT checklist has been retired)
 **Last Verified:** 2026-01-30
 
 ---

@@ -1,0 +1,17 @@
+{
+  "description": "ASPIRATIONAL U9 Suggest: new test function without t.Parallel() — should suggest adding it since project convention uses it",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy_test.go",
+      "new_string": "func TestNewFeature(t *testing.T) {\n\tresult := process(\"input\")\n\tif result != \"expected\" {\n\t\tt.Errorf(\"got %q\", result)\n\t}\n}"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["U9", "t.Parallel", "convention"],
+    "max_latency_ms": 5000
+  }
+}

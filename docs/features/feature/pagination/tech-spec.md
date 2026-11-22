@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 # Pagination for Large Datasets - Technical Spec
 
-> **Superseded (reviewed 2026-11-21):** this offset/limit plan was never built. Pagination shipped as cursor-based (`after`/`before`/`since` + `limit`) in `internal/pagination/pagination.go` (`ApplyCursorPagination`, `ParseCursor`, `BuildCursor`) and `internal/pagination/entries.go` (log, action and WebSocket helpers), consumed by observe handlers such as `internal/tools/observe/logs/logs.go`. Tests: `internal/pagination/pagination_test.go`, `internal/pagination/cursor_test.go`. File names below marked "planned, never built" are historical.
+> **Superseded (reviewed 2026-11-21):** this offset/limit plan was never built. Pagination shipped as cursor-based (`after`/`before`/`since` + `limit`) in `internal/observation/pagination/pagination.go` (`ApplyCursorPagination`, `ParseCursor`, `BuildCursor`) and `internal/observation/pagination/entries.go` (log, action and WebSocket helpers), consumed by observe handlers such as `internal/tools/observe/logs/logs.go`. Tests: `internal/observation/pagination/pagination_test.go`, `internal/observation/pagination/cursor_test.go`. File names below marked "planned, never built" are historical.
 
 **Feature:** Pagination for Large Datasets
 **Version:** v5.3

@@ -11,14 +11,14 @@ code_paths:
   - src/background/exec/csp-safe/executor.ts
   - src/background/exec/query-execution.ts
   - src/inject/execute-js.ts
-  - cmd/browser-agent/internal/insecureproxy/handler.go
-  - cmd/browser-agent/internal/toolguard/guards.go
+  - internal/composition/http/insecureproxy/handler.go
+  - internal/tools/guard/guards.go
 test_paths:
   - extension/background/exec/__tests__/query-execution-serialization.test.js
   - tests/extension/injection/execute-js.test.js
-  - cmd/browser-agent/internal/insecureproxy/handler_test.go
-  - cmd/browser-agent/internal/toolguard/guards_test.go
-  - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
+  - internal/composition/http/insecureproxy/handler_test.go
+  - internal/tools/guard/guards_test.go
+  - internal/tools/interact/handler/contracts/gates_test.go
   - internal/tools/observe/page/page_state_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

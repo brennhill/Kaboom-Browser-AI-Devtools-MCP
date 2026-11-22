@@ -15,7 +15,7 @@ links:
 
 - Problem: We build hooks that claim to save tokens and prevent mistakes, but we have no way to prove it. Without measurement, we can't tell if a hook helps, hurts, or does nothing.
 - User value: Confidence that each hook delivers measurable improvement. Data-driven decisions about which hooks to enable. Regression detection when hook logic changes.
-- Implementation (reviewed 2026-11-21): Tier 1 shipped as a Go eval library and test runner — `internal/hook/eval/eval.go` loads JSON fixtures from `internal/hook/eval/testdata/` and `internal/hook/eval/eval_test.go` runs them (`go test ./internal/hook/eval/`). A `kaboom-hooks eval` subcommand and a separate orchestration scripts directory are still planned; `cmd/hooks/main.go` does not register an `eval` subcommand yet. Tiers 2 and 3 below remain proposals.
+- Implementation (reviewed 2026-11-21): Tier 1 shipped as a Go eval library and test runner — `internal/hooks/eval/eval.go` loads JSON fixtures from `internal/hooks/eval/testdata/` and `internal/hooks/eval/eval_test.go` runs them (`go test ./internal/hooks/eval/`). A `kaboom-hooks eval` subcommand and a separate orchestration scripts directory are still planned; `cmd/hooks/main.go` does not register an `eval` subcommand yet. Tiers 2 and 3 below remain proposals.
 
 ## Requirements
 

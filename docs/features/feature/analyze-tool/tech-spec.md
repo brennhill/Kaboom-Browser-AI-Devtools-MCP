@@ -53,7 +53,7 @@ last_verified_date: 2026-03-05
 - Repeated flush calls are idempotent: terminal commands are returned as-is.
 
 ## Schema Contract Notes
-- Analyze schema source: `internal/schema/analyze.go`.
+- Analyze schema source: `internal/tools/schema/analyze.go`.
 - `operation` currently supports:
   - `api_validation`: `analyze`, `report`, `clear`
   - `annotations`: `flush`
@@ -62,8 +62,8 @@ last_verified_date: 2026-03-05
 - `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`
 - `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go`
 - `cmd/browser-agent/internal/toolobserve/dispatcher.go`
-- `cmd/browser-agent/internal/asynccommand/handler.go`
+- `internal/tools/asynccommand/handler.go`
 - `internal/annotation/store.go`
 - `internal/annotation/store_results.go`
 - `internal/annotation/store.go`
-- `internal/schema/analyze.go`
+- `internal/tools/schema/analyze.go`

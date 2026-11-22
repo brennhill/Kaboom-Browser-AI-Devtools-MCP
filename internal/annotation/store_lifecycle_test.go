@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 func TestStore_SessionExpired(t *testing.T) {

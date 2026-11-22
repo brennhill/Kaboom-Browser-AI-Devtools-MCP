@@ -6,11 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-05
 code_paths:
-  - cmd/browser-agent/internal/toolconfigure/capabilities.go
-  - cmd/browser-agent/internal/toolconfigure/deps.go
+  - internal/tools/configure/handler/capabilities.go
+  - internal/tools/configure/handler/deps.go
   - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - cmd/browser-agent/internal/toolcatalog/catalog.go
+  - internal/tools/configure/handler/dispatcher.go
+  - internal/tools/catalog/catalog.go
   - cmd/browser-agent/internal/toolruntime/tools_core.go
   - cmd/browser-agent/server.go
   - internal/analysis/apicontract/contract.go
@@ -20,38 +20,38 @@ code_paths:
   - internal/analysis/apicontract/learning.go
   - internal/analysis/apicontract/validation.go
   - internal/analysis/apicontract/violations.go
-  - internal/schema/schema.go
-  - internal/schema/observe.go
-  - internal/schema/analyze.go
-  - internal/schema/generate.go
-  - internal/schema/configure/tool.go
-  - internal/schema/configure/properties.go
-  - internal/schema/configure/properties_core.go
-  - internal/schema/configure/properties_runtime.go
-  - internal/schema/interact/tool.go
-  - internal/schema/interact/actions.go
-  - internal/schema/interact/properties.go
-  - internal/schema/interact/properties_core.go
-  - internal/schema/interact/properties_dispatch.go
-  - internal/schema/interact/properties_form_wait.go
-  - internal/schema/interact/properties_output_batch.go
-  - internal/schema/interact/properties_targeting.go
-  - internal/mcp/response_clamp.go
+  - internal/tools/schema/schema.go
+  - internal/tools/schema/observe.go
+  - internal/tools/schema/analyze.go
+  - internal/tools/schema/generate.go
+  - internal/tools/schema/configure/tool.go
+  - internal/tools/schema/configure/properties.go
+  - internal/tools/schema/configure/properties_core.go
+  - internal/tools/schema/configure/properties_runtime.go
+  - internal/tools/schema/interact/tool.go
+  - internal/tools/schema/interact/actions.go
+  - internal/tools/schema/interact/properties.go
+  - internal/tools/schema/interact/properties_core.go
+  - internal/tools/schema/interact/properties_dispatch.go
+  - internal/tools/schema/interact/properties_form_wait.go
+  - internal/tools/schema/interact/properties_output_batch.go
+  - internal/tools/schema/interact/properties_targeting.go
+  - internal/tools/mcp/response_clamp.go
   - scripts/contracts/response/snapshot-tool-responses.cjs
 test_paths:
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/internal/toolcatalog/catalog_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
+  - internal/tools/catalog/catalog_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
+  - internal/tools/configure/handler/handlers_coverage_test.go
   - internal/analysis/apicontract/runtime/handler_test.go
   - internal/analysis/apicontract/contract_test.go
   - internal/analysis/apicontract/contract_actions_test.go
   - internal/analysis/apicontract/contract_analyze_test.go
   - internal/analysis/apicontract/contract_report_test.go
-  - internal/schema/invariants_test.go
-  - internal/schema/interact/schema_test.go
+  - internal/tools/schema/invariants_test.go
+  - internal/tools/schema/interact/schema_test.go
   - cmd/browser-agent/composition_test.go
-  - internal/mcp/response_test.go
+  - internal/tools/mcp/response_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -99,7 +99,7 @@ ownership boundary.
 
 ## Code and Tests
 
-API contract tests construct canonical `internal/types.NetworkBody` values
+API contract tests construct canonical `internal/platform/types.NetworkBody` values
 directly; no test-local type alias masks the wire-contract owner.
 API contract violations expose one discriminator, `violation_type`; the former
 duplicate `type` response field is not emitted.
@@ -114,15 +114,15 @@ Observed-traffic API schema inference (`observe {what: "api"}`):
 - MCP tool-list adapter: `cmd/browser-agent/tools_core.go`
 - OpenAPI HTTP route: `cmd/browser-agent/server.go`
 
-MCP tool schemas (the `tools/list` contract, `internal/schema`):
+MCP tool schemas (the `tools/list` contract, `internal/tools/schema`):
 
-- tools/list assembly: `internal/schema/schema.go` (`AllTools`, in tools/list order)
-- Single-file tool schemas: `internal/schema/observe.go`, `internal/schema/analyze.go`, `internal/schema/generate.go`
-- Configure tool schema + property groups: `internal/schema/configure/`
-- Interact tool schema, property groups, and canonical action registry: `internal/schema/interact/`
+- tools/list assembly: `internal/tools/schema/schema.go` (`AllTools`, in tools/list order)
+- Single-file tool schemas: `internal/tools/schema/observe.go`, `internal/tools/schema/analyze.go`, `internal/tools/schema/generate.go`
+- Configure tool schema + property groups: `internal/tools/schema/configure/`
+- Interact tool schema, property groups, and canonical action registry: `internal/tools/schema/interact/`
   (`interact.ActionSpecs` is the single source of truth consumed by `internal/tools/configure`
   for `describe_capabilities` mode specs)
 - Daemon delegation: `cmd/browser-agent/tools_core.go`
-- Claude-API schema invariants (no top-level/nested combiners, valid JSON round-trip): `internal/schema/invariants_test.go`
-- Interact enum/alias/registry invariants: `internal/schema/interact/schema_test.go`
+- Claude-API schema invariants (no top-level/nested combiners, valid JSON round-trip): `internal/tools/schema/invariants_test.go`
+- Interact enum/alias/registry invariants: `internal/tools/schema/interact/schema_test.go`
 - Schema/runtime dispatch parity: `cmd/browser-agent/composition_test.go`

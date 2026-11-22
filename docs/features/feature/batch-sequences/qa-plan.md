@@ -10,7 +10,7 @@ last_verified_date: 2026-03-05
 # Batch Sequences QA Plan
 
 ## Automated Coverage
-- `cmd/browser-agent/internal/toolinteract/interactbatch/batch_test.go`
+- `internal/tools/interact/handler/interactbatch/batch_test.go`
 - `cmd/browser-agent/tools_configure_sequence_test.go`
 
 ## Required Scenarios

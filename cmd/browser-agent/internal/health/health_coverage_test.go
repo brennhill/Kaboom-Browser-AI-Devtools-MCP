@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/healthreader"
 	"net"
 	"net/http/httptest"
 	"os"
@@ -17,11 +17,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/testsupport/fixture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/defaults"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/diag"
 )
 
 // ---------------------------------------------------------------------------

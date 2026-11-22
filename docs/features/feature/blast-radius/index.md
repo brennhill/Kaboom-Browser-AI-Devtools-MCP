@@ -6,11 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-12
 code_paths:
-  - internal/hook/blast_radius.go
+  - internal/hooks/blast_radius.go
   - cmd/hooks/main.go
 test_paths:
-  - internal/hook/blast_radius_test.go
-  - internal/hook/eval/testdata/blast-radius/
+  - internal/hooks/blast_radius_test.go
+  - internal/hooks/eval/testdata/blast-radius/
   - cmd/hooks/main_test.go
 ---
 

@@ -26,14 +26,14 @@ code_paths:
   - cmd/browser-agent/internal/mediaapi/draw_mode.go
   - cmd/browser-agent/internal/mediaapi/screenshots.go
   - cmd/browser-agent/internal/mediaapi/handler.go
-  - cmd/browser-agent/internal/toolgenerate/dispatcher.go
-  - cmd/browser-agent/internal/toolgenerate/deps.go
-  - cmd/browser-agent/internal/toolgenerate/annotations/handlers.go
-  - cmd/browser-agent/internal/toolgenerate/annotations/visual.go
-  - cmd/browser-agent/internal/toolgenerate/annotations/report.go
-  - cmd/browser-agent/internal/toolgenerate/annotations/issues.go
-  - cmd/browser-agent/internal/toolgenerate/annotations/builder.go
-  - internal/schema/analyze.go
+  - internal/tools/generate/handler/dispatcher.go
+  - internal/tools/generate/handler/deps.go
+  - internal/tools/generate/handler/annotations/handlers.go
+  - internal/tools/generate/handler/annotations/visual.go
+  - internal/tools/generate/handler/annotations/report.go
+  - internal/tools/generate/handler/annotations/issues.go
+  - internal/tools/generate/handler/annotations/builder.go
+  - internal/tools/schema/analyze.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - scripts/smoke-tests/media/31-annotation-parity.sh
   - scripts/smoke-tests/media/annotation-parity-benchmark.sh
@@ -46,7 +46,7 @@ test_paths:
   - tests/extension/draw-mode/draw-mode-enrichment.test.js
   - tests/extension/draw-mode/draw-mode-fixture.js
   - tests/extension/draw-mode/draw-mode-routing.test.js
-  - internal/schema/invariants_test.go
+  - internal/tools/schema/invariants_test.go
   - tests/extension/draw-mode/draw-mode.test.js
   - internal/annotation/store_test.go
   - internal/annotation/named_test.go
@@ -62,7 +62,7 @@ test_paths:
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/wait_test.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/detail_test.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/hints_test.go
-  - cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go
+  - internal/tools/generate/handler/annotations/annotations_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - tests/extension/contracts/entry-point-parity.test.js
   - scripts/smoke-tests/media/31-annotation-parity.sh
@@ -128,12 +128,12 @@ last_verified_date: 2026-08-05
   `TestPackageFileBoundary` prevents either boundary from regressing. Tests are
   grouped by store behavior, maintenance, lifecycle/persistence, and result
   projection—the same families that change together.
-- `cmd/browser-agent/internal/toolgenerate/annotations/visual.go` — resilient visual test generation via locator fallback candidates (`css`, `testid`, `role`, `label`, `placeholder`, `text`)
-- `cmd/browser-agent/internal/toolgenerate/annotations/handlers.go` — the three MCP entry points (`visual_test`, `annotation_report`, `annotation_issues`) and session resolution
+- `internal/tools/generate/handler/annotations/visual.go` — resilient visual test generation via locator fallback candidates (`css`, `testid`, `role`, `label`, `placeholder`, `text`)
+- `internal/tools/generate/handler/annotations/handlers.go` — the three MCP entry points (`visual_test`, `annotation_report`, `annotation_issues`) and session resolution
 - Annotation artifact handlers accept the canonical `*annotation.Store`
   directly. There is no annotation host interface or ToolHandler store accessor.
-- `cmd/browser-agent/internal/toolgenerate/annotations/report.go` / `issues.go` / `builder.go` — Markdown report rendering, structured issue payloads, and the shared line builder
-- `internal/schema/analyze.go` + `internal/tools/configure/capabilities/modespecs_analyze.go` — analyze annotations schema/capability metadata for the canonical `url` filter
+- `internal/tools/generate/handler/annotations/report.go` / `issues.go` / `builder.go` — Markdown report rendering, structured issue payloads, and the shared line builder
+- `internal/tools/schema/analyze.go` + `internal/tools/configure/capabilities/modespecs_analyze.go` — analyze annotations schema/capability metadata for the canonical `url` filter
 
 ### Tests
 - `tests/extension/draw-mode/draw-mode-enrichment.test.js` — element detail, framework, and selector enrichment
@@ -147,8 +147,8 @@ last_verified_date: 2026-08-05
   `time.Sleep` for correctness.
 - `internal/annotation/store_lifecycle_test.go` and `cmd/browser-agent/internal/toolanalyze/analyzedispatch/draw_sessions_test.go` — safe persisted-session loading and end-to-end store hydration
 - `cmd/browser-agent/internal/toolanalyze/annotationanalysis/` tests — session retrieval, waiting, enrichment fields (`selector_candidates`, `js_framework`, `component`), error correlation, and hints
-- `internal/schema/invariants_test.go` — ensures annotations expose only the canonical `url` scope filter and never restore `url_pattern`
-- `cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go` — generator and handler contracts for JS escaping, locator fallbacks, expired detail recovery, named sessions, Markdown reports, structured issues, and Playwright output
+- `internal/tools/schema/invariants_test.go` — ensures annotations expose only the canonical `url` scope filter and never restore `url_pattern`
+- `internal/tools/generate/handler/annotations/annotations_test.go` — generator and handler contracts for JS escaping, locator fallbacks, expired detail recovery, named sessions, Markdown reports, structured issues, and Playwright output
 - `scripts/smoke-tests/media/31-annotation-parity.sh` — deterministic end-to-end ingest/retrieval/generation gate with bounded retries for transient startup/no_data windows
 - `scripts/smoke-tests/media/annotation-parity-benchmark.sh` — repeated pass-rate benchmark with threshold enforcement
 - `scripts/uat/runners/smoke-test.sh` — resume-mode daemon version parity guard prevents stale-daemon false negatives in `--only/--start-from` runs

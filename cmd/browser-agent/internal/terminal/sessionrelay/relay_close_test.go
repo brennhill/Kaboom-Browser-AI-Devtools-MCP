@@ -10,8 +10,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
-	ptyfanout "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/fanout"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty"
+	ptyfanout "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty/fanout"
 )
 
 // spawnCat starts a `cat` PTY session: it echoes stdin and never exits on its

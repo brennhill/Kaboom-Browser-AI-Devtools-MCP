@@ -22,7 +22,7 @@ internal/tool*/             # feature implementations
 
 Composition-root test fixtures are local to `cmd/browser-agent/composition_test.go`. The
 cross-tool queue-to-result protocol lives in
-`internal/asynccommand/handler.go`; the composition root injects its functions
+`internal/tools/asynccommand/handler.go`; the composition root injects its functions
 directly into feature owners.
 
 **Status**: In progress. Root adapters are being removed or colocated with their

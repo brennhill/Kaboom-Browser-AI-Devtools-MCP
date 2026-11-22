@@ -13,12 +13,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/commandcontract"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/contract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/healthreader"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/streaming/alertbuf"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 type doctorCommandRuntime struct {

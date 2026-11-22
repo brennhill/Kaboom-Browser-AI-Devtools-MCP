@@ -1,0 +1,14 @@
+{
+  "description": "ASPIRATIONAL U1 Enforce: error message violates structured format — should flag 'something broke' as missing OP:CAUSE.RECOVERY",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "internal/hooks/hook_policy.go", "new_string": "return errors.New(\"something broke\")" }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["U1", "error format", "something broke"],
+    "max_latency_ms": 5000
+  }
+}

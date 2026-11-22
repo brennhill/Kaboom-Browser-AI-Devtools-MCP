@@ -181,7 +181,7 @@ func buildSHA() string {
 // reader who cannot tell which version of the page had three errors.
 func fixtureSHA() string {
 	out, err := exec.Command("git", "log", "-1", "--format=%h", "--",
-		"cmd/browser-agent/internal/testpages").Output()
+		"internal/composition/http/testpages").Output()
 	if err != nil {
 		return "unknown"
 	}

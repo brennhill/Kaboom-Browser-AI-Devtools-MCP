@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/incident"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 func responsePayload(t *testing.T, response mcp.JSONRPCResponse) map[string]any {

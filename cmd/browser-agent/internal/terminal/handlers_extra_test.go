@@ -15,9 +15,9 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/wstransport"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/clientreg"
 )
 
 func TestHandleActiveCodebase_Get(t *testing.T) {

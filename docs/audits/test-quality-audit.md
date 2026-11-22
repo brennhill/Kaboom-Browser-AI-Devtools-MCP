@@ -265,7 +265,7 @@ No significant findings.
 
 **Resolved:** DOM action validation, pilot gating, queue types, and correlation
 identities now run deterministically beside the canonical owner in
-`cmd/browser-agent/internal/toolinteract/interact_dom_test.go`; the skipped
+`internal/tools/interact/handler/interact_dom_test.go`; the skipped
 root-only substitutes were deleted.
 
 ---
@@ -311,7 +311,7 @@ No test for `ReadLast(-5)`. Should verify this returns empty slice or panics pre
 
 ---
 
-### File: `internal/security/security_test.go` (from session summary)
+### File: `internal/analysis/security/security_test.go` (from session summary)
 
 Strong security test suite with fuzz testing, false positive mitigation, and evidence redaction. Good negative tests for localhost skips.
 
@@ -319,7 +319,7 @@ No significant findings.
 
 ---
 
-### File: `internal/redaction/redaction_test.go` (from session summary)
+### File: `internal/platform/redaction/redaction_test.go` (from session summary)
 
 Comprehensive pattern tests with exact string matching. Thread safety verified. Performance benchmarks included.
 
@@ -327,7 +327,7 @@ No significant findings.
 
 ---
 
-### File: `internal/capture/circuit_breaker_test.go`
+### File: `internal/composition/capture/circuit_breaker_test.go`
 
 **[MEDIUM] `TestCircuitBreaker_LifecycleCallback` uses timing-dependent assertion**
 Line 167: `time.Sleep(50 * time.Millisecond)` to wait for goroutine-based callbacks. On slow CI machines, 50ms may not be sufficient, causing flaky failures.
@@ -337,7 +337,7 @@ Lines 74-85: Test reaches into `cb.mu.Lock()` and directly manipulates internal 
 
 ---
 
-### File: `internal/session/sessions_test.go` (from session summary)
+### File: `internal/analysis/snapshots/sessions_test.go` (from session summary)
 
 Uses mock `CaptureStateReader`. Thorough verdict logic tests. Tests limits, case sensitivity, JSON serialization.
 
@@ -346,7 +346,7 @@ The `CaptureStateReader` mock is defined in the test file. If the real interface
 
 ---
 
-### File: `internal/pagination/pagination_test.go`
+### File: `internal/observation/pagination/pagination_test.go`
 
 Well-structured cursor pagination tests with sequence number verification and monotonicity checks.
 

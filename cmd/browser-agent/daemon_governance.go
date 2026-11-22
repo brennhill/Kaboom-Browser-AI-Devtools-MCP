@@ -14,15 +14,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/retentionsweep"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/idlewatch"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/instancegov"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/instancereg"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/daemon"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/idlewatch"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/instance/gov"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/instance/registry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/retention/sweep"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/paths"
 )
 
 const (

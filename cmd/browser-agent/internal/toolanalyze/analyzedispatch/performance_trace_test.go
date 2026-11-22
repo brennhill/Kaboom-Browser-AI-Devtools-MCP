@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 func TestPerformanceTraceQueuesStartAndStop(t *testing.T) {

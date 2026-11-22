@@ -6,27 +6,27 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-05
 code_paths:
-  - internal/session/runtime_reader.go
+  - internal/analysis/snapshots/runtime_reader.go
   - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - internal/audit/recorder.go
+  - internal/tools/audit/recorder.go
   - internal/analysis/thirdparty/audit.go
   - internal/analysis/thirdparty/entries.go
   - internal/analysis/thirdparty/origins.go
   - internal/analysis/thirdparty/reputation.go
   - internal/analysis/thirdparty/summary.go
-  - internal/audit/audit_types.go
-  - internal/audit/audit_recording.go
-  - internal/audit/audit_query.go
-  - internal/audit/audit_session.go
-  - internal/audit/audit_redaction.go
+  - internal/tools/audit/audit_types.go
+  - internal/tools/audit/audit_recording.go
+  - internal/tools/audit/audit_query.go
+  - internal/tools/audit/audit_session.go
+  - internal/tools/audit/audit_redaction.go
 test_paths:
-  - internal/audit/audit_trail_test.go
-  - internal/audit/audit_query_test.go
-  - internal/audit/audit_session_test.go
-  - internal/audit/audit_redaction_test.go
-  - cmd/browser-agent/internal/toolconfigure/auditlog/handler_test.go
-  - cmd/browser-agent/internal/toolconfigure/auditlog/handler_test.go
-  - internal/session/sessions_test.go
+  - internal/tools/audit/audit_trail_test.go
+  - internal/tools/audit/audit_query_test.go
+  - internal/tools/audit/audit_session_test.go
+  - internal/tools/audit/audit_redaction_test.go
+  - internal/tools/configure/handler/auditlog/handler_test.go
+  - internal/tools/configure/handler/auditlog/handler_test.go
+  - internal/analysis/snapshots/sessions_test.go
   - internal/analysis/thirdparty/audit_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -55,10 +55,10 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Third-party audit tests consume `internal/types.NetworkBody` directly, keeping
+Third-party audit tests consume `internal/platform/types.NetworkBody` directly, keeping
 the test contract aligned with production ownership.
 
-`internal/audit/recorder.go` owns tool-call filtering, error interpretation,
+`internal/tools/audit/recorder.go` owns tool-call filtering, error interpretation,
 per-client audit sessions, and session reset. `ToolHandler` retains only the
 canonical recorder and trail references needed by dispatch and configure.
 Callers use the canonical `AuditEntry`, `AuditTrail`, `AuditFilter`, and

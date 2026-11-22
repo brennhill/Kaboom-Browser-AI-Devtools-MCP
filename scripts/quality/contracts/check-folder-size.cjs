@@ -54,8 +54,8 @@ const EXCLUDED_DIR = new Set([
   '.beads'
 ])
 const GENERATED_OUTPUT_ROOTS = new Set([
-  'cmd/browser-agent/internal/testpages/pages/frameworks',
-  'cmd/browser-agent/internal/testpages/pages/_next',
+  'internal/composition/http/testpages/pages/frameworks',
+  'internal/composition/http/testpages/pages/_next',
   'scripts/smoke-tests/framework/framework-fixtures/next-app/out'
 ])
 

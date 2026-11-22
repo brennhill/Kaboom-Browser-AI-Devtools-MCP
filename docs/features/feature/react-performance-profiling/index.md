@@ -10,7 +10,7 @@ code_paths:
   - src/inject/api.ts
   - src/background/commands/analyze.ts
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/react_profile.go
-  - internal/schema/analyze.go
+  - internal/tools/schema/analyze.go
 test_paths:
   - tests/extension/performance/react-profiler.test.js
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/react_profile_test.go

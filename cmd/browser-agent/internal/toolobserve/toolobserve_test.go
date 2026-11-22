@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 // ---------------------------------------------------------------------------

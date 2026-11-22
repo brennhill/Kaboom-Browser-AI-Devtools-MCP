@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/telemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/sync/runtime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 

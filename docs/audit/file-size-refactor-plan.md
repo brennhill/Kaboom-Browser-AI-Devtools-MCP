@@ -20,8 +20,8 @@ last-verified: 2026-02-08
 | File | Current LOC | Target LOC | Status |
 |-------|-------------|-------------|--------|
 | `src/background/pending-queries.ts` | 952 | < 500 | ❌ Exceeds |
-| `internal/capture/types.go` | 653 | < 500 | ❌ Exceeds |
-| `internal/session/types.go` | 694 | < 500 | ❌ Exceeds |
+| `internal/composition/capture/types.go` | 653 | < 500 | ❌ Exceeds |
+| `internal/analysis/snapshots/types.go` | 694 | < 500 | ❌ Exceeds |
 | `src/background/message-handlers.ts` | 552 | < 500 | ❌ Exceeds |
 | `src/lib/net/websocket.ts` | 776 | < 500 | ⚠️ Near limit |
 
@@ -83,7 +83,7 @@ last-verified: 2026-02-08
 
 ---
 
-## 2. `internal/capture/types.go` (653 LOC → ~400 LOC)
+## 2. `internal/composition/capture/types.go` (653 LOC → ~400 LOC)
 
 **Refactoring Plan:** See [`types-go-refactor-plan.md`](types-go-refactor-plan.md) for detailed split strategy including:
 - 12 new files organized by domain/concern
@@ -92,7 +92,7 @@ last-verified: 2026-02-08
 - Migration checklist
 - Estimated effort (6.8 hours)
 
-## 3. `internal/session/types.go` (694 LOC → ~400 LOC)
+## 3. `internal/analysis/snapshots/types.go` (694 LOC → ~400 LOC)
 
 **Refactoring Plan:** See [`sessions-go-refactor-plan.md`](sessions-go-refactor-plan.md) for detailed split strategy including:
 - 11 new files organized by domain/concern
@@ -112,29 +112,29 @@ last-verified: 2026-02-08
 **Proposed split:**
 
 ### New Files:
-1. `internal/capture/interfaces.go` (~80 LOC)
+1. `internal/composition/capture/interfaces.go` (~80 LOC)
    - `SchemaStore` interface
    - `CSPGenerator` interface
    - `ClientRegistry` interface
 
-2. `internal/capture/aliases.go` (~30 LOC)
+2. `internal/composition/capture/aliases.go` (~30 LOC)
    - All type aliases for imported packages
    - PerformanceSnapshot, PerformanceBaseline, etc.
    - Recording, RecordingAction, etc.
    - PendingQueryResponse, PendingQuery, CommandResult
 
-3. `internal/capture/session-types.go` (~50 LOC)
+3. `internal/composition/capture/session-types.go` (~50 LOC)
    - `SessionTracker` struct
 
-4. `internal/capture/security-types.go` (~50 LOC)
+4. `internal/composition/capture/security-types.go` (~50 LOC)
    - `SecurityFlag` struct
 
-5. `internal/capture/network-types.go` (~200 LOC)
+5. `internal/composition/capture/network-types.go` (~200 LOC)
    - `NetworkWaterfallEntry` struct
    - `NetworkWaterfallPayload` struct
    - Related network types
 
-6. `internal/capture/types.go` (~350 LOC)
+6. `internal/composition/capture/types.go` (~350 LOC)
    - Capture struct
    - Extension state types
    - WebSocket event types
@@ -151,7 +151,7 @@ last-verified: 2026-02-08
 
 ---
 
-## 3. `internal/session/types.go` (694 LOC → ~400 LOC)
+## 3. `internal/analysis/snapshots/types.go` (694 LOC → ~400 LOC)
 
 **Current concerns:**
 - Session comparison logic
@@ -162,35 +162,35 @@ last-verified: 2026-02-08
 **Proposed split:**
 
 ### New Files:
-1. `internal/session/comparison.go` (~100 LOC)
+1. `internal/analysis/snapshots/comparison.go` (~100 LOC)
    - `Compare()` - Main comparison entry point
    - Result aggregation
 
-2. `internal/session/network-diff.go` (~100 LOC)
+2. `internal/analysis/snapshots/network-diff.go` (~100 LOC)
    - `diffNetwork()` - Network diff computation
    - Entry comparison logic
 
-3. `internal/session/actions-diff.go` (~80 LOC)
+3. `internal/analysis/snapshots/actions-diff.go` (~80 LOC)
    - `diffActions()` - Actions diff computation
    - Action comparison logic
 
-4. `internal/session/performance-diff.go` (~100 LOC)
+4. `internal/analysis/snapshots/performance-diff.go` (~100 LOC)
    - `diffPerformance()` - Performance diff computation
    - Baseline comparison logic
 
-5. `internal/session/dom-diff.go` (~80 LOC)
+5. `internal/analysis/snapshots/dom-diff.go` (~80 LOC)
    - `diffDOM()` - DOM diff computation
    - Element comparison logic
 
-6. `internal/session/fragile-selectors.go` (~80 LOC)
+6. `internal/analysis/snapshots/fragile-selectors.go` (~80 LOC)
    - `DetectFragileSelectors()` - Find fragile selectors
    - Selector analysis logic
 
-7. `internal/session/playback.go` (~100 LOC)
+7. `internal/analysis/snapshots/playback.go` (~100 LOC)
    - Playback session management
    - Execution tracking
 
-8. `internal/session/types.go` (~200 LOC)
+8. `internal/analysis/snapshots/types.go` (~200 LOC)
    - SessionManager struct
    - Snapshot capture logic
    - Main exports

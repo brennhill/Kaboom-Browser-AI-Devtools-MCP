@@ -7,8 +7,8 @@ owners: []
 last_reviewed: 2026-08-07
 code_paths:
   - internal/push/
-  - cmd/browser-agent/internal/pushapi/runtime.go
-  - cmd/browser-agent/internal/pushapi/handler.go
+  - internal/push/adapters/http/runtime.go
+  - internal/push/adapters/http/handler.go
   - cmd/browser-agent/internal/mediaapi/screenshots.go
   - cmd/browser-agent/internal/mediaapi/draw_mode.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
@@ -17,13 +17,13 @@ code_paths:
   - src/background/push-handler.ts
   - src/content/ui/chat-widget.ts
 test_paths:
-  - cmd/browser-agent/internal/pushapi/handler_test.go
-  - cmd/browser-agent/internal/pushapi/runtime_test.go
+  - internal/push/adapters/http/handler_test.go
+  - internal/push/adapters/http/runtime_test.go
   - internal/push/inbox_test.go
   - internal/push/router_test.go
   - internal/push/sampling_test.go
-  - cmd/browser-agent/internal/pushapi/runtime_test.go
-  - cmd/browser-agent/internal/pushapi/handler_test.go
+  - internal/push/adapters/http/runtime_test.go
+  - internal/push/adapters/http/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/draw_sessions_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
@@ -74,8 +74,8 @@ Push browser content (annotations, screenshots, chat messages) to the AI automat
 | `internal/push/inbox.go` | Bounded FIFO queue (50 events) | `inbox_test.go` (8 tests) |
 | `internal/push/router.go` | Delivery router: sampling→notification→inbox | `router_test.go` (6 tests) |
 | `internal/push/sampling.go` | MCP sampling/createMessage builder | `sampling_test.go` (5 tests) |
-| `cmd/browser-agent/internal/pushapi/runtime.go` | Negotiated capability/framing state and MCP outbound delivery | `runtime_test.go` |
-| `cmd/browser-agent/internal/pushapi/handler.go` | Push HTTP parsing, event delivery, draining, and annotation routing | `handler_test.go` |
+| `internal/push/adapters/http/runtime.go` | Negotiated capability/framing state and MCP outbound delivery | `runtime_test.go` |
+| `internal/push/adapters/http/handler.go` | Push HTTP parsing, event delivery, draining, and annotation routing | `handler_test.go` |
 | `cmd/browser-agent/internal/toolobserve/dispatcher.go` | observe(inbox) adapter + piggyback wiring | `toolobserve_coverage_test.go` |
 | `cmd/browser-agent/internal/toolobserve/inbox.go` | inbox response and piggyback behavior | `toolobserve_coverage_test.go` |
 

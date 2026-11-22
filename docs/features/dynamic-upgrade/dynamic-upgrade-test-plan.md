@@ -110,10 +110,10 @@ last_verified_date: 2026-03-05
 - `UpgradeMarkerFile()`: path correctness
 
 **Test Files:**
-- `cmd/browser-agent/internal/daemonlife/lifecycle_policy_test.go`
-- `cmd/browser-agent/internal/binarywatch/watcher_test.go`
+- `internal/lifecycle/daemon/lifecycle_policy_test.go`
+- `internal/lifecycle/upgrade/binarywatch/watcher_test.go`
 - `cmd/browser-agent/handler_unit_test.go`
-- `internal/state/paths_coverage_test.go`
+- `internal/platform/state/paths/paths_coverage_test.go`
 
 ### Integration Tests
 
@@ -137,10 +137,10 @@ last_verified_date: 2026-03-05
 
 | Test Type | File | Status | Notes |
 |-----------|------|--------|-------|
-| Unit (version) | `cmd/browser-agent/internal/daemonlife/lifecycle_policy_test.go` | Passing | 3 test functions |
-| Unit (watcher) | `cmd/browser-agent/internal/binarywatch/watcher_test.go` | Passing | 14 test functions |
+| Unit (version) | `internal/lifecycle/daemon/lifecycle_policy_test.go` | Passing | 3 test functions |
+| Unit (watcher) | `internal/lifecycle/upgrade/binarywatch/watcher_test.go` | Passing | 14 test functions |
 | Unit (handler) | `cmd/browser-agent/handler_unit_test.go` | Passing | 2 upgrade test functions |
-| Unit (paths) | `internal/state/paths_coverage_test.go` | Passing | 2 test functions |
+| Unit (paths) | `internal/platform/state/paths/paths_coverage_test.go` | Passing | 2 test functions |
 | Integration | Manual | Pending | Requires two-binary setup |
 | Manual | N/A | Pending | Requires running daemon |
 

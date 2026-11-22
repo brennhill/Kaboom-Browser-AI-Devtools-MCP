@@ -238,7 +238,7 @@ func TestFormatHealSummary(t *testing.T) {
 
 	t.Run("repair", func(t *testing.T) {
 		summary := FormatHealSummary(TestHealRequest{Action: "repair"}, &HealResult{
-			Healed: []HealedSelector{{OldSelector: "#a", NewSelector: "#b"}},
+			Healed:  []HealedSelector{{OldSelector: "#a", NewSelector: "#b"}},
 			Summary: HealSummary{TotalBroken: 3, HealedAuto: 1, Unhealed: 2},
 		})
 		if !strings.Contains(summary, "Healed 1/3") {

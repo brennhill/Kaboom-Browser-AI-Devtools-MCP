@@ -1,0 +1,237 @@
+<!doctype html>
+<!-- Embedded by internal/composition/http/dashboard. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setup - Kaboom MCP Server</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4Ij4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZmxhbWUiIHgxPSIwJSIgeTE9IjEwMCUiIHgyPSIwJSIgeTI9IjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2Y5NzMxNiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3R5bGU9InN0b3AtY29sb3I6I2ZiOTIzYyIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNmYmJmMjQiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImlubmVyRmxhbWUiIHgxPSIwJSIgeTE9IjEwMCUiIHgyPSIwJSIgeTI9IjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2ZiYmYyNCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNmZWYzYzciLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjY0IiBjeT0iNjQiIHI9IjYwIiBmaWxsPSIjMWExYTFhIi8+CiAgPHBhdGggZD0iTTY0IDE2IEM0MCA0MCwgMjggNjAsIDI4IDgwIEMyOCAxMDAsIDQ0IDExNiwgNjQgMTE2IEM4NCAxMTYsIDEwMCAxMDAsIDEwMCA4MCBDMTAwIDYwLCA4OCA0MCwgNjQgMTYgWiIgZmlsbD0idXJsKCNmbGFtZSkiLz4KICA8cGF0aCBkPSJNNjQgNDggQzUyIDYwLCA0NCA3MiwgNDQgODQgQzQ0IDk2LCA1MiAxMDQsIDY0IDEwNCBDNzYgMTA0LCA4NCA5NiwgODQgODQgQzg0IDcyLCA3NiA2MCwgNjQgNDggWiIgZmlsbD0idXJsKCNpbm5lckZsYW1lKSIvPgo8L3N2Zz4K">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #111;
+  color: #e0e0e0;
+  padding: 24px;
+  max-width: 720px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+a { color: #7ab3ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #333;
+}
+header .logo { width: 28px; height: 28px; flex-shrink: 0; }
+header h1 { font-size: 22px; font-weight: 600; color: #fff; }
+header .nav { margin-left: auto; font-size: 13px; }
+header .nav a { margin-left: 16px; }
+.summary {
+  text-align: center;
+  margin-bottom: 32px;
+  font-size: 15px;
+}
+.summary .score { font-size: 48px; font-weight: 700; display: block; margin-bottom: 4px; }
+.summary .score.all-good { color: #22c55e; }
+.summary .score.partial { color: #eab308; }
+.summary .score.bad { color: #ef4444; }
+.summary .label { color: #888; }
+.step {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+}
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.step-icon {
+  width: 24px; height: 24px; flex-shrink: 0;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+}
+.step-icon.pass { background: #22c55e22; color: #22c55e; }
+.step-icon.fail { background: #ef444422; color: #ef4444; }
+.step-icon.loading { background: #33333; color: #666; }
+.step-title { font-size: 15px; font-weight: 600; color: #fff; }
+.step-status { margin-left: auto; font-size: 12px; font-weight: 500; }
+.step-status.pass { color: #22c55e; }
+.step-status.fail { color: #ef4444; }
+.step-detail {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #2a2a2a;
+  font-size: 13px;
+  color: #aaa;
+}
+.step-detail code {
+  display: block;
+  background: #0d0d0d;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin: 8px 0;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  color: #ccc;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.step-detail p { margin-bottom: 6px; }
+.refresh-note {
+  text-align: center; color: #444; font-size: 11px; margin-top: 24px;
+}
+</style>
+</head>
+<body>
+<header>
+  <svg class="logo" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="flame" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" style="stop-color:#f97316"/><stop offset="50%" style="stop-color:#fb923c"/><stop offset="100%" style="stop-color:#fbbf24"/>
+      </linearGradient>
+      <linearGradient id="innerFlame" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" style="stop-color:#fbbf24"/><stop offset="100%" style="stop-color:#fef3c7"/>
+      </linearGradient>
+    </defs>
+    <circle cx="64" cy="64" r="60" fill="#1a1a1a"/>
+    <path d="M64 16 C40 40, 28 60, 28 80 C28 100, 44 116, 64 116 C84 116, 100 100, 100 80 C100 60, 88 40, 64 16 Z" fill="url(#flame)"/>
+    <path d="M64 48 C52 60, 44 72, 44 84 C44 96, 52 104, 64 104 C76 104, 84 96, 84 84 C84 72, 76 60, 64 48 Z" fill="url(#innerFlame)"/>
+  </svg>
+  <h1>Setup</h1>
+  <nav class="nav">
+    <a href="/">Dashboard</a>
+  </nav>
+</header>
+
+<div class="summary">
+  <span class="score loading" id="score">...</span>
+  <span class="label" id="score-label">Checking setup...</span>
+</div>
+
+<div id="steps"></div>
+
+<div class="refresh-note">Auto-refreshes every 5s</div>
+
+<script>
+function esc(s) {
+  var d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function stepHTML(id, title, pass, statusText, detail) {
+  var iconCls = pass ? 'pass' : 'fail';
+  var icon = pass ? '\u2713' : '\u2717';
+  var statusCls = pass ? 'pass' : 'fail';
+  var detailHTML = '';
+  if (!pass && detail) {
+    detailHTML = '<div class="step-detail">' + detail + '</div>';
+  }
+  return '<div class="step" id="step-' + id + '">' +
+    '<div class="step-header">' +
+    '<div class="step-icon ' + iconCls + '">' + icon + '</div>' +
+    '<span class="step-title">' + esc(title) + '</span>' +
+    '<span class="step-status ' + statusCls + '">' + esc(statusText) + '</span>' +
+    '</div>' + detailHTML + '</div>';
+}
+
+async function refresh() {
+  try {
+    var r = await fetch('/health');
+    if (!r.ok) return;
+    var h = await r.json();
+
+    var checks = [];
+
+    // 1. Server running
+    checks.push({
+      id: 'server',
+      title: 'MCP Server Running',
+      pass: h.status === 'ok',
+      status: h.status === 'ok' ? 'v' + h.version : 'not responding',
+      detail: '<p>The server should start automatically when your MCP client connects. To start manually:</p>' +
+        '<code>kaboom-mcp</code>'
+    });
+
+    // 2. Extension connected
+    var cap = h.capture || {};
+    var extConnected = !!cap.extension_connected;
+    checks.push({
+      id: 'extension',
+      title: 'Browser Extension Connected',
+      pass: extConnected,
+      status: extConnected ? 'connected' : 'not connected',
+      detail: '<p>Install the Kaboom browser extension and make sure it shows "Connected" in the popup.</p>' +
+        '<p>The extension connects to <strong>localhost:' + location.port + '</strong> automatically.</p>' +
+        '<p>If installed but not connecting, try:</p>' +
+        '<code>1. Click the Kaboom extension icon\n2. Check the server URL matches this port\n3. Reload the extension (chrome://extensions)</code>'
+    });
+
+    // 3. Browser data flowing
+    var logCount = h.logs ? h.logs.entries : 0;
+    var hasData = logCount > 0;
+    checks.push({
+      id: 'data',
+      title: 'Browser Data Flowing',
+      pass: hasData,
+      status: hasData ? logCount + ' log entries' : 'no data yet',
+      detail: '<p>Once the extension is connected, open any web page and interact with it. Console logs, network requests, and user actions will appear here.</p>' +
+        '<p>Tip: Open a page with console output (e.g. open DevTools on any site) to verify data flow.</p>'
+    });
+
+    // 4. Pilot enabled
+    var pilotEnabled = !!cap.pilot_enabled;
+    checks.push({
+      id: 'pilot',
+      title: 'AI Web Pilot Enabled',
+      pass: pilotEnabled,
+      status: pilotEnabled ? 'enabled' : 'disabled',
+      detail: '<p>Web Pilot lets AI agents interact with your browser (click, type, navigate). Enable it in the extension popup:</p>' +
+        '<code>1. Click the Kaboom extension icon\n2. Toggle "AI Web Pilot" to ON</code>' +
+        '<p>This is optional \u2014 Kaboom works in observe-only mode without it.</p>'
+    });
+
+    // 5. Version check
+    var hasUpdate = !!h.available_version && h.available_version !== h.version;
+    checks.push({
+      id: 'version',
+      title: 'Up to Date',
+      pass: !hasUpdate,
+      status: hasUpdate ? 'v' + h.available_version + ' available' : 'v' + h.version,
+      detail: '<p>A newer version is available. Update with:</p>' +
+        '<code>npm update -g kaboom-mcp</code>'
+    });
+
+    // Render
+    var passed = checks.filter(function(c) { return c.pass; }).length;
+    var total = checks.length;
+    var scoreEl = document.getElementById('score');
+    scoreEl.textContent = passed + '/' + total;
+    scoreEl.className = 'score ' + (passed === total ? 'all-good' : (passed >= 3 ? 'partial' : 'bad'));
+    document.getElementById('score-label').textContent = passed === total ? 'Everything looks good!' : (total - passed) + ' item' + (total - passed > 1 ? 's' : '') + ' need attention';
+
+    document.getElementById('steps').innerHTML = checks.map(function(c) {
+      return stepHTML(c.id, c.title, c.pass, c.status, c.detail);
+    }).join('');
+
+  } catch (e) {
+    document.getElementById('score').textContent = '?';
+    document.getElementById('score').className = 'score bad';
+    document.getElementById('score-label').textContent = 'Cannot reach server';
+  }
+}
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

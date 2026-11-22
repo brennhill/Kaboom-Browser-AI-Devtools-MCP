@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/wsframe"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/wsframe"
 )
 
 func testDeps() Deps {

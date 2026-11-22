@@ -56,11 +56,11 @@ last_verified_date: 2026-03-05
 | Missing Diagram | Should Show | Located In | Why Critical |
 |-----------------|------------|-----------|--------------|
 | **Extension Message Protocol** | Message routing flow, message types | docs/core/protocol/extension-message-protocol.md | Core docs exist but NO visual diagram |
-| **Capture Data Pipeline** | WS → Network → Actions → Logs | internal/capture/ | How telemetry flows from tab to server |
-| **Query Dispatcher** | Query routing logic | internal/queries/dispatcher_queries.go | How commands route to extension |
-| **Buffer Architecture** | Ring buffer, TTL, eviction | internal/buffers/, internal/capture/ | Memory management strategy |
-| **Session/Client Registry** | Multi-client isolation | internal/session/clientreg/ | How concurrent clients are managed |
-| **Security Analysis Pipeline** | CSP → SRI → Threat detection | internal/security/ | Security workflow |
+| **Capture Data Pipeline** | WS → Network → Actions → Logs | internal/composition/capture/ | How telemetry flows from tab to server |
+| **Query Dispatcher** | Query routing logic | internal/browsercommand/query/dispatcher_queries.go | How commands route to extension |
+| **Buffer Architecture** | Ring buffer, TTL, eviction | internal/buffers/, internal/composition/capture/ | Memory management strategy |
+| **Session/Client Registry** | Multi-client isolation | internal/tools/clientreg/ | How concurrent clients are managed |
+| **Security Analysis Pipeline** | CSP → SRI → Threat detection | internal/analysis/security/ | Security workflow |
 | **Error Clustering** | Error grouping by root cause | internal/analysis/clustering/clustering.go | How errors are deduplicated |
 | **API Contract Analysis** | Schema inference from network | internal/analysis/apicontract/contract.go | How API contracts are learned |
 | **Recording Lifecycle** | Start → Capture → Save → Persist | cmd/browser-agent/tools_recording_video.go + internal/recording/ | Full recording flow |

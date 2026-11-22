@@ -381,7 +381,7 @@ Deletes a saved sequence.
 
 ### Session Store (persistence)
 
-Sequences are stored using the existing `configure(what="store")` persistence layer (`internal/persistence/persistence_store.go`). The session store supports namespaced key-value storage with Save/Load/List/Delete operations. Sequences use a dedicated namespace `"sequences"` to avoid collisions with other stored data.
+Sequences are stored using the existing `configure(what="store")` persistence layer (`internal/platform/state/persistence/persistence_store.go`). The session store supports namespaced key-value storage with Save/Load/List/Delete operations. Sequences use a dedicated namespace `"sequences"` to avoid collisions with other stored data.
 
 **Storage format on disk:** `~/.kaboom/store/sequences/{name}.json`
 
@@ -563,11 +563,11 @@ Handlers for all sequence actions:
 
 Add cases to the configure action switch for: `save_sequence`, `replay_sequence`, `get_sequence`, `list_sequences`, `delete_sequence`.
 
-#### Modified file: `internal/schema/configure/tool.go` (~15 LOC)
+#### Modified file: `internal/tools/schema/configure/tool.go` (~15 LOC)
 
 Add new actions to the configure tool schema enum and add parameter definitions for sequence-related fields.
 
-#### Module registration owner: `cmd/browser-agent/internal/toolmodule/registry.go`
+#### Module registration owner: `internal/tools/module/registry.go`
 
 No changes needed -- configure tool is already registered.
 

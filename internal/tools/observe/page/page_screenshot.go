@@ -1,5 +1,5 @@
 // Purpose: MCP adapter for observe(what='screenshot'): parse arguments, run the screenshot use case, assemble JSON-RPC.
-// Why: The workflow lives in internal/app/screenshot; this file keeps only MCP parsing, error-code mapping
+// Why: The workflow lives in internal/page/app/screenshot; this file keeps only MCP parsing, error-code mapping
 // and the text + image content blocks, so other MCP callers can reuse the same mapping.
 // Docs: docs/features/feature/observe/index.md
 
@@ -10,8 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/page/app/screenshot"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 )
 

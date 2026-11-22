@@ -1,0 +1,17 @@
+{
+  "description": "ASPIRATIONAL U4 Suggest: os.Getenv deep in business logic — should suggest moving env access to startup/config boundary",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/session.go",
+      "new_string": "func getTimeout() time.Duration {\n\tv := os.Getenv(\"SESSION_TIMEOUT\")\n\td, _ := time.ParseDuration(v)\n\treturn d\n}"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["U4", "os.Getenv", "boundary", "configuration"],
+    "max_latency_ms": 5000
+  }
+}

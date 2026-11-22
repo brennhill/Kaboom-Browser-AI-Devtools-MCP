@@ -66,7 +66,7 @@ Server returns audit report to AI
 
 ## Implementation Strategy
 
-Not built yet (reviewed 2026-11-21). The audit engine and a dedicated `performance_audit` handler do not exist. What exists today is the raw input this audit would consume: performance snapshots built in `src/lib/analysis/perf-snapshot.ts`, stored by `internal/capture/perfstore/store.go`, and typed in `internal/performance/types.go`.
+Not built yet (reviewed 2026-11-21). The audit engine and a dedicated `performance_audit` handler do not exist. What exists today is the raw input this audit would consume: performance snapshots built in `src/lib/analysis/perf-snapshot.ts`, stored by `internal/observation/store/perf/store.go`, and typed in `internal/observation/performance/types.go`.
 
 **Planned extension work**:
 - New audit module in the extension's analysis library (`src/lib/analysis/`): audit engine, severity classifier, recommendation generator

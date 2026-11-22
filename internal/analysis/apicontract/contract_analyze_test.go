@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )
 
 func TestAPIContractValidator_ProcessNetworkBodies(t *testing.T) {

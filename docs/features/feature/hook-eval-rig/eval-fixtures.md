@@ -9,7 +9,7 @@
 
 ## Quality Gate (6/13)
 
-Source: `internal/hook/hook_policy.go` (195 LOC), `internal/hook/conventions/conventions.go` (251 LOC)
+Source: `internal/hooks/hook_policy.go` (195 LOC), `internal/hooks/conventions/conventions.go` (251 LOC)
 
 The quality gate fires on every Edit/Write. It finds `.kaboom.json` in the parent chain, loads the project's code standards, checks file size, and detects convention drift.
 
@@ -17,7 +17,7 @@ The quality gate fires on every Edit/Write. It finds `.kaboom.json` in the paren
 
 **001 — Standards injection** `quality-gate/001-standards-injection.json`
 
-Edits `internal/hook/hook_policy.go`. The hook finds `.kaboom.json` at the repo root, reads `kaboom-code-standards.md`, and injects the first 150 lines into the agent's context. Expects `PROJECT CODE STANDARDS` and `Max 800 lines`. This is the core loop: every edit, the agent sees the project's rules.
+Edits `internal/hooks/hook_policy.go`. The hook finds `.kaboom.json` at the repo root, reads `kaboom-code-standards.md`, and injects the first 150 lines into the agent's context. Expects `PROJECT CODE STANDARDS` and `Max 800 lines`. This is the core loop: every edit, the agent sees the project's rules.
 
 **002 — File size warning** `quality-gate/002-file-size-warning.json`
 
@@ -73,7 +73,7 @@ Edits with 3 lines of commented-out code. Expects the gate to flag it. **Why it 
 
 ## Compress Output (6/10)
 
-Source: `internal/hook/compress_output.go` (426 LOC)
+Source: `internal/hooks/compress_output.go` (426 LOC)
 
 Compresses verbose Bash output (test runners, build tools) to summaries. Preserves errors, strips noise. Fires when Bash output exceeds 50 lines.
 
@@ -125,7 +125,7 @@ Go test with `TestHandler/nil_body` failing inside parent `TestHandler`. Expects
 
 ## Session Track (5/9)
 
-Source: `internal/hook/session.go` (130 LOC), `internal/hook/session.go` (278 LOC)
+Source: `internal/hooks/session.go` (130 LOC), `internal/hooks/session.go` (278 LOC)
 
 Records every tool use in an append-only JSONL session log. Detects redundant reads and injects session summaries on edits.
 
@@ -173,7 +173,7 @@ Session has: read A, edit A, read B, edit B, test fails, edit A again. Should wa
 
 ## Blast Radius (4/9)
 
-Source: `internal/hook/blast_radius.go` (529 LOC)
+Source: `internal/hooks/blast_radius.go` (529 LOC)
 
 Builds a per-language import graph, detects whether the edit touches exported symbols, and lists files that import the edited file.
 
@@ -181,7 +181,7 @@ Builds a per-language import graph, detects whether the edit touches exported sy
 
 **001 — Exported function edit** `blast-radius/001-edit-exported-function.json`
 
-Edits `protocol.go` with `func WriteOutput(...)` — uppercase Go function = exported. The import graph finds files that import `internal/hook`. Output shows `[Blast Radius] ... imported by N file(s)`. Core functionality works.
+Edits `protocol.go` with `func WriteOutput(...)` — uppercase Go function = exported. The import graph finds files that import `internal/hooks`. Output shows `[Blast Radius] ... imported by N file(s)`. Core functionality works.
 
 **002 — Unexported function edit** `blast-radius/002-edit-internal-only.json`
 
@@ -193,7 +193,7 @@ Read tool on `protocol.go`. `isEditTool("Read")` returns false. No blast radius 
 
 **004 — File path in output** `blast-radius/004-output-contains-filepath.json`
 
-Same edit as 001 but specifically checks that `internal/hook/hook_policy.go` (the relative path) appears in the output, and that importers are listed under `Not yet reviewed`. Tests the formatting, not just existence of output.
+Same edit as 001 but specifically checks that `internal/hooks/hook_policy.go` (the relative path) appears in the output, and that importers are listed under `Not yet reviewed`. Tests the formatting, not just existence of output.
 
 ### Failing
 
@@ -221,7 +221,7 @@ Edits to add a method to an interface. Expects warning about implementors. **Why
 
 ## Decision Guard (7/10)
 
-Source: `internal/hook/hook_policy.go` (156 LOC)
+Source: `internal/hooks/hook_policy.go` (156 LOC)
 
 Checks edited code against locked architectural decisions in `.kaboom/decisions.json`. Supports literal patterns, regex, and expiry dates.
 
@@ -273,7 +273,7 @@ Edit of `protocol_test.go` with `fmt.Println("debug output")`. Test files should
 
 ## Fixture File Format
 
-Each fixture is a JSON file in `internal/hook/eval/testdata/<hook-name>/`:
+Each fixture is a JSON file in `internal/hooks/eval/testdata/<hook-name>/`:
 
 ```json
 {
@@ -313,7 +313,7 @@ Each fixture is a JSON file in `internal/hook/eval/testdata/<hook-name>/`:
 ## Running the Eval
 
 ```bash
-go test ./internal/hook/eval/ -v -run TestEval_Report -count=1
+go test ./internal/hooks/eval/ -v -run TestEval_Report -count=1
 ```
 
 The eval is test-only code. A lint invariant (check 16 in `scripts/quality/verification/lint-hardening.sh`) prevents `hook/eval` from being imported by production binaries.

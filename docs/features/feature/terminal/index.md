@@ -8,7 +8,7 @@ last_reviewed: 2026-11-21
 code_paths:
   - internal/activecodebase/store.go
   - cmd/browser-agent/internal/terminal/status/status.go
-  - internal/pty/upload/upload.go
+  - internal/terminal/pty/upload/upload.go
   - src/content/ui/hover/screenshot-feedback.ts
   - src/content/ui/panel/host-tab.ts
   - src/content/ui/panel/shell.ts
@@ -21,8 +21,8 @@ code_paths:
   - cmd/browser-agent/internal/terminal/server.go
   - cmd/browser-agent/internal/terminal/supervisor/supervisor.go
   - cmd/browser-agent/main_connection_mcp.go
-  - cmd/browser-agent/internal/daemonlife/lifecycle.go
-  - cmd/browser-agent/internal/nativeinstall/installer.go
+  - internal/lifecycle/daemon/lifecycle.go
+  - internal/lifecycle/install/native/installer.go
   - cmd/browser-agent/internal/terminal/intent/handlers.go
   - cmd/browser-agent/internal/terminal/intent/store.go
   - cmd/browser-agent/internal/terminal/directorybrowser/browser.go
@@ -48,11 +48,11 @@ code_paths:
   - src/background/message-routing/utility-handler.ts
   - src/types/runtime-messages.ts
   - src/sidepanel.ts
-  - internal/pty/manager.go
-  - internal/pty/session.go
-  - internal/pty/writebuf.go
-  - internal/pty/diagnostics/diagnostics.go
-  - internal/pty/fanout/fanout.go
+  - internal/terminal/pty/manager.go
+  - internal/terminal/pty/session.go
+  - internal/terminal/pty/writebuf.go
+  - internal/terminal/pty/diagnostics/diagnostics.go
+  - internal/terminal/pty/fanout/fanout.go
   - npm/kaboom-agentic-browser/lib/daemon/kill-daemon.js
   - scripts/tests/framework/framework.sh
   - scripts/tests/workflows/cat-28-terminal.sh
@@ -95,12 +95,12 @@ test_paths:
   - tests/extension/terminal-panel/terminal-panel-presence.test.js
   - tests/extension/terminal-session/terminal-session-stop.test.js
   - tests/extension/contracts/entry-point-parity.test.js
-  - internal/pty/manager_test.go
-  - internal/pty/session_test.go
-  - internal/pty/runtime_lifecycle_test.go
-  - internal/pty/diagnostics/diagnostics_test.go
-  - internal/pty/fanout/fanout_test.go
-  - internal/pty/upload/upload_test.go
+  - internal/terminal/pty/manager_test.go
+  - internal/terminal/pty/session_test.go
+  - internal/terminal/pty/runtime_lifecycle_test.go
+  - internal/terminal/pty/diagnostics/diagnostics_test.go
+  - internal/terminal/pty/fanout/fanout_test.go
+  - internal/terminal/pty/upload/upload_test.go
   - cmd/browser-agent/internal/terminal/wstransport/session_end_signal_test.go
   - cmd/browser-agent/internal/terminal/wstransport/frame_writer_deadline_test.go
   - cmd/browser-agent/internal/terminal/wstransport/handlers_fanout_test.go
@@ -115,8 +115,8 @@ test_paths:
   - cmd/browser-agent/internal/terminal/intent/store_test.go
   - cmd/browser-agent/internal/terminal/directorybrowser/browser_test.go
   - cmd/browser-agent/internal/terminal/dimensions/dimensions_test.go
-  - cmd/browser-agent/internal/daemonlife/startup_throttle_test.go
-  - cmd/browser-agent/internal/nativeinstall/connect_refused_test.go
+  - internal/lifecycle/daemon/startup_throttle_test.go
+  - internal/lifecycle/install/native/connect_refused_test.go
   - tests/extension/terminal-reconnect/terminal-html-reconnect.test.js
   - tests/extension/terminal-reconnect/terminal-reconnect-recovery-contract.test.js
   - tests/extension/terminal-reconnect/terminal-reconnect-budget-contract.test.js
@@ -202,7 +202,7 @@ last_verified_date: 2026-03-28
   injected fake-clock suite rather than duplicate real-timer tests.
 - **Bounded reap in the relay:** `Relay.reapExitCode` called `sess.Wait()`, which blocked on the reaper channel with no timeout. It runs *before* readLoop's deferred `fanout.Close()`, so an unreapable child parked readLoop forever — the fanout never closed and every WebSocket pump hung on a channel that would never close. `Session.Wait(timeout)` now mirrors `Close`'s bound (`terminal.ReapTimeout`, 2s), returns `pty.ErrReapTimeout` and logs `pty_session_reap_timeout` with `phase: wait`; teardown then proceeds with exit code -1 (unknown).
 - **No re-lookup after Start:** `HandleTerminalStart` used to do `sess, _ := mgr.Get(result.SessionID)` and then dereference `sess` (`SetIdleConfig`, `NewRelay`). A `/terminal/stop` landing in that window removed the session from the map, so the swallowed error became a nil-pointer panic in the handler. `pty.StartResult` now carries the spawned `Session`, so there is no second lookup and no window.
-- **PTY failures are no longer silent (rule 25):** signalling, closing and flushing were all discarded with `_ =`. `internal/pty` now has one structured sink (`pty.SetDiagnosticHook`, wired to the daemon log in `RegisterRoutes`) and emits `pty_session_signal_failed`, `pty_session_reap_timeout` (child survived SIGKILL + both bounded waits), `pty_session_close_failed` (Start/StopAll discarded these) and `pty_writebuffer_write_failed` (stranded stdin bytes, with the undelivered byte count). Control flow is unchanged; an already-exited child (`os.ErrProcessDone`) is still treated as the expected case and is not logged.
+- **PTY failures are no longer silent (rule 25):** signalling, closing and flushing were all discarded with `_ =`. `internal/terminal/pty` now has one structured sink (`pty.SetDiagnosticHook`, wired to the daemon log in `RegisterRoutes`) and emits `pty_session_signal_failed`, `pty_session_reap_timeout` (child survived SIGKILL + both bounded waits), `pty_session_close_failed` (Start/StopAll discarded these) and `pty_writebuffer_write_failed` (stranded stdin bytes, with the undelivered byte count). Control flow is unchanged; an already-exited child (`os.ErrProcessDone`) is still treated as the expected case and is not logged.
   Close-failure coverage injects a minimal PTY whose `Close` deterministically
   fails; nil test PTYs represent an intentionally absent descriptor and are not
   misused as an error fixture.
@@ -478,7 +478,7 @@ If the user re-focuses and types again during the auto-submit window, Enter is d
 
 The root PTY package is exactly ten files and owns process/session management,
 platform PTY opening, and buffered input. Subscriber broadcast is an independent
-`internal/pty/fanout` package because it changes with relay backpressure rather
+`internal/terminal/pty/fanout` package because it changes with relay backpressure rather
 than process lifecycle. Runtime clock, diagnostic, write-buffer, and reaper
 tests share one lifecycle suite; manager spawn/self-heal tests share the manager
 suite. Package regression coverage prevents the ten-file or 800-line boundaries
@@ -493,14 +493,14 @@ Manager self-heal tests likewise synchronize on the evicted session's `done`
 transition and the child reaper's completion, proving replacement publication
 and dead-process recovery without polling manager or process state.
 
-### Manager (`internal/pty/manager.go`)
+### Manager (`internal/terminal/pty/manager.go`)
 
 - Manages a map of `sessionID → *Session` and `token → sessionID`
 - Tokens are 32-byte cryptographic random hex strings
 - Thread-safe: all operations hold `sync.RWMutex`
 - `Stop()` removes map entries under lock, then calls `sess.Close()` outside the lock to avoid blocking concurrent reads during slow child process teardown
 
-### Session (`internal/pty/session.go`)
+### Session (`internal/terminal/pty/session.go`)
 
 - Wraps a PTY master fd + child process
 - `Spawn()`: opens `/dev/ptmx`, grants/unlocks slave, sets initial `winsize`, starts child with `Setsid + Setctty`
@@ -546,7 +546,7 @@ Note: `/config/active-codebase` is on the **main** daemon server (not terminal s
 | `src/content/ui/terminal-widget-types.ts` | Shared terminal state, timing, and DOM ids |
 | `src/content/ui/tracked-hover-launcher.ts` | Hover launcher terminal button + launcher hide/show coordination |
 | `src/lib/constants.ts` | `TERMINAL_PORT_OFFSET`, storage keys |
-| `internal/pty/manager.go` | Session manager: create, get, destroy, token auth |
-| `internal/pty/session.go` | PTY session: spawn, I/O, resize, scrollback, close |
-| `internal/pty/writebuf.go` | Bounded, close-aware PTY input buffering |
-| `internal/pty/fanout/fanout.go` | Subscriber isolation, caps, and slow-consumer backpressure |
+| `internal/terminal/pty/manager.go` | Session manager: create, get, destroy, token auth |
+| `internal/terminal/pty/session.go` | PTY session: spawn, I/O, resize, scrollback, close |
+| `internal/terminal/pty/writebuf.go` | Bounded, close-aware PTY input buffering |
+| `internal/terminal/pty/fanout/fanout.go` | Subscriber isolation, caps, and slow-consumer backpressure |

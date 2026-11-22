@@ -22,8 +22,8 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/dimensions"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
-	ptyfanout "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/fanout"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty"
+	ptyfanout "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty/fanout"
 )
 
 const (

@@ -15,8 +15,8 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/uninstall.js
   - npm/kaboom-agentic-browser/lib/skills.js
   - cmd/browser-agent/native_install.go
-  - internal/state/paths.go
-  - internal/identity/mcp.go
+  - internal/platform/state/paths/paths.go
+  - internal/platform/identity/mcp.go
 test_paths:
   - tests/cli/uninstall-script.test.cjs
   - tests/cli/uninstall.test.cjs
@@ -43,7 +43,7 @@ for the install-side flow):
 
 | Artifact | Created by | Removed by |
 | --- | --- | --- |
-| `~/.kaboom/bin/*` binaries + runtime state (`logs/`, `run/`, `projects/`, `recordings/`, `settings/`, `install_id`) | install.sh / daemon (`internal/state/paths.go`) | `remove_state_root` (honors `KABOOM_STATE_DIR`, `XDG_STATE_HOME`; `--keep-data` keeps everything except `bin/` and `run/`) |
+| `~/.kaboom/bin/*` binaries + runtime state (`logs/`, `run/`, `projects/`, `recordings/`, `settings/`, `install_id`) | install.sh / daemon (`internal/platform/state/paths/paths.go`) | `remove_state_root` (honors `KABOOM_STATE_DIR`, `XDG_STATE_HOME`; `--keep-data` keeps everything except `bin/` and `run/`) |
 | `~/KaboomAgenticDevtoolExtension` (or `KABOOM_EXTENSION_DIR`) | install.sh / install.ps1 | `remove_path "$EXT_DIR"` (browser-side unload is a documented manual step) |
 | macOS LaunchAgent `~/Library/LaunchAgents/com.kaboom.daemon.plist` | install.sh `register_autostart` | `launchctl bootout gui/$UID/com.kaboom.daemon` + file removal |
 | Linux systemd unit `~/.config/systemd/user/kaboom.service` (+ `default.target.wants` symlink) and XDG `~/.config/autostart/kaboom.desktop` | install.sh `register_autostart` | `systemctl --user disable --now` + file removal |

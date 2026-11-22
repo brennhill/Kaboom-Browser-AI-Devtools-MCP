@@ -794,11 +794,11 @@ test('handles 401 response gracefully', async () => {
 
 | File | Changes |
 |------|---------|
-| `cmd/browser-agent/internal/httpguard/apikey.go` | Replace existing middleware with enhanced version |
-| `cmd/browser-agent/internal/httpguard/apikey_test.go` | New test file for auth middleware |
+| `internal/platform/httpguard/apikey.go` | Replace existing middleware with enhanced version |
+| `internal/platform/httpguard/apikey_test.go` | New test file for auth middleware |
 | `cmd/browser-agent/main.go` | Add CLI flags, wire up middleware |
 | `cmd/browser-agent/config.go` | Add auth config parsing (env, flags, key file) |
-| `internal/audit/` (e.g. `internal/audit/audit_recording.go`) | Add auth attempt logging (audit trail now lives in the `internal/audit` package) |
+| `internal/tools/audit/` (e.g. `internal/tools/audit/audit_recording.go`) | Add auth attempt logging (audit trail now lives in the `internal/tools/audit` package) |
 | `extension/background.js` | Include API key in requests |
 | `extension/options.html` | Add API key input field |
 | `extension/options.js` | Handle API key storage |

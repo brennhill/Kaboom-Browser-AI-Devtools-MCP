@@ -156,7 +156,7 @@ test-go-sharded:
 # Wall-clock SLOs must run without cross-package or intra-package contention.
 # Unit lanes retain deterministic correctness/race coverage under -short.
 test-performance:
-	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) GOMAXPROCS=1 KABOOM_PERFORMANCE_SLO=1 go test -count=1 -p 1 -parallel 1 -run '^(TestSLO|TestRedactPerformance)' ./internal/pagination ./internal/redaction
+	CGO_ENABLED=0 GOTOOLCHAIN=$(GO_TEST_TOOLCHAIN) GOCACHE=$(GO_TEST_CACHE_DIR) GOMAXPROCS=1 KABOOM_PERFORMANCE_SLO=1 go test -count=1 -p 1 -parallel 1 -run '^(TestSLO|TestRedactPerformance)' ./internal/observation/pagination ./internal/platform/redaction
 
 test-race:
 	go test -race -v ./...
@@ -290,7 +290,7 @@ check-response-contract:
 response-contract-update:
 	@UPDATE_GOLDEN=1 go test ./cmd/browser-agent/internal/responsegate -run TestDeclaredResponseShapesStillShip
 
-# Every decode into a Wire* type must go through internal/wirecodec, so a peer's
+# Every decode into a Wire* type must go through internal/platform/wirecodec, so a peer's
 # error envelope cannot decode into a zero value and read as an empty result.
 check-wire-decode:
 	@go test ./scripts/contracts/wiredecode

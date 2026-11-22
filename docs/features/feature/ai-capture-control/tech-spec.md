@@ -224,7 +224,7 @@ Not yet built (reviewed 2026-11-21). No `configure(what: "capture")` handler, ov
 
 Where the planned work would land in the current layout:
 
-- Server: the `capture_overrides` payload is built by `buildCaptureOverrides()` in `internal/capture/syncruntime/handler.go` (wire type `SyncResponse.CaptureOverrides` in `internal/capture/syncruntime/wire_sync.go`, TS counterpart `src/types/wire/wire-sync.ts`). AI-set overrides would be merged there; the extension now receives settings over `POST /sync`, not a `GET /settings` poll.
-- Configure handler: a new `capture` action in the configure tool package (`cmd/browser-agent/internal/toolconfigure/`) with schema registration under `internal/schema/`.
+- Server: the `capture_overrides` payload is built by `buildCaptureOverrides()` in `internal/sync/runtime/handler.go` (wire type `SyncResponse.CaptureOverrides` in `internal/sync/runtime/wire_sync.go`, TS counterpart `src/types/wire/wire-sync.ts`). AI-set overrides would be merged there; the extension now receives settings over `POST /sync`, not a `GET /settings` poll.
+- Configure handler: a new `capture` action in the configure tool package (`internal/tools/configure/handler/`) with schema registration under `internal/tools/schema/`.
 - Extension: overrides are already applied via `applyCaptureOverrides` in `src/background/sync/sync-manager.ts`; the new settings keys would be handled there.
 - Tests: alongside the above packages (planned; no tests exist yet).

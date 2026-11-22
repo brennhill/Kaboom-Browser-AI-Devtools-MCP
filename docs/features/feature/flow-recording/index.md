@@ -7,14 +7,14 @@ owners: []
 last_reviewed: 2026-11-21
 code_paths:
   - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
+  - internal/tools/configure/handler/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/deps.go
   - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolrecording/handler.go
-  - cmd/browser-agent/internal/toolrecording/helpers.go
-  - internal/capture/capture.go
-  - internal/capture/httpingest/handlers.go
+  - internal/tools/recording/handler.go
+  - internal/tools/recording/helpers.go
+  - internal/composition/capture/capture.go
+  - internal/ingestion/http/handlers.go
   - internal/recording/types.go
   - internal/recording/manager.go
   - internal/recording/actionlog/recorder.go
@@ -39,20 +39,20 @@ code_paths:
   - src/lib/storage/validated.ts
   - src/background/recording/rehydration.ts
   - internal/recording/manager_store.go
-  - cmd/browser-agent/internal/screenrec/save.go
+  - internal/screenrec/save.go
 test_paths:
-  - internal/capture/httpingest/handlers_test.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
+  - internal/ingestion/http/handlers_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/internal/toolrecording/handler_test.go
-  - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
-  - cmd/browser-agent/internal/toolrecording/playback_result_test.go
-  - internal/capture/recordingtest/recording_manager_test.go
+  - internal/tools/recording/handler_test.go
+  - internal/tools/recording/toolrecording_test.go
+  - internal/tools/recording/playback_result_test.go
+  - internal/recording/testsupport/recording_manager_test.go
   - internal/recording/manager_active_test.go
-  - internal/capture/recordingtest/recording_store_integration_test.go
-  - internal/capture/recordingtest/recording_logdiff_integration_test.go
-  - internal/capture/recordingtest/recording_extension_lifecycle_test.go
-  - internal/capture/no_facade_test.go
+  - internal/recording/testsupport/recording_store_integration_test.go
+  - internal/recording/testsupport/recording_logdiff_integration_test.go
+  - internal/recording/testsupport/recording_extension_lifecycle_test.go
+  - internal/composition/capture/no_facade_test.go
   - internal/recording/playback/playback_test.go
   - internal/recording/logdiff/logdiff_test.go
   - internal/recording/types_test.go
@@ -91,7 +91,7 @@ Flow recording spans two lifecycles with separate owners:
 - **Event recording** (`configure` `event_recording_start` / `event_recording_stop`,
   popup action-recording row). Owner: the Go `RecordingManager`
   (`internal/recording/manager.go`), reached only through `Capture.Recordings()`
-  (`internal/capture/capture.go`) and entered via `toolrecording.Handler`. It is
+  (`internal/composition/capture/capture.go`) and entered via `toolrecording.Handler`. It is
   held in memory until stop, then persisted to disk; it is not restored after a
   daemon restart. The popup mirror `kaboom_action_recording` is reconciled
   against the daemon when the popup opens.
@@ -99,7 +99,7 @@ Flow recording spans two lifecycles with separate owners:
   popup, keyboard, context menu). Owner: `src/background/recording/` plus the
   offscreen recorder; it is the only writer of `kaboom_recording` and
   `kaboom_pending_recording`. The saved WebM is owned by the daemon save path
-  (`cmd/browser-agent/internal/screenrec/save.go`).
+  (`internal/screenrec/save.go`).
 
 The full start/restore/stop/persist table, storage-key writers and failure modes
 are in [tab-recording: Recording Ownership](../tab-recording/index.md#recording-ownership).
@@ -145,7 +145,7 @@ canonical owners directly; root one-line forwarding wrappers are prohibited.
   - `cmd/browser-agent/tools_configure.go`
   - `cmd/browser-agent/internal/toolobserve/dispatcher.go`
   - `cmd/browser-agent/tools_core.go`
-  - `cmd/browser-agent/internal/toolrecording/handler.go`
+  - `internal/tools/recording/handler.go`
 - Only one recording runs at a time, and the running one must stay reachable.
   `event_recording_stop` accepts no `recording_id`, meaning "stop whatever is
   active", and `observe(recordings)` reports `active_recording_id` alongside the
@@ -156,8 +156,8 @@ canonical owners directly; root one-line forwarding wrappers are prohibited.
   naming the stop call. It previously returned `internal_error` with "Check
   storage quota and try again", so a caller acting on the code and the playbook
   went looking for disk space while the actual remedy went unmentioned.
-  - `cmd/browser-agent/internal/toolrecording/helpers.go`
-  - `internal/capture/httpingest/handlers.go`
+  - `internal/tools/recording/helpers.go`
+  - `internal/ingestion/http/handlers.go`
   - `src/background/recording/index.ts`
   - `src/background/recording/capture.ts`
   - `src/background/recording/listeners.ts`
@@ -169,10 +169,10 @@ canonical owners directly; root one-line forwarding wrappers are prohibited.
   - `src/popup/recording/recording-io.ts`
   - `src/lib/brand.ts`
 - Core tests:
-  - `cmd/browser-agent/internal/toolrecording/handler_test.go`
-  - `cmd/browser-agent/internal/toolrecording/toolrecording_test.go`
-  - `cmd/browser-agent/internal/toolrecording/playback_result_test.go`
-  - `internal/capture/recordingtest/recording_manager_test.go`
+  - `internal/tools/recording/handler_test.go`
+  - `internal/tools/recording/toolrecording_test.go`
+  - `internal/tools/recording/playback_result_test.go`
+  - `internal/recording/testsupport/recording_manager_test.go`
   - `tests/extension/recording-lifecycle/recording.test.js`
   - `tests/extension/recording-ui/recording-listeners-target-tab.test.js`
   - `tests/extension/recording-ui/recording-capture-branding.test.js`

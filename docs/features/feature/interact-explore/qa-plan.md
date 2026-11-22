@@ -18,8 +18,8 @@ last_verified_date: 2026-03-05
 ## Automated Coverage
 - `cmd/browser-agent/tools_interact_rich_test.go`
 - `cmd/browser-agent/tools_interact_upload_test.go`
-- `cmd/browser-agent/internal/toolinteract/interactstate/state_test.go`
-- `cmd/browser-agent/internal/toolinteract/interact_browser_test.go`
+- `internal/tools/interact/handler/interactstate/state_test.go`
+- `internal/tools/interact/handler/interact_browser_test.go`
 
 ## Required Scenarios
 1. Action dispatch

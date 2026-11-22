@@ -75,7 +75,8 @@ func receiverTypeName(expr ast.Expr) string {
 	return ""
 }
 
-func funcComplexity(fn ast.Node) int {	complexity := 1
+func funcComplexity(fn ast.Node) int {
+	complexity := 1
 	ast.Inspect(fn, func(node ast.Node) bool {
 		switch typed := node.(type) {
 		case *ast.IfStmt, *ast.ForStmt, *ast.RangeStmt, *ast.CaseClause, *ast.CommClause:
@@ -103,8 +104,8 @@ func funcParams(fn *ast.FuncDecl) int {
 }
 
 type lengthBaselineFile struct {
-	Version  int         `json:"version"`
-	MaxLines int         `json:"max_lines"`
+	Version   int            `json:"version"`
+	MaxLines  int            `json:"max_lines"`
 	Functions map[string]int `json:"functions"`
 }
 

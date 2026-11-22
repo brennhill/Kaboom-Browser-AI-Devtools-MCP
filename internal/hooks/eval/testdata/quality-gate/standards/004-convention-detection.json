@@ -1,0 +1,14 @@
+{
+  "description": "Edit uses json.Marshal — should show auto-discovered conventions AND direct match examples",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "internal/hooks/session.go", "new_string": "data, err := json.Marshal(result)" }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["PROJECT CONVENTIONS", "auto-discovered", "json.Marshal(", "CODEBASE CONVENTIONS", "existing usage"],
+    "max_latency_ms": 5000
+  }
+}

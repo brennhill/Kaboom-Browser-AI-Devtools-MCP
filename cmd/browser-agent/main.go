@@ -8,22 +8,22 @@ import (
 	"os"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonrecovery"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/exitdiag"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcpprotocol"
-	playbookresources "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks/resources"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testowner"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/appruntime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/daemon/recovery"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/exitdiag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/testsupport/testowner"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/defaults"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push/adapters/http"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/cli"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcpserver/protocol"
+	playbookresources "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/playbooks/resources"
 )
 
 // version is set at build time via -ldflags "-X main.version=..."
@@ -31,7 +31,7 @@ import (
 var version = "0.9.0"
 
 // daemonProcessArgv0 binds the build-time version to the process-title builder in
-// internal/procctl. It lives beside `version` because that is the only reason it
+// internal/lifecycle/procctl. It lives beside `version` because that is the only reason it
 // exists — the bridge lifecycle collaborator and CLI config both take a plain
 // func(string) string.
 func daemonProcessArgv0(exePath string) string {

@@ -6,31 +6,31 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/runtimeflags/flags.go
-  - internal/serverdefaults/defaults.go
-  - internal/configdiscovery/mcp.go
+  - internal/lifecycle/runtimeflags/flags.go
+  - internal/platform/defaults/defaults.go
+  - internal/lifecycle/install/configdiscovery/mcp.go
   - cmd/browser-agent/main.go
   - cmd/browser-agent/config.go
-  - cmd/browser-agent/internal/startupconfig/paths.go
-  - cmd/browser-agent/internal/startupconfig/runtime.go
-  - cmd/browser-agent/internal/startupconfig/help.go
-  - cmd/browser-agent/internal/runtimeconfig/parallel.go
-  - cmd/browser-agent/internal/cli/cli_output.go
-  - cmd/browser-agent/internal/cli/parser/commands.go
-  - cmd/browser-agent/internal/cli/parser/flags.go
-  - cmd/browser-agent/internal/cli/parser/generate_configure.go
-  - cmd/browser-agent/internal/cli/parser/interact.go
-  - cmd/browser-agent/internal/cli/parser/observe_analyze.go
+  - internal/lifecycle/startupconfig/paths.go
+  - internal/lifecycle/startupconfig/runtime.go
+  - internal/lifecycle/startupconfig/help.go
+  - internal/lifecycle/runtimeconfig/parallel.go
+  - internal/tools/cli/cli_output.go
+  - internal/tools/cli/parser/commands.go
+  - internal/tools/cli/parser/flags.go
+  - internal/tools/cli/parser/generate_configure.go
+  - internal/tools/cli/parser/interact.go
+  - internal/tools/cli/parser/observe_analyze.go
   - cmd/browser-agent/internal/health/doctor.go
   - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
+  - internal/tools/configure/handler/dispatcher.go
   - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolconfigure/deps.go
+  - internal/tools/configure/handler/deps.go
   - cmd/browser-agent/internal/health/doctor_fastpath_telemetry.go
-  - internal/diag/output.go
-  - cmd/browser-agent/internal/toolconfigure/tutorial/handlers.go
-  - cmd/browser-agent/internal/toolconfigure/tutorial/snippets.go
-  - cmd/browser-agent/internal/toolconfigure/tutorial/playbooks.go
+  - internal/platform/diag/output.go
+  - internal/tools/configure/handler/tutorial/handlers.go
+  - internal/tools/configure/handler/tutorial/snippets.go
+  - internal/tools/configure/handler/tutorial/playbooks.go
   - Makefile
   - scripts/release/version/version-sync.mjs
   - .github/workflows/validate-versions.yml
@@ -41,8 +41,8 @@ code_paths:
   - scripts/release/daemon-health-identity.mjs
   - scripts/release/install-upgrade-regression.mjs
   - scripts/release/npm-wrapper/run-tests.mjs
-  - cmd/browser-agent/internal/nativeinstall/installer.go
-  - cmd/browser-agent/internal/nativeinstall/codex.go
+  - internal/lifecycle/install/native/installer.go
+  - internal/lifecycle/install/native/codex.go
   - npm/kaboom-agentic-browser/lib/installation/extension.js
   - npm/kaboom-agentic-browser/lib/browser/browser.js
   - npm/kaboom-agentic-browser/lib/daemon/health.js
@@ -75,31 +75,31 @@ code_paths:
   - docs/setup/mcp-install-guide.md
 test_paths:
   - cmd/browser-agent/composition_test.go
-  - cmd/browser-agent/internal/startupconfig/paths_test.go
-  - cmd/browser-agent/internal/startupconfig/runtime_test.go
-  - cmd/browser-agent/internal/cli/parser/commands_test.go
-  - cmd/browser-agent/internal/cli/parser/flags_test.go
-  - cmd/browser-agent/internal/cli/cli_coverage_extra_test.go
-  - cmd/browser-agent/internal/cli/cli_test.go
-  - cmd/browser-agent/internal/nativeinstall/installer_test.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
+  - internal/lifecycle/startupconfig/paths_test.go
+  - internal/lifecycle/startupconfig/runtime_test.go
+  - internal/tools/cli/parser/commands_test.go
+  - internal/tools/cli/parser/flags_test.go
+  - internal/tools/cli/cli_coverage_extra_test.go
+  - internal/tools/cli/cli_test.go
+  - internal/lifecycle/install/native/installer_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/internal/runtimeflags/parsing_test.go
-  - cmd/browser-agent/internal/runtimeflags/repeatable_test.go
-  - cmd/browser-agent/internal/startupconfig/help_test.go
-  - cmd/browser-agent/internal/cli/parser/commands_test.go
+  - internal/lifecycle/runtimeflags/parsing_test.go
+  - internal/lifecycle/runtimeflags/repeatable_test.go
+  - internal/lifecycle/startupconfig/help_test.go
+  - internal/tools/cli/parser/commands_test.go
   - cmd/browser-agent/internal/health/health_coverage_test.go
   - cmd/browser-agent/integration/runtime/reliability_lifecycle_test.go
   - scripts/smoke-tests/core/23-doctor-preflight.sh
-  - cmd/browser-agent/internal/runtimeconfig/parallel_test.go
-  - internal/configdiscovery/mcp_test.go
+  - internal/lifecycle/runtimeconfig/parallel_test.go
+  - internal/lifecycle/install/configdiscovery/mcp_test.go
   - scripts/contracts/stdout_protocol_test.go
-  - cmd/browser-agent/internal/toolconfigure/tutorial/tutorial_test.go
-  - cmd/browser-agent/internal/nativeinstall/installer_test.go
-  - cmd/browser-agent/internal/nativeinstall/codex_test.go
-  - cmd/browser-agent/internal/nativeinstall/config_test.go
-  - cmd/browser-agent/internal/nativeinstall/open_test.go
-  - cmd/browser-agent/internal/nativeinstall/connect_test.go
+  - internal/tools/configure/handler/tutorial/tutorial_test.go
+  - internal/lifecycle/install/native/installer_test.go
+  - internal/lifecycle/install/native/codex_test.go
+  - internal/lifecycle/install/native/config_test.go
+  - internal/lifecycle/install/native/open_test.go
+  - internal/lifecycle/install/native/connect_test.go
   - npm/kaboom-agentic-browser/lib/config/config.test.js
   - npm/kaboom-agentic-browser/lib/config/auto-approve.test.js
   - npm/kaboom-agentic-browser/lib/config/codex-config.test.js
@@ -140,8 +140,8 @@ test_paths:
   - scripts/release/version/version-sync.test.mjs
   - tests/extension/contracts/tooling-contracts.test.js
   - scripts/quality/contracts/check-bridge-stdout-invariant.sh
-  - cmd/browser-agent/internal/cli/cli_test.go
-  - cmd/browser-agent/internal/cli/cli_coverage_extra_test.go
+  - internal/tools/cli/cli_test.go
+  - internal/tools/cli/cli_coverage_extra_test.go
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -166,7 +166,7 @@ the regression suite deterministically blocks the backup path to enforce this.
 - Mode/Action: cli
 - Location: `docs/features/feature/enhanced-cli-config`
 - `cmd/browser-agent/config.go` owns only process exits and launch callbacks;
-  `internal/startupconfig` builds the validated runtime, paths, and upload
+  `internal/lifecycle/startupconfig` builds the validated runtime, paths, and upload
   boundary without terminating the process. Port, state, parallel-isolation,
   log fallback, and upload failures are therefore deterministic unit contracts.
 - Compiled CLI/daemon artifacts are prohibited in the source root by a binary
@@ -201,7 +201,7 @@ listed above. The popup no longer exposes a dormant one-click update flow:
 its `/upgrade/nonce` and `/upgrade/install` calls had no server routes or
 OpenAPI contract.
 
-The CLI runtime depends one-way on the canonical `internal/cli/parser`
+The CLI runtime depends one-way on the canonical `internal/tools/cli/parser`
 subpackage. Tool-family flag contracts no longer share a package with daemon
 startup, transport, or output rendering, and both folders enforce the ten-file
 ownership boundary without compatibility wrappers.

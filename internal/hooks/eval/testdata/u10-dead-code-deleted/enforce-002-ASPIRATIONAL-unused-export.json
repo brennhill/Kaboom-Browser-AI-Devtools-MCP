@@ -1,0 +1,17 @@
+{
+  "description": "ASPIRATIONAL U10 Enforce: exported function with zero callers anywhere in the codebase — should flag as dead code",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "func DeprecatedLegacyHelper(s string) string {\n\treturn strings.ToUpper(s)\n}"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["U10", "unused", "zero callers"],
+    "max_latency_ms": 5000
+  }
+}

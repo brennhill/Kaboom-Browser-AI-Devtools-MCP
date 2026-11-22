@@ -7,11 +7,11 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/actioneffects"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/interactdispatch"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact/dispatch"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact/effects"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 func (h *ToolHandler) toolInteract(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {

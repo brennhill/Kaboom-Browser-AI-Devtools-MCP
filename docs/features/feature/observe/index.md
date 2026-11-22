@@ -6,21 +6,21 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - internal/screenshotframe/wire_screenshot.go
+  - internal/page/screenshotframe/wire_screenshot.go
   - src/lib/screenshot/coordinate-frame.ts
   - src/lib/screenshot/image-size.ts
   - src/background/commands/results/screenshot-delivery.ts
   - src/background/commands/observe.ts
   - src/background/ui/tracked-tab-state.ts
   - cmd/browser-agent/internal/mediaapi/screenshots.go
-  - internal/capture/healthreader/reader.go
+  - internal/observation/healthreader/reader.go
   - internal/browsercommand/internal/dispatch/dispatcher_queries.go
-  - internal/capture/syncruntime/handler.go
-  - internal/capture/telemetrystore/store.go
-  - internal/capture/waterfallstore/store.go
-  - internal/capture/wsconn/status.go
-  - internal/capture/wsconn/store.go
-  - internal/capture/wsconn/tracker.go
+  - internal/sync/runtime/handler.go
+  - internal/observation/store/telemetry/store.go
+  - internal/observation/store/waterfall/store.go
+  - internal/observation/store/wsconn/status.go
+  - internal/observation/store/wsconn/store.go
+  - internal/observation/store/wsconn/tracker.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/deps.go
   - cmd/browser-agent/internal/toolobserve/response.go
@@ -28,33 +28,33 @@ code_paths:
   - cmd/browser-agent/internal/toolobserve/registry.go
   - cmd/browser-agent/internal/toolobserve/page_inventory.go
   - cmd/browser-agent/internal/toolobserve/site_menus.go
-  - cmd/browser-agent/internal/toolresp/toolresp.go
-  - internal/mcp/response.go
-  - cmd/browser-agent/internal/asynccommand/handler.go
-  - internal/a11ysummary/summary.go
+  - internal/tools/response/toolresp.go
+  - internal/tools/mcp/response.go
+  - internal/tools/asynccommand/handler.go
+  - internal/analysis/a11ysummary/summary.go
   - internal/tools/observe/core/deps.go
   - internal/tools/observe/core/filtering.go
   - internal/tools/observe/core/metadata.go
   - internal/tools/observe/logs/logs.go
   - internal/tools/observe/logs/summarized_logs.go
-  - internal/types/wire_log.go
+  - internal/platform/types/wire_log.go
   - internal/tools/observe/network/network.go
   - internal/tools/observe/session/session.go
   - internal/tools/observe/timeline/correlation.go
   - internal/tools/observe/page/page_state.go
   - internal/tools/observe/page/page_screenshot.go
-  - internal/app/screenshot/screenshot.go
-  - internal/app/pageinfo/pageinfo.go
-  - internal/app/pagestorage/storage.go
-  - internal/app/pagestorage/sections.go
-  - internal/app/a11yaudit/a11yaudit.go
-  - internal/capture/waterfallstore/store.go
+  - internal/page/app/screenshot/screenshot.go
+  - internal/page/app/pageinfo/pageinfo.go
+  - internal/page/app/storage/storage.go
+  - internal/page/app/storage/sections.go
+  - internal/analysis/app/a11yaudit/a11yaudit.go
+  - internal/observation/store/waterfall/store.go
   - cmd/browser-agent/internal/toolruntime/usecase_wiring.go
-  - cmd/browser-agent/internal/mcphttp/handler.go
+  - internal/tools/mcpserver/http/handler.go
   - cmd/browser-agent/internal/telemetryapi/handler.go
   - internal/tools/observe/hints/hints.go
-  - internal/app/pagestorage/execute.go
-  - internal/app/pagestorage/scripts.go
+  - internal/page/app/storage/execute.go
+  - internal/page/app/storage/scripts.go
   - src/background.ts
   - src/background/commands/observe.ts
   - src/background/commands/helpers.ts
@@ -78,7 +78,7 @@ code_paths:
   - src/background/push-handler.ts
   - src/lib/tabs/tab-focus.ts
 test_paths:
-  - internal/screenshotframe/wire_screenshot_test.go
+  - internal/page/screenshotframe/wire_screenshot_test.go
   - cmd/browser-agent/internal/mediaapi/screenshot_frame_test.go
   - tests/extension/capture/screenshot-coordinate-frame.test.js
   - tests/extension/capture/background/background-tab-capture.test.js
@@ -88,21 +88,21 @@ test_paths:
   - internal/tools/observe/network/network_test.go
   - internal/tools/observe/timeline/correlation_test.go
   - internal/tools/observe/logs/logs_edge_test.go
-  - internal/app/pagestorage/execute_test.go
-  - internal/capture/healthreader/reader_test.go
+  - internal/page/app/storage/execute_test.go
+  - internal/observation/healthreader/reader_test.go
   - tests/extension/dom/command-element-results.test.js
   - tests/extension/dom/page-query-targeting.test.js
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
   - internal/tools/observe/page/page_readiness_test.go
   - cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go
-  - internal/app/pagestorage/execute_test.go
+  - internal/page/app/storage/execute_test.go
   - extension/background/commands/observe.fullpage.test.js
-  - internal/a11ysummary/summary_test.go
-  - internal/capture/websockettest/websocket_test.go
-  - internal/capture/websockettest/websocket_status_test.go
-  - internal/capture/websockettest/websocket_handlers_test.go
-  - internal/capture/wsconn/store_test.go
+  - internal/analysis/a11ysummary/summary_test.go
+  - internal/observation/testsupport/websocket/websocket_test.go
+  - internal/observation/testsupport/websocket/websocket_status_test.go
+  - internal/observation/testsupport/websocket/websocket_handlers_test.go
+  - internal/observation/store/wsconn/store_test.go
   - internal/tools/observe/logs/logs_test.go
   - internal/tools/observe/core/metadata_test.go
   - internal/tools/observe/network/network_test.go
@@ -113,18 +113,18 @@ test_paths:
   - internal/tools/observe/contracts/validation_test.go
   - internal/tools/observe/testsupport/helpers.go
   - internal/tools/observe/page/page_state_test.go
-  - cmd/browser-agent/internal/mcphttp/handler_test.go
+  - internal/tools/mcpserver/http/handler_test.go
   - internal/tools/observe/page/page_state_storage_test.go
   - internal/tools/observe/page/page_screenshot_test.go
-  - internal/app/screenshot/screenshot_test.go
-  - internal/app/screenshot/save_test.go
-  - internal/app/pageinfo/pageinfo_test.go
-  - internal/app/pagestorage/storage_test.go
-  - internal/app/pagestorage/sections_test.go
-  - internal/app/a11yaudit/a11yaudit_test.go
-  - internal/capture/waterfallstore/store_test.go
+  - internal/page/app/screenshot/screenshot_test.go
+  - internal/page/app/screenshot/save_test.go
+  - internal/page/app/pageinfo/pageinfo_test.go
+  - internal/page/app/storage/storage_test.go
+  - internal/page/app/storage/sections_test.go
+  - internal/analysis/app/a11yaudit/a11yaudit_test.go
+  - internal/observation/store/waterfall/store_test.go
   - scripts/contracts/layering/main_test.go
-  - internal/capture/waterfallstore/store_test.go
+  - internal/observation/store/waterfall/store_test.go
   - tests/extension/capture/observe-screenshot.test.js
   - tests/extension/capture/background/background-tab-capture.test.js
   - tests/extension/capture/background/visible-tab-capture-fallback.test.js
@@ -186,7 +186,7 @@ coverage therefore use no scheduler sleeps; concurrent-response validation also
 fails explicitly when a content block is absent instead of accidentally sending
 a nil error.
 Queued observation modes receive command admission and completion functions
-from `internal/asynccommand.Handler`; observe owns no host interface and the
+from `internal/tools/asynccommand.Handler`; observe owns no host interface and the
 composition root provides no forwarding methods.
 The injected page-world entrypoint is also startup-only; observer and telemetry
 APIs remain owned by their focused `src/inject` and `src/lib` modules.
@@ -212,7 +212,7 @@ queue on a wall-clock interval.
 - Status: shipped
 - Tool: `observe`
 - Mode key: `what`
-- Contract source: `internal/schema/observe.go`
+- Contract source: `internal/tools/schema/observe.go`
 
 ## Specs
 - Product: `product-spec.md`
@@ -233,7 +233,7 @@ Element collection, visibility filtering, limits, and tab metadata use the
 shared command helpers also consumed by `interact-explore`; viewport screenshot
 capture/upload has one implementation for both normal capture and CDP fallback.
 The screenshot workflow is a transport-independent use case in
-`internal/app/screenshot` (`Service.Capture(ctx, Options) (Result, error)`). It
+`internal/page/app/screenshot` (`Service.Capture(ctx, Options) (Result, error)`). It
 validates options, enqueues and awaits the extension query through the
 `internal/browsercommand` owner (via the shared `queries.QueryRunner` port), splits
 the data URL from the result fields, and applies `save_to`. It accepts no MCP
@@ -245,19 +245,19 @@ arguments, maps failure kinds to canonical `mcp.Fail` codes
 `visual_baseline`/`visual_diff` call the same use case (composed in
 `cmd/browser-agent/internal/toolruntime/usecase_wiring.go`). The
 `scripts/contracts/layering` rule `app->transport` forbids `internal/app/**`
-from importing `net/http`, `internal/mcp`, `internal/capture/**` or
+from importing `net/http`, `internal/tools/mcp`, `internal/composition/capture/**` or
 `internal/tools/**`.
-The tracked-page projection is the `internal/app/pageinfo` use case
+The tracked-page projection is the `internal/page/app/pageinfo` use case
 (`Service.Read() Info`: URL with waterfall fallback, title with log fallback,
 CSP, tab status, command readiness, tab focus) over a seven-method
 `ExtensionState` port, `waterfallstore.Store.LastPageURL` and the log buffer.
 `observe(what="page")` (`page.GetPageInfo`) only assembles the MCP payload,
 metadata and CSP blocked actions; interact page-context enrichment consumes the
 typed `Info` (`PageDeps.PageInfo`) instead of re-parsing the observe MCP
-response. Storage and IndexedDB reads are the `internal/app/pagestorage` use
+response. Storage and IndexedDB reads are the `internal/page/app/storage` use
 case (tracking gate + `queries.QueryRunner`; section filtering/summaries and the
 generated IndexedDB scripts live there, typed `*pagestorage.Failure` kinds), and
-the accessibility audit is `internal/app/a11yaudit` (tracking gate + audit port,
+the accessibility audit is `internal/analysis/app/a11yaudit` (tracking gate + audit port,
 partial results on extension failure, summary projection). `page.GetStorage`,
 `page.GetIndexedDB` and `page.RunA11yAudit` only parse arguments, map failure
 kinds to the unchanged MCP errors and add metadata; services are composed in
@@ -270,7 +270,7 @@ carries the read owners (`Extension` = `syncruntime.Runtime`, `Telemetry`,
 stores directly with unchanged buffer ownership and retention. Response metadata
 takes a one-method `core.Connection`. The layering rule `observe->capture`
 forbids `internal/tools/observe/**` (except `testsupport`) from importing
-`internal/capture`.
+`internal/composition/capture`.
 Live-page storage, IndexedDB, screenshot, and accessibility failures use the
 canonical `mcp.Fail` response boundary; queue saturation guidance is built once
 with the canonical `pending_commands` recovery call.

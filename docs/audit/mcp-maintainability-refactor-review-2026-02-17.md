@@ -28,7 +28,7 @@ The same command/mode/action sets are represented separately in multiple places:
 
 - Tool schemas: `cmd/browser-agent/tools_schema.go`
 - Server dispatch: `cmd/browser-agent/tools_core.go`, `cmd/browser-agent/tools_observe.go`, `cmd/browser-agent/tools_analyze.go`, `cmd/browser-agent/tools_configure.go`, `cmd/browser-agent/tools_interact.go`
-- Sync command types: `internal/capture/syncruntime/handler.go`
+- Sync command types: `internal/sync/runtime/handler.go`
 - Extension sync types: `src/background/sync/sync-client.ts`
 - Extension execution router: `src/background/pending-queries.ts`
 
@@ -73,7 +73,7 @@ Impact:
 
 Evidence:
 
-- Lenient parser helper: `internal/mcp/response.go` (`LenientUnmarshal`)
+- Lenient parser helper: `internal/tools/mcp/response.go` (`LenientUnmarshal`)
 - Tool-level unknown-arg warning based on top-level schema: `cmd/browser-agent/handler.go`
 - Structured warning parser exists but is limited in use: `cmd/browser-agent/tools_validation.go`
 - Many extension params parsed from `unknown`/string JSON at execution time: `src/background/pending-queries.ts`
@@ -87,7 +87,7 @@ Impact:
 
 Evidence:
 
-- Canonical path is `/sync`: `internal/capture/syncruntime/handler.go`, `src/background/sync/sync-client.ts`
+- Canonical path is `/sync`: `internal/sync/runtime/handler.go`, `src/background/sync/sync-client.ts`
 - Legacy functions were still exported and visible through `src/background.ts`; sync ownership now lives in focused modules under `src/background/sync/`.
 
 Impact:
@@ -101,7 +101,7 @@ Evidence:
 
 - Extension sends statuses (`complete|error|timeout`), but many failures are encoded as `complete` with `error` payload.
 - Server-side processing of command results largely keys off correlation/result presence, not strict status semantics.
-- Relevant files: `src/background/pending-queries.ts`, `src/background/sync/sync-client.ts`, `internal/capture/syncruntime/handler.go`, `internal/capture/query_dispatcher.go`.
+- Relevant files: `src/background/pending-queries.ts`, `src/background/sync/sync-client.ts`, `internal/sync/runtime/handler.go`, `internal/composition/capture/query_dispatcher.go`.
 
 Impact:
 
@@ -127,11 +127,11 @@ Impact:
 1. MCP request enters via `/mcp`: `cmd/browser-agent/handler.go`.
 2. Tool dispatch occurs in `ToolHandler.HandleToolCall`: `cmd/browser-agent/tools_core.go`.
 3. Tool-specific handlers enqueue `queries.PendingQuery`: `cmd/browser-agent/tools_*.go`.
-4. Pending queries are surfaced through `/sync`: `internal/capture/syncruntime/handler.go`.
+4. Pending queries are surfaced through `/sync`: `internal/sync/runtime/handler.go`.
 5. Extension `SyncClient` receives commands: `src/background/sync/sync-client.ts`.
 6. Extension executes in `handlePendingQuery`: `src/background/pending-queries.ts`.
 7. Command results are sent back via `/sync` `command_results`.
-8. Server correlates via query ID/correlation ID: `internal/capture/syncruntime/handler.go`, `internal/capture/query_dispatcher.go`.
+8. Server correlates via query ID/correlation ID: `internal/sync/runtime/handler.go`, `internal/composition/capture/query_dispatcher.go`.
 9. Tool response is post-processed (redaction/warnings/telemetry): `cmd/browser-agent/handler.go`, `cmd/browser-agent/telemetry_passive.go`.
 
 ## Current accuracy posture

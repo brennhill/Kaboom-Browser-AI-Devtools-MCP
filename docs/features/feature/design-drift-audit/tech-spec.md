@@ -42,12 +42,12 @@ decision logic under table tests.
 
 ## Wire contract
 
-`internal/styleprobe/wire_style_probe.go` and `src/types/wire/wire-style-probe.ts`
+`internal/page/styleprobe/wire_style_probe.go` and `src/types/wire/wire-style-probe.ts`
 are the two halves of the probe payload and must change together
-(`make check-wire-drift`). `internal/schema/analyze.go` declares the `design_audit`
+(`make check-wire-drift`). `internal/tools/schema/analyze.go` declares the `design_audit`
 mode arguments (`selector`, `categories`, `spec`, `limit`, `offset`);
 `internal/tools/configure/capabilities/modespecs_analyze.go` exposes it in the
-capability matrix and `cmd/browser-agent/internal/cli/parser/observe_analyze.go`
+capability matrix and `internal/tools/cli/parser/observe_analyze.go`
 gives each one a CLI flag.
 
 A schema property that the mode's own params struct does not name is accepted

@@ -8,12 +8,12 @@ last_reviewed: 2026-08-06
 code_paths:
   - src/lib/analysis/perf-snapshot.ts
   - src/lib/analysis/vitals-attribution.ts
-  - internal/performance/wire_performance.go
-  - internal/performance/types.go
+  - internal/observation/performance/wire_performance.go
+  - internal/observation/performance/types.go
   - internal/tools/observe/session/session.go
 test_paths:
   - tests/extension/performance/web-vitals.test.js
-  - internal/performance/wire_performance_test.go
+  - internal/observation/performance/wire_performance_test.go
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-04
 ---

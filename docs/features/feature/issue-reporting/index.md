@@ -8,23 +8,23 @@ last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/internal/toolruntime/tools_core.go
   - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - internal/issuereport/handler.go
-  - internal/schema/configure/properties_core.go
-  - internal/schema/configure/properties_runtime.go
+  - internal/tools/configure/handler/dispatcher.go
+  - internal/tools/issuereport/handler.go
+  - internal/tools/schema/configure/properties_core.go
+  - internal/tools/schema/configure/properties_runtime.go
   - internal/tools/configure/capabilities/modespecs_configure.go
-  - internal/issuereport/types.go
-  - internal/issuereport/templates.go
-  - internal/issuereport/sanitize.go
-  - internal/issuereport/submit.go
+  - internal/tools/issuereport/types.go
+  - internal/tools/issuereport/templates.go
+  - internal/tools/issuereport/sanitize.go
+  - internal/tools/issuereport/submit.go
 test_paths:
   - cmd/browser-agent/composition_test.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - internal/issuereport/handler_test.go
-  - internal/issuereport/templates_test.go
-  - internal/issuereport/sanitize_test.go
-  - internal/issuereport/submit_test.go
+  - internal/tools/issuereport/handler_test.go
+  - internal/tools/issuereport/templates_test.go
+  - internal/tools/issuereport/sanitize_test.go
+  - internal/tools/issuereport/submit_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -36,7 +36,7 @@ last_verified_date: 2026-03-05
 | **Status**    | shipped                                 |
 | **Tool**      | configure                               |
 | **Mode**      | `what="report_issue"`                   |
-| **Schema**    | `internal/schema/configure/properties_runtime.go` |
+| **Schema**    | `internal/tools/schema/configure/properties_runtime.go` |
 
 ## Specs
 

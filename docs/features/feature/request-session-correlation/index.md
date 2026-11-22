@@ -6,47 +6,47 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - internal/capture/clientstore/owner.go
-  - internal/capture/perfstore/store.go
-  - internal/capture/capture.go
+  - internal/observation/clientstore/owner.go
+  - internal/observation/store/perf/store.go
+  - internal/composition/capture/capture.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/server.go
-  - cmd/browser-agent/internal/clientapi/handler.go
-  - internal/session/clientreg/registry.go
-  - internal/session/clientreg/state.go
-  - internal/session/snapshot-manager.go
-  - internal/session/comparison.go
-  - internal/session/snapdiff/types.go
-  - internal/session/snapdiff/network.go
-  - internal/session/snapdiff/performance.go
-  - internal/performance/types.go
-  - internal/session/runtime_reader.go
-  - internal/session/tool-handler.go
-  - internal/schema/configure/properties_runtime.go
-  - internal/types/snapshot.go
+  - internal/tools/clientreg/http/handler.go
+  - internal/tools/clientreg/registry.go
+  - internal/tools/clientreg/state.go
+  - internal/analysis/snapshots/snapshot-manager.go
+  - internal/analysis/snapshots/comparison.go
+  - internal/analysis/snapshots/snapdiff/types.go
+  - internal/analysis/snapshots/snapdiff/network.go
+  - internal/analysis/snapshots/snapdiff/performance.go
+  - internal/observation/performance/types.go
+  - internal/analysis/snapshots/runtime_reader.go
+  - internal/analysis/snapshots/tool-handler.go
+  - internal/tools/schema/configure/properties_runtime.go
+  - internal/platform/types/snapshot.go
   - internal/util/media.go
 test_paths:
   - cmd/browser-agent/testdata/mcp-tools-list.golden.json
-  - internal/capture/clientstore/owner_test.go
-  - internal/capture/perfstore/store_test.go
-  - cmd/browser-agent/internal/clientapi/handler_test.go
-  - internal/session/clientreg/clientreg_test.go
-  - internal/session/snapshot_manager_test.go
-  - internal/session/sessions_test.go
-  - internal/session/sessions_compare_regression_test.go
-  - internal/session/tool_handler_test.go
-  - internal/schema/configure/schema_test.go
-  - internal/session/comparison_test.go
-  - internal/session/snapdiff/errors_test.go
-  - internal/session/snapdiff/network_test.go
-  - internal/session/snapdiff/performance_test.go
-  - internal/performance/wire_performance_test.go
+  - internal/observation/clientstore/owner_test.go
+  - internal/observation/store/perf/store_test.go
+  - internal/tools/clientreg/http/handler_test.go
+  - internal/tools/clientreg/clientreg_test.go
+  - internal/analysis/snapshots/snapshot_manager_test.go
+  - internal/analysis/snapshots/sessions_test.go
+  - internal/analysis/snapshots/sessions_compare_regression_test.go
+  - internal/analysis/snapshots/tool_handler_test.go
+  - internal/tools/schema/configure/schema_test.go
+  - internal/analysis/snapshots/comparison_test.go
+  - internal/analysis/snapshots/snapdiff/errors_test.go
+  - internal/analysis/snapshots/snapdiff/network_test.go
+  - internal/analysis/snapshots/snapdiff/performance_test.go
+  - internal/observation/performance/wire_performance_test.go
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-04
 ---
 
 > **2026-07-26:** the `verify_fix` half of this feature was removed as dead code.
-> `internal/session/verify` had zero importers outside its own tests and `verify_fix`
+> `internal/analysis/snapshots/verify` had zero importers outside its own tests and `verify_fix`
 > was never registered as an MCP action, so the before/after verification loop was
 > unreachable at runtime. The session-correlation paths below are live and unaffected.
 
@@ -74,7 +74,7 @@ last_verified_date: 2026-08-04
 
 ## Code and Tests
 
-`internal/types/snapshot.go` owns the snapshot contract. Session capture and
+`internal/platform/types/snapshot.go` owns the snapshot contract. Session capture and
 diff modules consume those types directly; they do not re-export package-local
 aliases. Snapshot manager, comparison, and diff tests exercise the same
 canonical contract. Network diffing likewise consumes URL-path normalization
@@ -83,12 +83,12 @@ The session package is bounded at ten files. `snapshot-manager.go` owns its
 aggregate state, reader boundary, validation constants, and CRUD helpers;
 runtime projection, comparison, and MCP dispatch retain distinct owners.
 Client-session registry installation is owned by the focused
-`internal/capture/clientstore` package. `Capture.Clients()` exposes that
+`internal/observation/clientstore` package. `Capture.Clients()` exposes that
 canonical owner directly and stores the concrete `clientreg.ClientRegistry`.
 Runtime routes and terminal CWD detection consume that registry without
 interfaces returning `any`, adapters, JSON round trips, Capture forwarding
 methods, or root-package contract aliases.
-The canonical `internal/clientapi` owner installs and handles `/clients`
+The canonical `internal/tools/clientreg/http` owner installs and handles `/clients`
 routes. It exposes only the snake_case `ClientInfo` projection, never internal
 cursor or checkpoint state, and the root server contains no client-route
 helpers or compatibility facade.

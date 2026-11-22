@@ -33,7 +33,7 @@ last_verified_date: 2026-03-05
 - Annotation wait path supports blocking retrieval for draw mode correlation IDs (`ann_*`).
 
 ## Pagination and Filtering
-- Cursor pagination implemented for logs via `internal/pagination`.
+- Cursor pagination implemented for logs via `internal/observation/pagination`.
 - Filter keys (`url`, `method`, `status_min`, `status_max`, `level`, `min_level`, etc.) are mode-specific.
 
 ## Response Metadata Contract

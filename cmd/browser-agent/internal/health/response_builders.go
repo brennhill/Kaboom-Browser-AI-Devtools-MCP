@@ -10,11 +10,11 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/pressure"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/serverdefaults"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/ingestion/circuit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/healthreader"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/pressure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/streaming/alertbuf"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/defaults"
 )
 
 // GetHealth computes and returns the current health metrics.

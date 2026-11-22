@@ -39,7 +39,7 @@ We've built **defense-in-depth** protection for the async queue-and-poll archite
 
 ### 2. Integration Tests (Comprehensive) 🧪
 
-**File**: `internal/capture/async_queue_integration_test.go`
+**File**: `internal/composition/capture/async_queue_integration_test.go`
 **Tests**: 5 scenarios, all passing
 
 **What it validates**:
@@ -51,7 +51,7 @@ We've built **defense-in-depth** protection for the async queue-and-poll archite
 ✅ TestCorrelationIDTracking - Status visibility
 ```
 
-**Run**: `go test -v ./internal/capture -run TestAsyncQueueIntegration`
+**Run**: `go test -v ./internal/composition/capture -run TestAsyncQueueIntegration`
 
 ---
 
@@ -236,12 +236,12 @@ Update enforcement when:
 
 ```bash
 # Simulate deletion
-rm internal/queries/dispatcher_queries.go
+rm internal/browsercommand/query/dispatcher_queries.go
 git add -A
 git commit -m "test"  # Should BLOCK
 
 # Restore
-git checkout internal/queries/dispatcher_queries.go
+git checkout internal/browsercommand/query/dispatcher_queries.go
 
 # Verify
 ./scripts/quality/verification/validate-architecture.sh  # Should PASS
@@ -327,10 +327,10 @@ Ask:
 
 ```bash
 # Find last good commit
-git log --oneline -- internal/queries/dispatcher_queries.go
+git log --oneline -- internal/browsercommand/query/dispatcher_queries.go
 
 # Restore from commit
-git checkout <commit-hash> -- internal/capture/
+git checkout <commit-hash> -- internal/composition/capture/
 
 # Verify
 ./scripts/quality/verification/validate-architecture.sh
@@ -356,9 +356,9 @@ git checkout <commit-hash> -- internal/capture/
 - `.claude/agents/principal-engineer.md` (580 lines)
 
 **Tests**:
-- `internal/capture/async_queue_integration_test.go` (280 lines)
-- `internal/capture/correlation_tracking_test.go` (190 lines)
-- `internal/capture/async_queue_reliability_test.go` (274 lines)
+- `internal/composition/capture/async_queue_integration_test.go` (280 lines)
+- `internal/composition/capture/correlation_tracking_test.go` (190 lines)
+- `internal/composition/capture/async_queue_reliability_test.go` (274 lines)
 - `cmd/browser-agent/bridge_reliability_test.go` (220 lines)
 
 **Total**: ~3,700 lines of enforcement code and documentation

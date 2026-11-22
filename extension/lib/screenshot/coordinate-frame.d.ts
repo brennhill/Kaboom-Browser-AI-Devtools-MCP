@@ -49,7 +49,7 @@ export interface CoveredCssRegion {
  * does not cover, which moves every click by the zoom offset.
  */
 export declare function readPageViewportMetrics(): PageViewportMetrics;
-/** Capture kinds, mirroring internal/screenshotframe.CaptureKinds(). */
+/** Capture kinds, mirroring internal/page/screenshotframe.CaptureKinds(). */
 export type CaptureKind = 'viewport' | 'full_page' | 'element' | 'region';
 /**
  * The CSS region a capture covers, in viewport coordinates.

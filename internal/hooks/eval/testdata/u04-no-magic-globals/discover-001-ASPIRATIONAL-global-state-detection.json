@@ -1,0 +1,17 @@
+{
+  "description": "ASPIRATIONAL U4 Discovery: engine should detect mutable package-level variables as global state",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "var globalCounter int\nfunc inc() { globalCounter++ }"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["U4", "global state", "mutable"],
+    "max_latency_ms": 5000
+  }
+}

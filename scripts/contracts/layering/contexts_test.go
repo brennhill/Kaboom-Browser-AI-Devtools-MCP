@@ -11,24 +11,24 @@ func TestBoundedContextsRejectUpstreamImports(t *testing.T) {
 	p := modulePrefix
 	writeTree(t, root, map[string]string{
 		// Observation Capture stores are leaves: no commands, sync, recording, MCP or HTTP.
-		"internal/capture/telemetrystore/a.go": "package telemetrystore\n\nimport _ \"" + p + "internal/browsercommand\"\n",
-		"internal/capture/logstore/b.go":       "package logstore\n\nimport _ \"net/http\"\n",
-		"internal/capture/perfstore/c.go":      "package perfstore\n\nimport _ \"" + p + "internal/capture\"\n",
+		"internal/observation/store/telemetry/a.go": "package telemetrystore\n\nimport _ \"" + p + "internal/browsercommand\"\n",
+		"internal/observation/store/logs/b.go":      "package logstore\n\nimport _ \"net/http\"\n",
+		"internal/observation/store/perf/c.go":      "package perfstore\n\nimport _ \"" + p + "internal/composition/capture\"\n",
 		// Event Recording never reaches the command lifecycle or the sync runtime.
-		"internal/recording/d.go":          "package recording\n\nimport _ \"" + p + "internal/queries\"\n",
-		"internal/recording/playback/e.go": "package playback\n\nimport _ \"" + p + "internal/capture/syncruntime\"\n",
+		"internal/recording/d.go":          "package recording\n\nimport _ \"" + p + "internal/browsercommand/query\"\n",
+		"internal/recording/playback/e.go": "package playback\n\nimport _ \"" + p + "internal/sync/runtime\"\n",
 		// Connection & Sync does not know about tools, use cases or event recording.
-		"internal/capture/syncruntime/f.go": "package syncruntime\n\nimport _ \"" + p + "internal/recording\"\n",
+		"internal/sync/runtime/f.go": "package syncruntime\n\nimport _ \"" + p + "internal/recording\"\n",
 		// Extension HTTP ingestion does not reach the MCP tool layer.
-		"internal/capture/httpingest/g.go": "package httpingest\n\nimport _ \"" + p + "internal/tools/observe/core\"\n",
+		"internal/ingestion/http/g.go": "package httpingest\n\nimport _ \"" + p + "internal/tools/observe/core\"\n",
 
 		// Clean: allowed downstream dependencies.
-		"internal/capture/telemetrystore/ok.go": "package telemetrystore\n\nimport _ \"" + p + "internal/capture/ringstore\"\n",
-		"internal/recording/actionlog/ok.go":    "package actionlog\n\nimport _ \"" + p + "internal/capture/telemetrystore\"\n",
-		"internal/capture/syncruntime/ok.go":    "package syncruntime\n\nimport (\n\t_ \"net/http\"\n\t_ \"" + p + "internal/browsercommand\"\n\t_ \"" + p + "internal/capture/logstore\"\n)\n",
-		"internal/capture/httpingest/ok.go":     "package httpingest\n\nimport _ \"" + p + "internal/recording\"\n",
+		"internal/observation/store/telemetry/ok.go": "package telemetrystore\n\nimport _ \"" + p + "internal/observation/store/ring\"\n",
+		"internal/recording/actionlog/ok.go":         "package actionlog\n\nimport _ \"" + p + "internal/observation/store/telemetry\"\n",
+		"internal/sync/runtime/ok.go":                "package syncruntime\n\nimport (\n\t_ \"net/http\"\n\t_ \"" + p + "internal/browsercommand\"\n\t_ \"" + p + "internal/observation/store/logs\"\n)\n",
+		"internal/ingestion/http/ok.go":              "package httpingest\n\nimport _ \"" + p + "internal/recording\"\n",
 		// Test files are exempt.
-		"internal/capture/logstore/x_test.go": "package logstore\n\nimport _ \"" + p + "internal/browsercommand\"\n",
+		"internal/observation/store/logs/x_test.go": "package logstore\n\nimport _ \"" + p + "internal/browsercommand\"\n",
 	})
 	scan, err := scanTree(root)
 	if err != nil {
@@ -36,13 +36,13 @@ func TestBoundedContextsRejectUpstreamImports(t *testing.T) {
 	}
 	violations := evaluateMatrix(scan)
 	want := []string{
-		"internal/capture/telemetrystore/a.go (Observation Capture) imports " + p + "internal/browsercommand",
-		"internal/capture/logstore/b.go (Observation Capture) imports net/http",
-		"internal/capture/perfstore/c.go (Observation Capture) imports " + p + "internal/capture",
-		"internal/recording/d.go (Event Recording) imports " + p + "internal/queries",
-		"internal/recording/playback/e.go (Event Recording) imports " + p + "internal/capture/syncruntime",
-		"internal/capture/syncruntime/f.go (Connection & Sync) imports " + p + "internal/recording",
-		"internal/capture/httpingest/g.go (Extension Ingestion) imports " + p + "internal/tools/observe/core",
+		"internal/observation/store/telemetry/a.go (Observation Capture) imports " + p + "internal/browsercommand",
+		"internal/observation/store/logs/b.go (Observation Capture) imports net/http",
+		"internal/observation/store/perf/c.go (Observation Capture) imports " + p + "internal/composition/capture",
+		"internal/recording/d.go (Event Recording) imports " + p + "internal/browsercommand/query",
+		"internal/recording/playback/e.go (Event Recording) imports " + p + "internal/sync/runtime",
+		"internal/sync/runtime/f.go (Connection & Sync) imports " + p + "internal/recording",
+		"internal/ingestion/http/g.go (Extension Ingestion) imports " + p + "internal/tools/observe/core",
 	}
 	if len(violations) != len(want) {
 		t.Fatalf("violations = %v\nwant %d context breaches", violations, len(want))

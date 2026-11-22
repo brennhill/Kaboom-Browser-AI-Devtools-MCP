@@ -6,30 +6,30 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - internal/capture/pressure/stats.go
-  - internal/capture/perfstore/store.go
+  - internal/observation/pressure/stats.go
+  - internal/observation/store/perf/store.go
   - internal/capture/settingscache/loader.go
-  - internal/incident/registry.go
-  - internal/incident/store.go
-  - internal/incident/projections.go
-  - internal/incident/support.go
-  - internal/statediag/collector.go
+  - internal/lifecycle/doctor/incident/registry.go
+  - internal/lifecycle/doctor/incident/store.go
+  - internal/lifecycle/doctor/incident/projections.go
+  - internal/lifecycle/doctor/incident/support.go
+  - internal/lifecycle/doctor/statediag/collector.go
   - internal/telemetry/beacon.go
   - cmd/browser-agent/internal/doctorsupport/handler.go
   - cmd/browser-agent/internal/doctorsupport/projections.go
   - cmd/browser-agent/internal/operationalapi/handler.go
-  - internal/schema/configure/properties_core.go
+  - internal/tools/schema/configure/properties_core.go
 test_paths:
-  - internal/capture/logstore/store_test.go
-  - internal/capture/perfstore/store_test.go
+  - internal/observation/store/logs/store_test.go
+  - internal/observation/store/perf/store_test.go
   - internal/capture/settingscache/loader_test.go
-  - internal/capture/pipelinetest/accessor_unit_test.go
-  - internal/incident/store_test.go
-  - internal/incident/support_test.go
+  - internal/observation/testsupport/pipeline/accessor_unit_test.go
+  - internal/lifecycle/doctor/incident/store_test.go
+  - internal/lifecycle/doctor/incident/support_test.go
   - cmd/browser-agent/internal/doctorsupport/handler_test.go
   - cmd/browser-agent/internal/doctorsupport/projections_test.go
   - cmd/browser-agent/internal/operationalapi/coverage_contract_test.go
-  - internal/statediag/collector_test.go
+  - internal/lifecycle/doctor/statediag/collector_test.go
   - internal/telemetry/contract_compliance_test.go
   - internal/telemetry/beacon_test.go
   - tests/architecture/user-state-loaders.test.cjs
@@ -76,7 +76,7 @@ bounded, use single-pass eviction, and expose dropped-entry counts rather than
 silently losing pressure signals.
 
 Disposable capture owners report resource pressure through the neutral
-`internal/capture/pressure` value contract. Extension logs, browser telemetry,
+`internal/observation/pressure` value contract. Extension logs, browser telemetry,
 performance samples, and health projections therefore expose consistent size,
 capacity, cumulative-drop, and oldest-entry evidence without importing one
 another or duplicating operational types.

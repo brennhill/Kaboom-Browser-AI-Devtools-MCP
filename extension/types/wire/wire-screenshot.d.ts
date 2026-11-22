@@ -1,5 +1,5 @@
 /**
- * @fileoverview Wire types for the screenshot coordinate frame — matches internal/screenshotframe/wire_screenshot.go
+ * @fileoverview Wire types for the screenshot coordinate frame — matches internal/page/screenshotframe/wire_screenshot.go
  *
  * Canonical TypeScript definitions for the frame that maps a screenshot pixel to a clickable coordinate.
  * Changes here MUST be mirrored in the Go counterpart. Run `make check-wire-drift`.

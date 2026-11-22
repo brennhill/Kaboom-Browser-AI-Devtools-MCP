@@ -9,7 +9,7 @@ package logstore
 import (
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )
 
 // SeedEntries appends entries to the in-memory window and, when addedAt is

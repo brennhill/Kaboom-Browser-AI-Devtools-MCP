@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/synctranscript"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/transcript"
 )
 
 const recordedDOM = `{"elements":[{"tag":"main","selector":"main.content"}],"count":1}`

@@ -295,9 +295,9 @@ By default, only `on_error` is true (screenshots on errors are the highest-value
 
 Current state (reviewed 2026-11-21): the base generators ship, the enhancements in this spec do not.
 
-- Reproduction scripts: `internal/reproduction/reproduction.go` (`Params`, dispatch on `output_format`), `internal/reproduction/reproduction_playwright.go`, `internal/reproduction/reproduction_kaboom.go`; tests in `internal/reproduction/reproduction_test.go` and `internal/reproduction/golden_test.go`.
-- Test generation: `cmd/browser-agent/internal/testgenhandler/generate.go`; tests in `cmd/browser-agent/internal/testgenhandler/entrypoints_test.go`.
-- Schema: `internal/schema/generate.go` already advertises `include_screenshots`, `generate_fixtures` and `visual_assertions` for `generate({what:"reproduction"})`, but the generator ignores them (`IncludeScreenshots` is parsed and unused; the other two are not parsed).
+- Reproduction scripts: `internal/recording/reproduction/reproduction.go` (`Params`, dispatch on `output_format`), `internal/recording/reproduction/reproduction_playwright.go`, `internal/recording/reproduction/reproduction_kaboom.go`; tests in `internal/recording/reproduction/reproduction_test.go` and `internal/recording/reproduction/golden_test.go`.
+- Test generation: `internal/tools/generate/testgen/generate.go`; tests in `internal/tools/generate/testgen/entrypoints_test.go`.
+- Schema: `internal/tools/schema/generate.go` already advertises `include_screenshots`, `generate_fixtures` and `visual_assertions` for `generate({what:"reproduction"})`, but the generator ignores them (`IncludeScreenshots` is parsed and unused; the other two are not parsed).
 - Screenshots: the shipped path is `observe({what:"screenshot"})`; the auto-capture configuration, `capture_screenshot` tool and Markdown bug report are not built.
 
-Planned: implement the flags in `internal/reproduction/`, with tests alongside, and any extension-side capture in `src/background/`.
+Planned: implement the flags in `internal/recording/reproduction/`, with tests alongside, and any extension-side capture in `src/background/`.

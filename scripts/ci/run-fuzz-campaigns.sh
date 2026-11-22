@@ -8,12 +8,12 @@ ARTIFACT_DIR="artifacts/fuzz"
 mkdir -p "$ARTIFACT_DIR"
 
 TARGETS=(
-  "./internal/qafixture|FuzzParseFixture"
-  "./internal/qafixture|FuzzRegistryGenerationTransitions"
-  "./internal/statediag|FuzzCollectorLifecycleTransitions"
-  "./internal/capture|FuzzSyncRequestCanonicalRoundTrip"
-  "./internal/redaction|FuzzRedactJSON"
-  "./internal/security/scan|FuzzSecurityPatterns"
+  "./internal/testgen/qafixture|FuzzParseFixture"
+  "./internal/testgen/qafixture|FuzzRegistryGenerationTransitions"
+  "./internal/lifecycle/doctor/statediag|FuzzCollectorLifecycleTransitions"
+  "./internal/composition/capture|FuzzSyncRequestCanonicalRoundTrip"
+  "./internal/platform/redaction|FuzzRedactJSON"
+  "./internal/analysis/security/scan|FuzzSecurityPatterns"
 )
 
 case "$MODE" in

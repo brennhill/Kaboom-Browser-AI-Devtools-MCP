@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/page/screenshotframe"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/paths"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/screenshotframe"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push/adapters/http"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )

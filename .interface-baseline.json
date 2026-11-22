@@ -2,10 +2,10 @@
   "version": 1,
   "max_methods": 7,
   "interfaces": {
-    "cmd/browser-agent/internal/toolmodule/registry.go:Module": "producer-owned",
-    "internal/issuereport/submit.go:CommandRunner": "producer-owned",
-    "internal/pagination/pagination.go:Sequenced": "producer-owned",
+    "internal/tools/module/registry.go:Module": "producer-owned",
+    "internal/tools/issuereport/submit.go:CommandRunner": "producer-owned",
+    "internal/observation/pagination/pagination.go:Sequenced": "producer-owned",
     "internal/server/log_accessor.go:LogReader": "producer-owned",
-    "internal/session/snapshot-manager.go:CaptureStateReader": "producer-owned"
+    "internal/analysis/snapshots/snapshot-manager.go:CaptureStateReader": "producer-owned"
   }
 }

@@ -8,7 +8,7 @@ last_reviewed: 2026-08-04
 
 ## Ownership
 
-`scripts/ci/run-flake-detection.mjs` owns campaign planning, process execution, bounded output capture, reproduction, classification, and artifact serialization. `.github/workflows/flake-detection.yml` owns scheduling and evidence upload. `internal/flakerepro` supplies the deterministic Go reproduction model also used by workflow verification.
+`scripts/ci/run-flake-detection.mjs` owns campaign planning, process execution, bounded output capture, reproduction, classification, and artifact serialization. `.github/workflows/flake-detection.yml` owns scheduling and evidence upload. `internal/analysis/flakerepro` supplies the deterministic Go reproduction model also used by workflow verification.
 
 ## Contracts
 
@@ -25,4 +25,4 @@ Process launch errors, timeouts, non-zero exits, and missing artifacts remain fa
 
 ## Change Boundary
 
-Campaign behavior and its JavaScript tests change together. Changes to reusable reproduction verdicts or attempt semantics also update `internal/flakerepro` and its Go tests.
+Campaign behavior and its JavaScript tests change together. Changes to reusable reproduction verdicts or attempt semantics also update `internal/analysis/flakerepro` and its Go tests.

@@ -9,7 +9,7 @@ package errorcluster
 import (
 	"sort"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )
 
 // keyCap bounds the fingerprint length so a stack-laden message cannot become a

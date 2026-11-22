@@ -1,0 +1,16 @@
+{
+  "description": "Properly formatted error (uppercase start) should NOT trigger DECISION-002",
+  "hook": "decision-guard",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "return errors.New(\"ReadInput: cannot read stdin. Check file descriptor\")"
+    }
+  },
+  "expect": {
+    "has_output": false,
+    "max_latency_ms": 200
+  }
+}

@@ -6,11 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
-  - cmd/browser-agent/internal/httpguard/apikey.go
-  - cmd/browser-agent/internal/httpguard/middleware.go
+  - internal/platform/httpguard/apikey.go
+  - internal/platform/httpguard/middleware.go
 test_paths:
-  - cmd/browser-agent/internal/httpguard/apikey_test.go
-  - cmd/browser-agent/internal/httpguard/middleware_test.go
+  - internal/platform/httpguard/apikey_test.go
+  - internal/platform/httpguard/middleware_test.go
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-29
 ---
@@ -38,6 +38,6 @@ last_verified_date: 2026-03-29
 
 ## Code and Tests
 
-- Auth middleware: `cmd/browser-agent/internal/httpguard/apikey.go`
-- CORS allowlist for auth header: `cmd/browser-agent/internal/httpguard/middleware.go`
-- Tests: `cmd/browser-agent/internal/httpguard/apikey_test.go`
+- Auth middleware: `internal/platform/httpguard/apikey.go`
+- CORS allowlist for auth header: `internal/platform/httpguard/middleware.go`
+- Tests: `internal/platform/httpguard/apikey_test.go`

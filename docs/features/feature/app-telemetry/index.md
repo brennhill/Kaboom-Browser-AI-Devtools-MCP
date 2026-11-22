@@ -10,14 +10,14 @@ code_paths:
   - internal/telemetry/beacon.go
   - internal/telemetry/install_id.go
   - internal/telemetry/usage_counter.go
-  - internal/statefault/fault.go
-  - internal/statefile/statefile.go
+  - internal/platform/state/fault/fault.go
+  - internal/platform/state/file/statefile.go
   - cmd/browser-agent/internal/operationalapi/handler.go
-  - cmd/browser-agent/internal/toolusage/key.go
-  - internal/statediag/collector.go
-  - internal/incident/registry.go
-  - internal/incident/store.go
-  - internal/incident/projections.go
+  - internal/tools/usage/key.go
+  - internal/lifecycle/doctor/statediag/collector.go
+  - internal/lifecycle/doctor/incident/registry.go
+  - internal/lifecycle/doctor/incident/store.go
+  - internal/lifecycle/doctor/incident/projections.go
 test_paths:
   - internal/telemetry/usagecallback/callback_test.go
   - tests/architecture/user-state-loaders.test.cjs
@@ -29,10 +29,10 @@ test_paths:
   - internal/telemetry/install_id_test.go
   - internal/telemetry/usage_counter_test.go
   - cmd/browser-agent/internal/operationalapi/debug_test.go
-  - cmd/browser-agent/internal/toolusage/key_test.go
+  - internal/tools/usage/key_test.go
   - cmd/browser-agent/composition_test.go
-  - internal/statediag/collector_test.go
-  - internal/incident/store_test.go
+  - internal/lifecycle/doctor/statediag/collector_test.go
+  - internal/lifecycle/doctor/incident/store_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/tests/contracts/app-telemetry-producers.test.mjs

@@ -6,7 +6,7 @@ package logstore
 import (
 	"encoding/json"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )
 
 // validLevels defines accepted log level values.

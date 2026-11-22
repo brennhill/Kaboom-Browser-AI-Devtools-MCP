@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
-	ptyfanout "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/fanout"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty"
+	ptyfanout "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty/fanout"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 

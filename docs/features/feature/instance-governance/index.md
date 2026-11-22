@@ -6,54 +6,54 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - internal/proclock/proclock.go
-  - internal/proclock/proclock_unix.go
-  - internal/proclock/proclock_windows.go
-  - internal/procidentity/procidentity.go
-  - internal/procidentity/procidentity_unix.go
-  - internal/procidentity/procidentity_windows.go
-  - internal/procidentity/procidentity_info.go
-  - internal/instancereg/registry.go
-  - internal/instancereg/prune.go
-  - internal/instancegov/instancegov.go
-  - internal/instancegov/policy.go
-  - internal/instancegov/cpu.go
-  - internal/instancegov/runtime.go
-  - internal/idlewatch/idlewatch.go
-  - internal/procwatch/procwatch.go
-  - internal/retention/retention.go
-  - internal/reaper/reaper.go
-  - internal/reaper/census.go
-  - internal/reaper/staledirs.go
-  - internal/semver/semver.go
-  - internal/state/paths.go
+  - internal/lifecycle/process/lock/proclock.go
+  - internal/lifecycle/process/lock/proclock_unix.go
+  - internal/lifecycle/process/lock/proclock_windows.go
+  - internal/lifecycle/process/identity/procidentity.go
+  - internal/lifecycle/process/identity/procidentity_unix.go
+  - internal/lifecycle/process/identity/procidentity_windows.go
+  - internal/lifecycle/process/identity/procidentity_info.go
+  - internal/lifecycle/instance/registry/registry.go
+  - internal/lifecycle/instance/registry/prune.go
+  - internal/lifecycle/instance/gov/instancegov.go
+  - internal/lifecycle/instance/gov/policy.go
+  - internal/lifecycle/instance/gov/cpu.go
+  - internal/lifecycle/instance/gov/runtime.go
+  - internal/lifecycle/idlewatch/idlewatch.go
+  - internal/lifecycle/process/watch/procwatch.go
+  - internal/lifecycle/retention/retention.go
+  - internal/lifecycle/instance/reaper/reaper.go
+  - internal/lifecycle/instance/reaper/census.go
+  - internal/lifecycle/instance/reaper/staledirs.go
+  - internal/platform/semver/semver.go
+  - internal/platform/state/paths/paths.go
   - cmd/browser-agent/daemon_governance.go
-  - cmd/browser-agent/internal/retentionsweep/retention.go
-  - cmd/browser-agent/internal/censuscmd/census.go
+  - internal/lifecycle/retention/sweep/retention.go
+  - internal/lifecycle/instance/censuscmd/census.go
   - cmd/browser-agent/config.go
   - cmd/browser-agent/main_connection_mcp.go
-  - cmd/browser-agent/internal/bridge/bridge_governance.go
-  - cmd/browser-agent/internal/bridge/bridge_startup.go
-  - cmd/browser-agent/internal/procctl/terminate.go
-  - cmd/browser-agent/internal/runtimeflags/flags.go
-  - cmd/browser-agent/internal/startupconfig/help.go
+  - internal/lifecycle/bridge/bridge_governance.go
+  - internal/lifecycle/bridge/bridge_startup.go
+  - internal/lifecycle/procctl/terminate.go
+  - internal/lifecycle/runtimeflags/flags.go
+  - internal/lifecycle/startupconfig/help.go
 test_paths:
-  - cmd/browser-agent/internal/censuscmd/census_test.go
-  - internal/proclock/proclock_test.go
-  - internal/procidentity/procidentity_test.go
-  - internal/instancereg/registry_test.go
-  - internal/instancegov/policy_test.go
-  - internal/instancegov/instancegov_test.go
-  - internal/idlewatch/idlewatch_test.go
-  - internal/procwatch/procwatch_test.go
-  - internal/retention/retention_test.go
-  - internal/reaper/reaper_test.go
-  - internal/reaper/census_test.go
-  - internal/reaper/staledirs_test.go
-  - internal/semver/semver_test.go
+  - internal/lifecycle/instance/censuscmd/census_test.go
+  - internal/lifecycle/process/lock/proclock_test.go
+  - internal/lifecycle/process/identity/procidentity_test.go
+  - internal/lifecycle/instance/registry/registry_test.go
+  - internal/lifecycle/instance/gov/policy_test.go
+  - internal/lifecycle/instance/gov/instancegov_test.go
+  - internal/lifecycle/idlewatch/idlewatch_test.go
+  - internal/lifecycle/process/watch/procwatch_test.go
+  - internal/lifecycle/retention/retention_test.go
+  - internal/lifecycle/instance/reaper/reaper_test.go
+  - internal/lifecycle/instance/reaper/census_test.go
+  - internal/lifecycle/instance/reaper/staledirs_test.go
+  - internal/platform/semver/semver_test.go
   - cmd/browser-agent/daemon_governance_test.go
-  - cmd/browser-agent/internal/retentionsweep/retention_test.go
-  - cmd/browser-agent/internal/bridge/bridge_governance_test.go
+  - internal/lifecycle/retention/sweep/retention_test.go
+  - internal/lifecycle/bridge/bridge_governance_test.go
   - cmd/browser-agent/internal/integrationtest/instance_cap_test.go
 ---
 
@@ -82,15 +82,15 @@ Measured on one developer machine before this feature:
 
 ## Design
 
-1. **Kernel-held singleton** (`internal/proclock`). `flock`/`LockFileEx` held for
+1. **Kernel-held singleton** (`internal/lifecycle/process/lock`). `flock`/`LockFileEx` held for
    the process lifetime. Mutual exclusion is guaranteed by the kernel and released
    on any death including SIGKILL and OOM, so there are no stale-lock heuristics,
    no grace windows, and no read-decide-write race.
-2. **Machine-wide registry** (`internal/instancereg`). Its location ignores
+2. **Machine-wide registry** (`internal/lifecycle/instance/registry`). Its location ignores
    `KABOOM_STATE_DIR`: isolation isolates *data*, never *accounting*. Under
    `go test` an explicit `KABOOM_REGISTRY_DIR` is required, so a test can never
    write into a developer's home — the defect that produced the 750MB above.
-3. **Identity-checked liveness** (`internal/procidentity`). Liveness compares pid
+3. **Identity-checked liveness** (`internal/lifecycle/process/identity`). Liveness compares pid
    **plus start time plus command**, because `kill(pid, 0)` answers "does some
    process hold this pid", not "is my process still running".
 4. **Admission with caps** (`instancegov.Admit`, `instancegov.Surplus`). One
@@ -99,19 +99,19 @@ Measured on one developer machine before this feature:
    only in whether a candidate is joining (`incoming` 1 or 0), and ONE wedged
    predicate (`instancegov.IsWedged`) — those pairs had already drifted apart once,
    disagreeing about a record whose heartbeat could not be parsed.
-5. **Idle exit** (`internal/idlewatch`). A daemon serving nobody releases its
+5. **Idle exit** (`internal/lifecycle/idlewatch`). A daemon serving nobody releases its
    ports. Any unreadable work signal counts as busy, so it never exits mid-recording.
-6. **Bridge parent-death** (`internal/procwatch`). stdin EOF covers a clean client
+6. **Bridge parent-death** (`internal/lifecycle/process/watch`). stdin EOF covers a clean client
    exit; this covers a client that was killed and never closed the pipe.
-7. **Reaper and census** (`internal/reaper`, `--instances`, `--reap`).
-8. **Retention budgets** (`internal/retention`). Count, bytes, and age per
+7. **Reaper and census** (`internal/lifecycle/instance/reaper`, `--instances`, `--reap`).
+8. **Retention budgets** (`internal/lifecycle/retention`). Count, bytes, and age per
    directory, applied hourly with single-pass eviction.
 9. **Cross-process proof** (`instance_cap_test.go`). Eight daemons launch
    simultaneously; exactly one binds and seven exit 0.
 
 ## What this replaced
 
-Singleton admission previously lived in `cmd/browser-agent/internal/daemonlife` as a
+Singleton admission previously lived in `internal/lifecycle/daemon` as a
 per-state-directory lock file with PID-based liveness, a startup grace window, and
 its own takeover policy. That package shrank from 2,369 to 1,116 lines when the
 kernel lock took over: `lock_file.go`, `EnforceStartupPolicy`, `PersistCurrentLock`,
@@ -127,8 +127,8 @@ incumbent — by asking it to stand down and then taking the freed lock, never b
 racing it.
 
 The operator surfaces are packages, not files in `main`. `--instances`/`--reap`
-live in `cmd/browser-agent/internal/censuscmd` (`Census`, `Reap`) and the hourly
-capture-budget sweep in `cmd/browser-agent/internal/retentionsweep` (`Start`,
+live in `internal/lifecycle/instance/censuscmd` (`Census`, `Reap`) and the hourly
+capture-budget sweep in `internal/lifecycle/retention/sweep` (`Start`,
 `Sweep`, `Budgets`). The sweeper takes a `LogLifecycle` function rather than the
 whole `*Server`, so it depends on the one thing it uses instead of the composition
 root, and `retention_test.go` moved with it.

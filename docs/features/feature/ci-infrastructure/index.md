@@ -18,7 +18,7 @@ code_paths:
   - cmd/browser-agent/internal/ciapi/types.go
   - cmd/browser-agent/server.go
 test_paths:
-  - internal/capture/resetter/resetter_test.go
+  - internal/observation/resetter/resetter_test.go
   - tests/extension/contracts/tooling-contracts.test.js
   - tests/extension/misc/integration.test.cjs
   - cmd/browser-agent/internal/ciapi/snapshot_test.go

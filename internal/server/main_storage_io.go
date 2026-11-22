@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )
 
 // loadEntries reads existing log entries from file.

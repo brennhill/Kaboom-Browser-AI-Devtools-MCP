@@ -21,13 +21,13 @@ background (src/background/message-routing/telemetry-handler.ts)
   environmentPinFor(tab) -> environment     (pin stamp, only when the tab is pinned)
         |
         v  HTTP, WireEnhancedAction
-daemon (internal/capture/actionstore) -> internal/reproduction
+daemon (internal/observation/store/actions) -> internal/recording/reproduction
   BuildLocators / SessionPin -> Playwright and kaboom-native artifacts
 ```
 
 ## Wire contract
 
-`internal/types/wire_enhanced_action.go` is the source of truth; `src/types/wire/wire-enhanced-action.ts`
+`internal/platform/types/wire_enhanced_action.go` is the source of truth; `src/types/wire/wire-enhanced-action.ts`
 is generated from it by `scripts/build/generate-wire-types.js`. Added there:
 
 - `WireAXLocator` — `ref`, `role`, `name`.
@@ -43,7 +43,7 @@ already holds, so a snapshot would disagree with itself.
 
 ## Emission
 
-`internal/reproduction/reproduction_locators.go` owns:
+`internal/recording/reproduction/reproduction_locators.go` owns:
 
 - `FallbackOrder` — the single declaration of selector -> ax -> coordinate, rendered into both
   artifacts as `FallbackOrderLabel`.
@@ -92,7 +92,7 @@ the browser would not pin — blaming the browser for a caller's typo.
 
 ## Budgets
 
-- `internal/reproduction`: 8 files before, 10 after (at the folder limit, not over).
+- `internal/recording/reproduction`: 8 files before, 10 after (at the folder limit, not over).
 - `src/background/dom/cdp`: 7 -> 8. `src/background/environment-transaction`: 5 -> 6.
-- `internal/types` stays at 10 files: the new wire structs extend `wire_enhanced_action.go`.
+- `internal/platform/types` stays at 10 files: the new wire structs extend `wire_enhanced_action.go`.
 - `early-patch.bundled.js`: 3.8 KB -> 4.6 KB against a 250 KB per-file cap.

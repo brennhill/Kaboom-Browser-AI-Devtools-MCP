@@ -8,10 +8,10 @@ links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
-  - internal/hook/blast_radius.go
+  - internal/hooks/blast_radius.go
   - cmd/hooks/main.go
 test_paths:
-  - internal/hook/blast_radius_test.go
+  - internal/hooks/blast_radius_test.go
   - cmd/hooks/main_test.go
 ---
 
@@ -25,12 +25,12 @@ test_paths:
 
 ## Requirement Mapping
 
-- BLAST_001 -> `internal/hook/blast_radius.go:RunBlastRadius()` — main entry point
-- BLAST_002 -> `internal/hook/blast_radius.go:buildImportGraph()` — per-language import scanning
-- BLAST_003 -> `internal/hook/blast_radius.go:buildImportGraph()` + `loadCachedGraph()`
-- BLAST_004 -> `internal/hook/blast_radius.go:annotateWithSession()` — reads session touches
-- BLAST_005 -> `internal/hook/blast_radius.go:formatDependents()` — graduated output
-- BLAST_006 -> `internal/hook/blast_radius.go:touchesExportedSymbol()` — export detection
+- BLAST_001 -> `internal/hooks/blast_radius.go:RunBlastRadius()` — main entry point
+- BLAST_002 -> `internal/hooks/blast_radius.go:buildImportGraph()` — per-language import scanning
+- BLAST_003 -> `internal/hooks/blast_radius.go:buildImportGraph()` + `loadCachedGraph()`
+- BLAST_004 -> `internal/hooks/blast_radius.go:annotateWithSession()` — reads session touches
+- BLAST_005 -> `internal/hooks/blast_radius.go:formatDependents()` — graduated output
+- BLAST_006 -> `internal/hooks/blast_radius.go:touchesExportedSymbol()` — export detection
 - BLAST_007 -> benchmarked in tests
 
 ## Import Graph
@@ -158,7 +158,7 @@ The hook checks if `new_string` contains any of these patterns. If not, the edit
 [Blast Radius] 3 files import this module:
   internal/server/routes.go (already in session)
   cmd/browser-agent/main.go (not yet visited)
-  internal/capture/httpingest/handlers.go (not yet visited)
+  internal/ingestion/http/handlers.go (not yet visited)
 Verify these files are compatible with your changes.
 ```
 
@@ -167,9 +167,9 @@ Verify these files are compatible with your changes.
 [Blast Radius] 8 files import this module:
   internal/server/routes.go (already in session)
   cmd/browser-agent/main.go (not yet visited)
-  internal/capture/httpingest/handlers.go (already in session)
-  internal/capture/syncruntime/handler.go (not yet visited)
-  internal/capture/websocket.go (not yet visited)
+  internal/ingestion/http/handlers.go (already in session)
+  internal/sync/runtime/handler.go (not yet visited)
+  internal/composition/capture/websocket.go (not yet visited)
   ...and 3 more
 Verify these files are compatible with your changes.
 ```

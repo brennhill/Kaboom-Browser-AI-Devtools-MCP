@@ -8,13 +8,13 @@ links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
-  - internal/hook/conventions/conventions.go
-  - internal/hook/hook_policy.go
+  - internal/hooks/conventions/conventions.go
+  - internal/hooks/hook_policy.go
 test_paths:
-  - internal/hook/conventions/conventions_test.go
-  - internal/hook/hook_policy_test.go
-  - internal/hook/eval/testdata/quality-gate/
-  - internal/hook/eval/testdata/u01-errors-not-ignored/
+  - internal/hooks/conventions/conventions_test.go
+  - internal/hooks/hook_policy_test.go
+  - internal/hooks/eval/testdata/quality-gate/
+  - internal/hooks/eval/testdata/u01-errors-not-ignored/
 ---
 
 # Convention Engine Tech Spec
@@ -118,7 +118,7 @@ AI calls Edit/Write
 
 ## Implementation Strategy
 
-The engine is implemented entirely inside `internal/hook`. It introduces no new subcommand and no new config beyond the optional `duplicate_threshold` already present in `.kaboom.json`. Discovery and detection share helpers (`matchesExtension`, `extensionFamily`, `isGenerated`, `skipDirs`) so the walk rules stay consistent across both passes.
+The engine is implemented entirely inside `internal/hooks`. It introduces no new subcommand and no new config beyond the optional `duplicate_threshold` already present in `.kaboom.json`. Discovery and detection share helpers (`matchesExtension`, `extensionFamily`, `isGenerated`, `skipDirs`) so the walk rules stay consistent across both passes.
 
 **Language families** (`extensionFamily`):
 - `.go` → `.go`
@@ -160,4 +160,4 @@ The engine is implemented entirely inside `internal/hook`. It introduces no new 
 
 ## Validation
 
-Phase 1 is validated by `convention_discover_test.go`, `convention_detect_test.go`, and `quality_gate_test.go`, plus eval fixtures under `internal/hook/eval/testdata/quality-gate/` and the universal-principle directories `u01`..`u10`. The eval rig runs these against the Kaboom codebase itself, so discovery is exercised on a real import graph.
+Phase 1 is validated by `convention_discover_test.go`, `convention_detect_test.go`, and `quality_gate_test.go`, plus eval fixtures under `internal/hooks/eval/testdata/quality-gate/` and the universal-principle directories `u01`..`u10`. The eval rig runs these against the Kaboom codebase itself, so discovery is exercised on a real import graph.

@@ -12,7 +12,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/diag"
 )
 
 // FastPathTelemetrySummary holds aggregated fast-path telemetry stats.

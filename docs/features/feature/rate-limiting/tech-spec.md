@@ -38,7 +38,7 @@ The threshold applies globally across all ingest endpoints combined — not per-
 
 ### Server-Side: Circuit Breaker
 
-The circuit breaker is a separate mechanism from rate limiting, implemented by `CircuitBreaker` in `internal/circuit/breaker.go`:
+The circuit breaker is a separate mechanism from rate limiting, implemented by `CircuitBreaker` in `internal/ingestion/circuit/breaker.go`:
 
 1. **Rate**: More than 1000 events/second (`RateLimitThreshold`) sustained for 5 consecutive seconds (`CircuitOpenStreakCount`) → circuit opens with reason `rate_exceeded`
 2. **Forced open**: Other subsystems may call `ForceOpen(reason)`; memory pressure is handled by memory enforcement, not by a breaker threshold
@@ -195,6 +195,6 @@ The extension can poll this cheaply to detect circuit state changes without wait
 
 ## File Locations
 
-Server implementation: `internal/circuit/breaker.go` (owned by `internal/capture/capture.go`, checked in `internal/capture/httpingest/handlers.go`) with tests in `internal/circuit/breaker_test.go`.
+Server implementation: `internal/ingestion/circuit/breaker.go` (owned by `internal/composition/capture/capture.go`, checked in `internal/ingestion/http/handlers.go`) with tests in `internal/ingestion/circuit/breaker_test.go`.
 
 Extension implementation: `src/background/sync/circuit-breaker.ts` with tests in `tests/extension/reliability/circuit-breaker.test.js` and `tests/extension/performance/rate-limit.test.js`.

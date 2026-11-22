@@ -59,13 +59,13 @@ client initialize request
 
 MCP constraints are owned by the boundary they protect:
 
-- `cmd/browser-agent/internal/mcprouter/router_test.go` — JSON-RPC envelope,
+- `internal/tools/mcpserver/router/router_test.go` — JSON-RPC envelope,
   method, ID, version-negotiation, and notification semantics
-- `cmd/browser-agent/internal/mcpprotocol/responses_test.go` — initialize,
+- `internal/tools/mcpserver/protocol/responses_test.go` — initialize,
   discovery, and resource response contracts
-- `cmd/browser-agent/internal/mcphttp/handler_test.go` — HTTP request parsing,
+- `internal/tools/mcpserver/http/handler_test.go` — HTTP request parsing,
   error codes, notification status, and newline framing
-- `cmd/browser-agent/internal/bridge/bridge_unit_test.go` — line and
+- `internal/lifecycle/bridge/bridge_unit_test.go` — line and
   content-length stdio framing, including invalid-payload recovery
 - `scripts/uat/protocol/test-mcp-spec-compliance.sh` — installed-artifact
   protocol verification through the complete bridge and daemon stack

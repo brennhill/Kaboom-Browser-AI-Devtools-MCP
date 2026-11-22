@@ -27,7 +27,7 @@ const USER_PORT = 7890;
 const INTEGRATION_TEST_PORT = 7899;
 
 // KABOOM_PORT is honoured here because the Go daemon already honours it
-// (cmd/browser-agent/internal/cli/cli.go). Without it the launcher was pinned
+// (internal/tools/cli/cli.go). Without it the launcher was pinned
 // to USER_PORT, so any test exercising it necessarily targeted the developer's
 // own daemon.
 function resolveDefaultPort() {

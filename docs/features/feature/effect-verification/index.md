@@ -6,25 +6,25 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-05
 code_paths:
-  - cmd/browser-agent/internal/actioneffects/effects.go
-  - cmd/browser-agent/internal/actioneffects/classify.go
-  - cmd/browser-agent/internal/interactdispatch/effects.go
-  - cmd/browser-agent/internal/interactdispatch/handler.go
+  - internal/tools/interact/effects/effects.go
+  - internal/tools/interact/effects/classify.go
+  - internal/tools/interact/dispatch/effects.go
+  - internal/tools/interact/dispatch/handler.go
   - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
-  - cmd/browser-agent/internal/toolinteract/action_owners.go
-  - cmd/browser-agent/internal/cli/parser/interact.go
-  - cmd/browser-agent/internal/cli/parser/flags.go
-  - internal/schema/interact/properties_core.go
-  - internal/mcp/response_content.go
+  - internal/tools/interact/handler/action_owners.go
+  - internal/tools/cli/parser/interact.go
+  - internal/tools/cli/parser/flags.go
+  - internal/tools/schema/interact/properties_core.go
+  - internal/tools/mcp/response_content.go
   - src/background/dom/primitives/dom-primitives-pointer.ts
   - src/background/dom/primitives/dom-primitives-form.ts
   - src/background/dom/primitives/dom-primitives-read.ts
 test_paths:
-  - cmd/browser-agent/internal/actioneffects/effects_test.go
-  - cmd/browser-agent/internal/actioneffects/classify_test.go
-  - cmd/browser-agent/internal/interactdispatch/effects_test.go
-  - cmd/browser-agent/internal/cli/parser/commands_test.go
-  - internal/mcp/response_test.go
+  - internal/tools/interact/effects/effects_test.go
+  - internal/tools/interact/effects/classify_test.go
+  - internal/tools/interact/dispatch/effects_test.go
+  - internal/tools/cli/parser/commands_test.go
+  - internal/tools/mcp/response_test.go
 ---
 
 # Effect verification

@@ -102,7 +102,7 @@ bold "4. Checking route ↔ OpenAPI sync..."
 # Public daemon route registration is owned by composition plus the canonical
 # client lifecycle feature. Keep this list explicit so test-only muxes and
 # internal helper routes cannot accidentally expand the public API contract.
-SERVER_ROUTE_FILES="cmd/browser-agent/server.go cmd/browser-agent/internal/clientapi/handler.go"
+SERVER_ROUTE_FILES="cmd/browser-agent/server.go internal/tools/clientreg/http/handler.go"
 
 # Extract registered routes from Go source
 GO_ROUTES=$(grep -h -o 'HandleFunc("[^"]*"' $SERVER_ROUTE_FILES \
@@ -338,7 +338,7 @@ bold "11. Checking for http.Error() in handler files..."
 HTTP_ERROR_CALLS=$(grep -rn 'http\.Error(' cmd/browser-agent/ \
   --include='*.go' \
   | grep -v '_test.go' \
-  | grep -v 'internal/httpguard/middleware.go' \
+  | grep -v 'internal/platform/httpguard/middleware.go' \
   | grep -v '// lint:http-error-ok' \
   || true)
 
@@ -354,7 +354,7 @@ fi
 # ─────────────────────────────────────────────
 bold "12. Checking bridge dispatch signal() coverage..."
 
-BRIDGE_FILE="cmd/browser-agent/internal/bridge/bridge.go"
+BRIDGE_FILE="internal/lifecycle/bridge/bridge.go"
 if [ -f "$BRIDGE_FILE" ]; then
   BRIDGE_SIGNAL_ISSUES=""
   FUNC_START=$(grep -nE 'func (\([^)]*\) )?bridgeForwardRequest' "$BRIDGE_FILE" | head -1 | cut -d: -f1)
@@ -382,7 +382,7 @@ if [ -f "$BRIDGE_FILE" ]; then
   fi
 else
   # Do NOT pass here. This check silently reported "PASS: bridge.go not found
-  # (skipped)" for ~4 months after the file moved to internal/bridge/, so a
+  # (skipped)" for ~4 months after the file moved to internal/lifecycle/bridge/, so a
   # green run meant nothing. A check whose target has vanished has not passed —
   # it has stopped running, and that must be loud (repo rule 25).
   fail "bridge dispatch check cannot run: $BRIDGE_FILE not found (did it move?)"
@@ -498,7 +498,7 @@ bold "16. Checking eval packages are not imported by production code..."
 EVAL_IMPORTS=$(grep -rn 'hook/eval' cmd/ internal/ \
   --include='*.go' \
   | grep -v '_test.go' \
-  | grep -v 'internal/hook/eval/' \
+  | grep -v 'internal/hooks/eval/' \
   || true)
 
 if [ -n "$EVAL_IMPORTS" ]; then

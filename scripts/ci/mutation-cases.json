@@ -5,78 +5,78 @@
   "cases": [
     {
       "id": "fixture_rejects_stale_generation",
-      "file": "internal/qafixture/registry.go",
-      "package": "./internal/qafixture",
+      "file": "internal/testgen/qafixture/registry.go",
+      "package": "./internal/testgen/qafixture",
       "from": "record.ExtensionGeneration != generation",
       "to": "record.ExtensionGeneration == generation"
     },
     {
       "id": "fixture_requires_pending_restore",
-      "file": "internal/qafixture/registry.go",
-      "package": "./internal/qafixture",
+      "file": "internal/testgen/qafixture/registry.go",
+      "package": "./internal/testgen/qafixture",
       "from": "if record.State != TransactionRestoreRequired {",
       "to": "if record.State == TransactionRestoreRequired {"
     },
     {
       "id": "fixture_registry_enforces_capacity",
-      "file": "internal/qafixture/registry.go",
-      "package": "./internal/qafixture",
+      "file": "internal/testgen/qafixture/registry.go",
+      "package": "./internal/testgen/qafixture",
       "from": "len(registry.records) >= registry.limit",
       "to": "len(registry.records) > registry.limit"
     },
     {
       "id": "doctor_evicts_beyond_recovered_limit",
-      "file": "internal/statediag/collector.go",
-      "package": "./internal/statediag",
+      "file": "internal/lifecycle/doctor/statediag/collector.go",
+      "package": "./internal/lifecycle/doctor/statediag",
       "from": "recovered <= c.recoveredLimit",
       "to": "recovered < c.recoveredLimit"
     },
     {
       "id": "doctor_bounds_transition_history",
-      "file": "internal/statediag/collector.go",
-      "package": "./internal/statediag",
+      "file": "internal/lifecycle/doctor/statediag/collector.go",
+      "package": "./internal/lifecycle/doctor/statediag",
       "from": "len(history) >= maxHistoryTransitions",
       "to": "len(history) > maxHistoryTransitions"
     },
     {
       "id": "ring_overwrites_at_capacity",
-      "file": "internal/capture/ringstore/store.go",
-      "package": "./internal/capture/ringstore",
+      "file": "internal/observation/store/ring/store.go",
+      "package": "./internal/observation/store/ring",
       "from": "s.size < len(s.storage)",
       "to": "s.size <= len(s.storage)"
     },
     {
       "id": "ring_drop_is_bounded_by_size",
-      "file": "internal/capture/ringstore/store.go",
-      "package": "./internal/capture/ringstore",
+      "file": "internal/observation/store/ring/store.go",
+      "package": "./internal/observation/store/ring",
       "from": "count > s.size",
       "to": "count < s.size"
     },
     {
       "id": "sync_detects_reconnect_after_disconnect",
-      "file": "internal/capture/syncruntime/handler.go",
-      "package": "./internal/capture/syncruntime",
+      "file": "internal/sync/runtime/handler.go",
+      "package": "./internal/sync/runtime",
       "from": "state.isReconnect = state.wasDisconnected",
       "to": "state.isReconnect = false"
     },
     {
       "id": "redaction_recognizes_sensitive_keys",
-      "file": "internal/redaction/redaction_map.go",
-      "package": "./internal/redaction",
+      "file": "internal/platform/redaction/redaction_map.go",
+      "package": "./internal/platform/redaction",
       "from": "if isSensitiveKeyName(key) {",
       "to": "if false {"
     },
     {
       "id": "http_auth_rejects_wrong_keys",
-      "file": "cmd/browser-agent/internal/httpguard/apikey.go",
-      "package": "./cmd/browser-agent/internal/httpguard",
+      "file": "internal/platform/httpguard/apikey.go",
+      "package": "./internal/platform/httpguard",
       "from": "subtle.ConstantTimeCompare(expectedBytes, providedBytes) != 1",
       "to": "subtle.ConstantTimeCompare(expectedBytes, providedBytes) == 1"
     },
     {
       "id": "client_registry_evicts_at_capacity",
-      "file": "internal/session/clientreg/registry.go",
-      "package": "./internal/session/clientreg",
+      "file": "internal/tools/clientreg/registry.go",
+      "package": "./internal/tools/clientreg",
       "from": "len(r.clients) >= maxClients",
       "to": "len(r.clients) > maxClients"
     },

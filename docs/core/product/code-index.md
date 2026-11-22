@@ -18,7 +18,7 @@ last_reviewed: 2026-02-16
 
 ## Critical Core Files
 
-### internal/capture/query_dispatcher.go
+### internal/composition/capture/query_dispatcher.go
 **What it does:** Async queue-and-poll implementation
 
 **Affects:**
@@ -29,15 +29,15 @@ last_reviewed: 2026-02-16
 - Diagram: [Async Queue Flow](../architecture/diagrams/async-queue-flow.md)
 
 **Tests:**
-- internal/capture/async_queue_integration_test.go
-- internal/capture/async_queue_reliability_test.go
-- internal/capture/correlation_tracking_test.go
+- internal/composition/capture/async_queue_integration_test.go
+- internal/composition/capture/async_queue_reliability_test.go
+- internal/composition/capture/correlation_tracking_test.go
 
 **Protected by:** Pre-commit hook, CI validation, ADR-002
 
 ---
 
-### internal/capture/httpingest/handlers.go
+### internal/ingestion/http/handlers.go
 **What it does:** HTTP endpoints for extension polling
 
 **Affects:**
@@ -47,7 +47,7 @@ last_reviewed: 2026-02-16
 
 **Tests:**
 
-- cmd/browser-agent/internal/toolcatalog/catalog_test.go and feature-owner tests
+- internal/tools/catalog/catalog_test.go and feature-owner tests
 
 **Protected by:** Pre-commit hook, stub detection
 
@@ -61,7 +61,7 @@ last_reviewed: 2026-02-16
 
 - `tools_core.go` (680 lines) - ToolHandler struct, dispatch, response helpers
 - `internal/toolobserve/dispatcher.go` (326 lines) - Observe tool and mode handlers
-- `internal/toolgenerate/dispatcher.go` (130 lines) - Generate tool (HAR, SARIF, CSP, SRI, tests)
+- `internal/tools/generate/handler/dispatcher.go` (130 lines) - Generate tool (HAR, SARIF, CSP, SRI, tests)
 - `tools_configure.go` (412 lines) - Configure tool (store, noise, streaming, etc.)
 - `tools_interact.go` (256 lines) - Interact tool (AI Web Pilot browser actions)
 - `tools_security.go` (85 lines) - Security audit wrappers
@@ -78,7 +78,7 @@ last_reviewed: 2026-02-16
 - [Observe Tool](../features/feature/observe/)
 
 **Tests:**
-- cmd/browser-agent/internal/toolcatalog/catalog_test.go (catalog coverage)
+- internal/tools/catalog/catalog_test.go (catalog coverage)
 
 **Protected by:** Pre-commit hook, GitHub Actions, architecture validation
 
@@ -212,10 +212,10 @@ last_reviewed: 2026-02-16
 
 ### Async Queue Pattern
 **Code:**
-- internal/capture/query_dispatcher.go (303 lines)
-- internal/capture/httpingest/handlers.go (polling endpoints)
+- internal/composition/capture/query_dispatcher.go (303 lines)
+- internal/ingestion/http/handlers.go (polling endpoints)
 - cmd/browser-agent/tools_core.go (MCP handlers)
-- internal/queries/types.go (type definitions)
+- internal/browsercommand/query/types.go (type definitions)
 
 **Docs:**
 - architecture/ADR-001-async-queue-pattern.md
@@ -223,8 +223,8 @@ last_reviewed: 2026-02-16
 - async-queue-correlation-tracking.md
 
 **Tests:**
-- internal/capture/async_queue_integration_test.go
-- internal/capture/async_queue_reliability_test.go
+- internal/composition/capture/async_queue_integration_test.go
+- internal/composition/capture/async_queue_reliability_test.go
 
 ---
 
@@ -238,7 +238,7 @@ last_reviewed: 2026-02-16
 - architecture/diagrams/correlation-id-lifecycle.md
 
 **Tests:**
-- internal/capture/correlation_tracking_test.go
+- internal/composition/capture/correlation_tracking_test.go
 
 ---
 
@@ -263,7 +263,7 @@ last_reviewed: 2026-02-16
 - .git/hooks/pre-commit (119 lines)
 - scripts/quality/verification/validate-architecture.sh (225 lines)
 - .github/workflows/architecture-validation.yml (103 lines)
-- internal/capture/async_queue_integration_test.go
+- internal/composition/capture/async_queue_integration_test.go
 
 **Docs:**
 - architecture/ADR-002-async-queue-immutability.md
@@ -271,7 +271,7 @@ last_reviewed: 2026-02-16
 - architecture/diagrams/quality/5-layer-protection.md
 
 **Tests:**
-- internal/capture/async_queue_integration_test.go (exercises full flow)
+- internal/composition/capture/async_queue_integration_test.go (exercises full flow)
 
 ---
 
@@ -283,16 +283,16 @@ Each internal package now has `doc.go` with comprehensive package overview:
 - `internal/analysis/apischema/schema.go` - API schema inference from observed traffic
 - `internal/analysis/clustering/clustering.go` - Error clustering by root cause
 - `internal/analysis/thirdparty/audit.go` - Third-party origin auditing
-- `internal/capture/capture.go` - Real-time browser telemetry capture
-- `internal/pagination/doc.go` - Cursor-based pagination
-- `internal/security/scan/scan.go` - Aggregate security audit contracts and orchestration
-- `internal/security/csp/doc.go` - CSP generation from observed traffic
-- `internal/security/sri/doc.go` - Subresource Integrity hash generation
-- `internal/session/snapshot-manager.go` - Named browser-state snapshot ownership and bounded CRUD
-- `internal/types/doc.go` - Core type definitions
+- `internal/composition/capture/capture.go` - Real-time browser telemetry capture
+- `internal/observation/pagination/doc.go` - Cursor-based pagination
+- `internal/analysis/security/scan/scan.go` - Aggregate security audit contracts and orchestration
+- `internal/analysis/security/csp/doc.go` - CSP generation from observed traffic
+- `internal/analysis/security/sri/doc.go` - Subresource Integrity hash generation
+- `internal/analysis/snapshots/snapshot-manager.go` - Named browser-state snapshot ownership and bounded CRUD
+- `internal/platform/types/doc.go` - Core type definitions
 
 **Type-Safe Dependencies:**
-- `internal/types/interfaces.go` - Interfaces for ToolHandler dependencies
+- `internal/platform/types/interfaces.go` - Interfaces for ToolHandler dependencies
 
 ---
 
@@ -331,7 +331,7 @@ Each internal package now has `doc.go` with comprehensive package overview:
 
 ### "I want to change timeout values"
 **Affects:**
-- internal/queries/types.go (AsyncCommandTimeout constant)
+- internal/browsercommand/query/types.go (AsyncCommandTimeout constant)
 - Async queue reliability (see tests)
 - Production stability (see async-queue-correlation-tracking.md)
 
@@ -349,7 +349,7 @@ Each internal package now has `doc.go` with comprehensive package overview:
 grep -r "queries.go" docs/
 
 # Search all code imports
-grep -r "internal/capture" . --include="*.go"
+grep -r "internal/composition/capture" . --include="*.go"
 
 # Search test references
 grep -r "TestAsyncQueue" . --include="*_test.go"
@@ -375,7 +375,7 @@ grep -r "correlation" docs/architecture/
 | tools_core.go | MCP integration docs, feature specs | ./scripts/quality/verification/validate-architecture.sh |
 | favicon-replacer.ts | flame-flicker-visual.md, tab-tracking-ux | npm run test:ext |
 | manifest.json | Extension build docs | make compile-ts |
-| Any internal/capture/* | Architecture diagrams | go test ./internal/capture |
+| Any internal/composition/capture/* | Architecture diagrams | go test ./internal/composition/capture |
 
 ---
 

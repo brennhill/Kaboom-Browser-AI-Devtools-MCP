@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/asynccommand/handler.go
+  - internal/tools/asynccommand/handler.go
   - cmd/browser-agent/internal/toolanalyze/navigation.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/linkvalidation/handler.go
@@ -15,7 +15,7 @@ code_paths:
   - src/content/message-handlers.ts
   - src/inject/message-handlers.ts
 test_paths:
-  - cmd/browser-agent/internal/asynccommand/handler_test.go
+  - internal/tools/asynccommand/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
   - cmd/browser-agent/internal/toolanalyze/linkvalidation/handler_test.go
   - scripts/tests/browser/cat-19-link-health.sh

@@ -24,21 +24,21 @@ Interface Definition Language (IDL) source of truth, generating both sides autom
 The Go/TS boundary has two distinct contract surfaces:
 
 **Wire types** (data payloads between extension and daemon):
-- `internal/types/wire_enhanced_action.go` -> `src/types/wire/wire-enhanced-action.ts`
-- `internal/types/wire_network.go` -> `src/types/wire/wire-network.ts`
-- `internal/types/wire_network.go` -> `src/types/wire/wire-network.ts` and `src/types/wire/wire-websocket-event.ts`
-- `internal/performance/wire_performance.go` -> `src/types/wire/wire-performance-snapshot.ts`
+- `internal/platform/types/wire_enhanced_action.go` -> `src/types/wire/wire-enhanced-action.ts`
+- `internal/platform/types/wire_network.go` -> `src/types/wire/wire-network.ts`
+- `internal/platform/types/wire_network.go` -> `src/types/wire/wire-network.ts` and `src/types/wire/wire-websocket-event.ts`
+- `internal/observation/performance/wire_performance.go` -> `src/types/wire/wire-performance-snapshot.ts`
 
 These are already partially automated. Go structs are the source of truth.
 `scripts/build/generate-wire-types.js` generates the TS side. `scripts/contracts/check-wire-drift.js`
 validates alignment. The TS files carry a `// THIS FILE IS GENERATED` header.
 
 **Tool schemas** (MCP tool input schemas, served to LLM clients):
-- `internal/schema/observe.go` — 200 lines of `map[string]any` literals
-- `internal/schema/interact/tool.go` — 347 lines of `map[string]any` literals
-- `internal/schema/configure/tool.go` — 271 lines of `map[string]any` literals
-- `internal/schema/analyze.go` — 159 lines of `map[string]any` literals
-- `internal/schema/generate.go` — 196 lines of `map[string]any` literals
+- `internal/tools/schema/observe.go` — 200 lines of `map[string]any` literals
+- `internal/tools/schema/interact/tool.go` — 347 lines of `map[string]any` literals
+- `internal/tools/schema/configure/tool.go` — 271 lines of `map[string]any` literals
+- `internal/tools/schema/analyze.go` — 159 lines of `map[string]any` literals
+- `internal/tools/schema/generate.go` — 196 lines of `map[string]any` literals
 
 These are Go-only (served via MCP JSON-RPC). No TS generation needed, but they are
 the largest source of untyped, error-prone code in the project. Every property is a
@@ -154,15 +154,15 @@ idl/
 
 | Source | Generated artifact | Replaces |
 |--------|-------------------|----------|
-| `idl/wire/*.schema.json` | `internal/types/wire_*.go` (Go structs) | Hand-written Go wire structs |
+| `idl/wire/*.schema.json` | `internal/platform/types/wire_*.go` (Go structs) | Hand-written Go wire structs |
 | `idl/wire/*.schema.json` | `src/types/wire/wire-*.ts` (TS interfaces) | Generated TS interfaces |
-| `idl/tools/*.schema.json` | `internal/schema/*_gen.go` (schema constants) | Hand-written `map[string]any` |
+| `idl/tools/*.schema.json` | `internal/tools/schema/*_gen.go` (schema constants) | Hand-written `map[string]any` |
 
 ### 3.3 What Stays Manual
 
 - **Tool handler dispatch logic** (`internal/tools/*/handler.go`) — business logic, not schema.
 - **Extension-internal TS types** (`dom-types.ts`, etc.) — not crossing the wire.
-- **MCP protocol types** (`internal/mcp/types.go`) — external spec, not project-controlled.
+- **MCP protocol types** (`internal/tools/mcp/types.go`) — external spec, not project-controlled.
 - **Server-only enrichment fields** — documented as comments in generated TS (current pattern preserved).
 - **Invariant tests** (`invariants_test.go`) — still validate generated output.
 
@@ -172,7 +172,7 @@ Two generators, both Node scripts (consistent with existing `generate-wire-types
 
 **`scripts/generate-from-idl.js`** (replaces `generate-wire-types.js`):
 - Reads `idl/wire/*.schema.json`
-- Emits Go structs to `internal/types/wire_*_gen.go` and `internal/performance/wire_*_gen.go`
+- Emits Go structs to `internal/platform/types/wire_*_gen.go` and `internal/observation/performance/wire_*_gen.go`
 - Emits TS interfaces to `src/types/wire/wire-*.ts`
 - Handles type mapping (JSON Schema -> Go types, JSON Schema -> TS types)
 - Server-only comments and override tables move into the schema files as
@@ -229,7 +229,7 @@ tests pass. No behavioral change.
 1. Extract current schemas: run `AllTools()`, marshal to JSON, write to `idl/tools/`.
    This produces the initial JSON Schema files that exactly match current behavior.
 2. Build `scripts/generate-tool-schemas.js` that reads JSON and emits Go.
-3. Replace `internal/schema/{observe,interact,configure,analyze,generate}.go` with
+3. Replace `internal/tools/schema/{observe,interact,configure,analyze,generate}.go` with
    generated `*_gen.go` files. Keep `schema.go` (the `AllTools()` entry point) manual.
 4. Validate: schema invariant tests still pass. MCP `tools/list` output is byte-identical.
 
@@ -311,7 +311,7 @@ files are not, warn and abort.
 - Tool schema files go from ~1170 lines of `map[string]any` to ~5 generated files + ~5 JSON Schema sources.
 - Adding a new wire field: edit 1 JSON file, run `make compile-ts`. Previously: edit Go file, run generator, verify TS.
 - Adding a new tool parameter: edit 1 JSON file, run `make compile-ts`. Previously: edit Go `map[string]any`, hope you got the types right.
-- Zero `map[string]any` in `internal/schema/` (all generated or embedded).
+- Zero `map[string]any` in `internal/tools/schema/` (all generated or embedded).
 
 ---
 

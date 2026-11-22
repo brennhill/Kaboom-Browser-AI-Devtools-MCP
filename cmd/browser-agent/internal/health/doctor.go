@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/paths"
 )
 
 // IsLocalPortAvailable checks whether a local TCP port is available.

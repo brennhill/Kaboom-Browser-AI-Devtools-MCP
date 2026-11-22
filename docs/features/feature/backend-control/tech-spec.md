@@ -273,13 +273,13 @@ Not yet built (reviewed 2026-11-21). The originally listed cmd/server/control/*,
 
 ### New code (planned):
 - A new backend-control package under `internal/` (command router, snapshot manager, service discovery, control protocol types)
-- Control operation auditing on top of the existing audit trail in `internal/audit/` (which today records MCP tool calls and is exposed as `configure({what: "audit_log"})` via `cmd/browser-agent/internal/toolconfigure/auditlog/handler.go`)
+- Control operation auditing on top of the existing audit trail in `internal/tools/audit/` (which today records MCP tool calls and is exposed as `configure({what: "audit_log"})` via `internal/tools/configure/handler/auditlog/handler.go`)
 - No extension-side tool is needed: MCP tools are served by the Go server only
 
 ### Existing code to modify (planned):
-- `cmd/browser-agent/internal/toolinteract/` and `internal/schema/interact/actions.go` — add a control action to `interact`
-- `cmd/browser-agent/internal/toolobserve/registry.go` and `internal/schema/observe.go` — add a `backend_state` mode
-- `cmd/browser-agent/internal/toolconfigure/dispatcher.go` and `internal/schema/configure/` — add a snapshot action
+- `internal/tools/interact/handler/` and `internal/tools/schema/interact/actions.go` — add a control action to `interact`
+- `cmd/browser-agent/internal/toolobserve/registry.go` and `internal/tools/schema/observe.go` — add a `backend_state` mode
+- `internal/tools/configure/handler/dispatcher.go` and `internal/tools/schema/configure/` — add a snapshot action
 
 ## Performance Requirements
 - Control operation execution: <50ms for reads, <200ms for writes

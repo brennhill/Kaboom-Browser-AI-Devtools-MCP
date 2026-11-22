@@ -1,0 +1,17 @@
+{
+  "description": "ASPIRATIONAL U3 Migrate: migration to extract data access into store files — raw DB calls in non-store files should be flagged",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "result := db.QueryRow(\"SELECT count(*) FROM events\")"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["migration", "data access", "store"],
+    "max_latency_ms": 5000
+  }
+}

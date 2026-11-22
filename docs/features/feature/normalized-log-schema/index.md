@@ -6,14 +6,14 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
-  - internal/types/wire_log.go
-  - internal/capture/logstore/store.go
-  - internal/capture/pressure/stats.go
+  - internal/platform/types/wire_log.go
+  - internal/observation/store/logs/store.go
+  - internal/observation/pressure/stats.go
   - src/types/wire/wire-extension-log.ts
 test_paths:
-  - internal/capture/logstore/store_test.go
-  - internal/capture/logstore/diagnostic_test.go
-  - internal/capture/syncruntime/sync_test_helpers_test.go
+  - internal/observation/store/logs/store_test.go
+  - internal/observation/store/logs/diagnostic_test.go
+  - internal/sync/runtime/sync_test_helpers_test.go
   - scripts/contracts/sync-wire-generated.test.cjs
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-04

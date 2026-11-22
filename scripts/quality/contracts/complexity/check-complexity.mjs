@@ -48,7 +48,7 @@ const EXCLUDED_DIR_NAMES = new Set([
 // Generated artifacts whose authored sources ARE scanned (Go wire source,
 // scripts/build generators, scripts/templates partials).
 const EXCLUDED_PATH_PREFIXES = [
-  join('src', 'types', 'wire'), // generated from internal/types/wire_*.go
+  join('src', 'types', 'wire'), // generated from internal/platform/types/wire_*.go
   join('scripts', 'smoke-tests', 'framework', 'framework-fixtures', 'next-app', 'out')
 ]
 

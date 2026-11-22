@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/instancereg"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/instance/registry"
 )
 
 func TestBuildArgsCoverAllProductionPackagesOnlyWhenRequested(t *testing.T) {

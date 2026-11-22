@@ -2,10 +2,10 @@
 // Docs: docs/features/generation/describe_capabilities.md
 package capabilities
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema/interact"
+import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/schema/interact"
 
 // interactModeSpecs derives directly from the canonical interact action registry
-// in internal/schema/interact/actions.go to keep schema + capabilities in sync.
+// in internal/tools/schema/interact/actions.go to keep schema + capabilities in sync.
 var interactModeSpecs = buildInteractModeSpecs()
 
 func buildInteractModeSpecs() map[string]modeParamSpec {

@@ -179,7 +179,8 @@ func TestSameNamedMethodsDoNotShareABudget(t *testing.T) {
 	}
 }
 
-func TestParamsCountsNamedUnnamedAndExcludesReceiver(t *testing.T) {	source := `package pkg
+func TestParamsCountsNamedUnnamedAndExcludesReceiver(t *testing.T) {
+	source := `package pkg
 
 type Receiver struct{}
 

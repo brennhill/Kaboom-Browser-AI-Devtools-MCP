@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/instancereg"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/procidentity"
-	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/instance/registry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/process/identity"
+	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/paths"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/testsync"
 )
 
 // launchDaemons starts count daemons AT THE SAME TIME, each with its own state

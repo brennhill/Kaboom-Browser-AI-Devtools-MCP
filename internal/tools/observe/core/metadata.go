@@ -10,14 +10,14 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/pagination"
 )
 
 // NOTE: data_age_ms is documented in observe tech/api docs and metadata tests;
 // page_ready_for_commands and tab_status are mode-specific fields on observe(page) responses.
 
 // Connection reports whether the extension link is live (staleness signal).
-// internal/capture/syncruntime.Runtime satisfies it.
+// internal/sync/runtime.Runtime satisfies it.
 type Connection interface {
 	IsExtensionConnected() bool
 }

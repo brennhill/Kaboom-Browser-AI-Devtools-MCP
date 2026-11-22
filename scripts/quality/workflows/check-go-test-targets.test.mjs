@@ -11,12 +11,12 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 test('extracts targeted Go test package and selector pairs', () => {
   assert.deepEqual(
     extractTargetedGoTests(`
-      run: go test ./internal/state -run TestRoot -count=1
+      run: go test ./internal/platform/state/paths -run TestRoot -count=1
       run: KABOOM_STATE_DIR=/tmp/test go test -race -tags=integration ./cmd/browser-agent/integration/bridge -run 'TestFastStart_.*' -count=3
       run: go test ./...
     `),
     [
-      { packagePath: './internal/state', pattern: 'TestRoot', tags: '' },
+      { packagePath: './internal/platform/state/paths', pattern: 'TestRoot', tags: '' },
       { packagePath: './cmd/browser-agent/integration/bridge', pattern: 'TestFastStart_.*', tags: 'integration' }
     ]
   )

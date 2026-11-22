@@ -12,7 +12,7 @@
 # Launching Chrome with --load-extension from extension/ removes the guess. The
 # browser is disposable, its profile is a temp directory, and the extension is by
 # construction the one that was just compiled — so a contract mismatch here means
-# a real drift between src/ and internal/commandcontract, not a stale install.
+# a real drift between src/ and internal/browsercommand/contract, not a stale install.
 #
 # It also removes the human from recording and from the canary. Chrome is
 # preinstalled on GitHub's hosted runners, so a job that sources this can run the

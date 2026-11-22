@@ -5,12 +5,12 @@
 package testgen
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/reproduction"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/reproduction"
 )
 
 func TestGenerateTestFilename(t *testing.T) {

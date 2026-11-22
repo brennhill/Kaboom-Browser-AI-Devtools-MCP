@@ -6,10 +6,10 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-05
 code_paths:
-  - internal/performance/navigation/critical_path.go
+  - internal/observation/performance/navigation/critical_path.go
   - internal/tools/observe/session/session.go
 test_paths:
-  - internal/performance/navigation/critical_path_test.go
+  - internal/observation/performance/navigation/critical_path_test.go
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-04
 ---

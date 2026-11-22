@@ -84,7 +84,7 @@ describe('a change nothing can bound runs everything', () => {
   })
 
   test('a Go change is traced, not treated as unboundable', () => {
-    assert.deepStrictEqual(untraceable(['internal/hook/session.go']), [])
+    assert.deepStrictEqual(untraceable(['internal/hooks/session.go']), [])
   })
 })
 

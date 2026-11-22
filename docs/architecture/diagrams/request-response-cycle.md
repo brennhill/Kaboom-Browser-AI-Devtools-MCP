@@ -313,29 +313,29 @@ sequenceDiagram
 ### Implementation Files
 
 **Query Queue:**
-- `internal/capture/capture.go:Capture.queries`
-- `internal/queries/dispatcher_queries.go` - Queue management
-- `internal/queries/dispatcher_queries.go` - Routing logic
+- `internal/composition/capture/capture.go:Capture.queries`
+- `internal/browsercommand/query/dispatcher_queries.go` - Queue management
+- `internal/browsercommand/query/dispatcher_queries.go` - Routing logic
 
 **Result Storage:**
-- `internal/capture/capture.go:Capture.completedResults`
+- `internal/composition/capture/capture.go:Capture.completedResults`
 - `cmd/browser-agent/tools_interact.go` - Query creation
 - `cmd/browser-agent/tools_core.go:ApplyCommandResult()` - Result storage
 
 **Extension Polling:**
 - `src/background/pending-queries.ts` - Poll logic
 - `src/background/sync/sync-client.ts` - Result posting
-- `internal/capture/httpingest/handlers.go:/pending-queries` - Endpoint
+- `internal/ingestion/http/handlers.go:/pending-queries` - Endpoint
 
 **Session Management:**
-- `internal/session/client_registry.go` - Token verification
+- `internal/analysis/snapshots/client_registry.go` - Token verification
 - `cmd/browser-agent/handler.go` - Request routing
 - `cmd/browser-agent/server_middleware.go` - Auth middleware
 
 **Timeout & Cleanup:**
-- `internal/capture/ttl.go` - TTL enforcement
-- `internal/capture/buffer_clear.go` - Cleanup logic
-- `internal/pagination/pagination.go` - Eviction handling
+- `internal/composition/capture/ttl.go` - TTL enforcement
+- `internal/composition/capture/buffer_clear.go` - Cleanup logic
+- `internal/observation/pagination/pagination.go` - Eviction handling
 
 ### Related Diagrams
 - [C2: Containers](c2-containers.md) - Component boundaries

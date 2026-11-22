@@ -9,11 +9,11 @@ code_paths:
   - src/background/commands/analyze.ts
   - cmd/browser-agent/internal/toolanalyze/navigation.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
-  - internal/schema/analyze.go
+  - internal/tools/schema/analyze.go
 test_paths:
   - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher_test.go
-  - internal/schema/invariants_test.go
+  - internal/tools/schema/invariants_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

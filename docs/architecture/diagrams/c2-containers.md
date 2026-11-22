@@ -132,8 +132,8 @@ graph TB
 - **Key Files:**
   - `cmd/browser-agent/handler.go` - MCP routing
   - `cmd/browser-agent/tools_*.go` - Tool implementations
-  - `internal/capture/` - Telemetry buffering
-  - `internal/session/` - Client management
+  - `internal/composition/capture/` - Telemetry buffering
+  - `internal/analysis/snapshots/` - Client management
 
 ### 4. Browser Extension (Chrome MV3)
 - **Components:**
@@ -232,8 +232,8 @@ AI Agent
 - **Wrapper:** `bin/kaboom-mcp`
 - **Server Entry:** `cmd/browser-agent/main.go:handleMCPConnection()`
 - **MCP Handler:** `cmd/browser-agent/handler.go`
-- **Capture:** `internal/capture/capture.go:Capture`
-- **Session:** `internal/session/client_registry.go`
+- **Capture:** `internal/composition/capture/capture.go:Capture`
+- **Session:** `internal/analysis/snapshots/client_registry.go`
 - **Extension Background:** `src/background/index.ts`
 - **Extension Content:** `src/content.ts`
 - **Page Injection:** `src/inject/index.ts`

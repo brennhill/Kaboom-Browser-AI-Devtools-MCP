@@ -33,7 +33,7 @@ drift apart, and a design-drift tool whose own expectations have drifted is not
 worth much.
 
 `testdata/fixture-probe.json` holds real computed styles captured from
-`cmd/browser-agent/internal/testpages/pages/design-drift.html` in Chrome, so the
+`internal/composition/http/testpages/pages/design-drift.html` in Chrome, so the
 end-to-end assertion runs in CI without a browser.
 
 ## Fixture coverage

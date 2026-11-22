@@ -23,7 +23,7 @@ links:
 
 | Area | Test | What a failure would have cost |
 | --- | --- | --- |
-| Fallback order | `internal/reproduction/reproduction_locators_test.go` | A replay trying the coordinate before the accessible name silently clicks whatever now occupies the point. |
+| Fallback order | `internal/recording/reproduction/reproduction_locators_test.go` | A replay trying the coordinate before the accessible name silently clicks whatever now occupies the point. |
 | Recovery without a selector | same | The failure the feature exists for: no selector, and the step must still be reachable by role and name. |
 | Coordinate context | same | A bare x/y replayed at another window size lands somewhere else and reports success. |
 | Both backends emit fallbacks | same | Half the artifacts stay brittle. |
@@ -31,8 +31,8 @@ links:
 | Unpinned stated, not omitted | same | A reader cannot tell "not pinned" from "not reported". |
 | Mid-session pin change | same | The header claims a pin that lapsed halfway through the recording. |
 | `Meta` coverage counts | same | A caller cannot tell three-locator sessions from selector-only ones. |
-| Emitted format stability | `internal/reproduction/golden_test.go` + `testdata/reproduction-playwright.golden.txt` | A change that silently drops the AX or coordinate line. |
-| Evidence detachment | `internal/capture/actionstore/store_test.go` | A later ingest rewriting locators or a pin a caller already holds. |
+| Emitted format stability | `internal/recording/reproduction/golden_test.go` + `testdata/reproduction-playwright.golden.txt` | A change that silently drops the AX or coordinate line. |
+| Evidence detachment | `internal/observation/store/actions/store_test.go` | A later ingest rewriting locators or a pin a caller already holds. |
 | CDP call shapes | `tests/extension/session-to-test/cdp-env-pin.test.js` | Epoch in ms puts the page ~55,000 years ahead; a refused knob reported as pinned. |
 | Seeded generator | `tests/extension/session-to-test/early-patch-seeded-random.test.js` | A degenerate all-zeros stream, or a seed reported active when the page refused the replacement. |
 | Page-side capture | `tests/extension/session-to-test/three-locator-capture.test.js` | A coordinate on a zero-area box; the AX locator disagreeing with the role selector. |

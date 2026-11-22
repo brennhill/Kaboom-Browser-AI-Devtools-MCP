@@ -4,7 +4,7 @@
 package generate
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 	"sort"
 	"strings"
 )

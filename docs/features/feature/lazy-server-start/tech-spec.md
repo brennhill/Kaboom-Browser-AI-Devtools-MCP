@@ -10,24 +10,24 @@ links:
   product: ./product-spec.md
   qa: ./qa-plan.md
 code_paths:
-  - cmd/browser-agent/internal/bridge/bridge_startup.go
-  - cmd/browser-agent/internal/bridge/bridge_startup_state.go
-  - cmd/browser-agent/internal/bridge/bridge_fastpath.go
-  - cmd/browser-agent/internal/bridge/bridge.go
-  - cmd/browser-agent/internal/bridge/startuplock/lock.go
+  - internal/lifecycle/bridge/bridge_startup.go
+  - internal/lifecycle/bridge/bridge_startup_state.go
+  - internal/lifecycle/bridge/bridge_fastpath.go
+  - internal/lifecycle/bridge/bridge.go
+  - internal/lifecycle/bridge/startuplock/lock.go
   - cmd/browser-agent/daemon_governance.go
-  - internal/instancegov/instancegov.go
-  - cmd/browser-agent/internal/launchmode/launch_mode.go
-  - cmd/browser-agent/internal/toolguard/guards.go
+  - internal/lifecycle/instance/gov/instancegov.go
+  - internal/lifecycle/launchmode/launch_mode.go
+  - internal/tools/guard/guards.go
 test_paths:
-  - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
-  - cmd/browser-agent/internal/bridge/bridge_startup_test.go
-  - cmd/browser-agent/internal/bridge/startuplock/lock_test.go
+  - internal/lifecycle/bridge/bridge_fastpath_unit_test.go
+  - internal/lifecycle/bridge/bridge_startup_test.go
+  - internal/lifecycle/bridge/startuplock/lock_test.go
   - cmd/browser-agent/integration/bridge/faststart_test.go
-  - internal/instancegov/instancegov_test.go
-  - cmd/browser-agent/internal/launchmode/launch_mode_test.go
-  - cmd/browser-agent/internal/toolguard/guards_test.go
-  - cmd/browser-agent/internal/asynccommand/handler_test.go
+  - internal/lifecycle/instance/gov/instancegov_test.go
+  - internal/lifecycle/launchmode/launch_mode_test.go
+  - internal/tools/guard/guards_test.go
+  - internal/tools/asynccommand/handler_test.go
 ---
 
 # Lazy Server Start Tech Spec
@@ -67,11 +67,11 @@ The critical invariant is that the read loop starts before, or concurrently with
 
 **Request forwarding (`bridge.go`).** `bridgeForwardRequest` proxies to the daemon over HTTP. On a connection error `bridgeSendWithRespawn` calls `respawnIfNeeded` and retries. Responses with status code 500 or higher are treated as `retryable`, and the structured error carries that flag back to the client.
 
-**Daemon singleton admission (`internal/instancegov/instancegov.go`, called from `cmd/browser-agent/daemon_governance.go`).** `instancegov.Admit` runs before the daemon binds anything. A production daemon is elected through a kernel-held lock (`proclock`), which the OS releases even on SIGKILL; there is no PID-file liveness heuristic. A newer build asks the incumbent to stand down over HTTP and waits for the lock to be released (a handoff, not a race). Parallel/test daemons and bridges are admitted against a counted cap that evicts the oldest instead of multiplying. The bridge also registers through `instancegov.Admit` (`bridge_governance.go`).
+**Daemon singleton admission (`internal/lifecycle/instance/gov/instancegov.go`, called from `cmd/browser-agent/daemon_governance.go`).** `instancegov.Admit` runs before the daemon binds anything. A production daemon is elected through a kernel-held lock (`proclock`), which the OS releases even on SIGKILL; there is no PID-file liveness heuristic. A newer build asks the incumbent to stand down over HTTP and waits for the lock to be released (a handoff, not a race). Parallel/test daemons and bridges are admitted against a counted cap that evicts the oldest instead of multiplying. The bridge also registers through `instancegov.Admit` (`bridge_governance.go`).
 
-**Launch-mode classification (`cmd/browser-agent/internal/launchmode/launch_mode.go`).** `launchmode.Classify` receives the daemon flag, terminal interactivity, and detected parent process while inspecting supervisor environment markers to label the launch `persistent` or `likely_transient`. `launchmode.Warning` produces the advisory string; `launchmode.EnforcePersistent` upgrades it to a hard error when `KABOOM_REQUIRE_PERSISTENT` is set.
+**Launch-mode classification (`internal/lifecycle/launchmode/launch_mode.go`).** `launchmode.Classify` receives the daemon flag, terminal interactivity, and detected parent process while inspecting supervisor environment markers to label the launch `persistent` or `likely_transient`. `launchmode.Warning` produces the advisory string; `launchmode.EnforcePersistent` upgrades it to a hard error when `KABOOM_REQUIRE_PERSISTENT` is set.
 
-**Extension readiness guard (`cmd/browser-agent/internal/toolguard/guards.go`).** `RequireExtension` blocks a tool call until the extension reports connectivity, waiting up to `toolguard.DefaultExtensionReadinessTimeout`. This window lets the extension's sync loop reconnect after a cold daemon start before the call fails.
+**Extension readiness guard (`internal/tools/guard/guards.go`).** `RequireExtension` blocks a tool call until the extension reports connectivity, waiting up to `toolguard.DefaultExtensionReadinessTimeout`. This window lets the extension's sync loop reconnect after a cold daemon start before the call fails.
 
 ## Data Flow
 
@@ -120,9 +120,9 @@ These are package variables so tests can shrink them for deterministic timing.
 
 ## Implementation Strategy
 
-**Bridge (`cmd/browser-agent/internal/bridge/`):** the fast path, startup coordinator, daemon state, and forwarding live here. Startup leadership uses a port-scoped lock file in the state directory; daemon state uses channels rather than sleeps so waiters wake on the exact transition.
+**Bridge (`internal/lifecycle/bridge/`):** the fast path, startup coordinator, daemon state, and forwarding live here. Startup leadership uses a port-scoped lock file in the state directory; daemon state uses channels rather than sleeps so waiters wake on the exact transition.
 
-**Daemon process (`cmd/browser-agent/`):** `daemon_governance.go` admits the daemon through `instancegov.Admit` (kernel-held singleton lock); `cmd/browser-agent/internal/launchmode/launch_mode.go` classifies the launch; `cmd/browser-agent/internal/toolguard/guards.go` gates tool calls on extension readiness.
+**Daemon process (`cmd/browser-agent/`):** `daemon_governance.go` admits the daemon through `instancegov.Admit` (kernel-held singleton lock); `internal/lifecycle/launchmode/launch_mode.go` classifies the launch; `internal/tools/guard/guards.go` gates tool calls on extension readiness.
 
 **Extension (`src/popup/`):** `tab-tracking.ts` keeps tracking state in `chrome.storage.local`; `status-display.ts` renders the connected/offline state. The sync client polls every second with no backoff so reconnection is prompt.
 

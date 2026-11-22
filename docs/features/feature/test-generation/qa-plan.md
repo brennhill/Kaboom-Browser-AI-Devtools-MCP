@@ -25,8 +25,8 @@ last_verified_date: 2026-03-05
 ### Test Location
 
 - **Go generation/heal/classify logic:** `internal/testgen/generate_test.go`, `internal/testgen/classify_test.go`, `internal/testgen/heal/heal_test.go`
-- **Go MCP handlers:** `cmd/browser-agent/internal/testgenhandler/entrypoints_test.go`, `cmd/browser-agent/internal/testgenhandler/context_test.go`, `cmd/browser-agent/internal/testgenhandler/heal_test.go`, `cmd/browser-agent/internal/testgenhandler/classify_test.go`
-- **Generate dispatch:** `cmd/browser-agent/internal/toolgenerate/toolgenerate_test.go`
+- **Go MCP handlers:** `internal/tools/generate/testgen/entrypoints_test.go`, `internal/tools/generate/testgen/context_test.go`, `internal/tools/generate/testgen/heal_test.go`, `internal/tools/generate/testgen/classify_test.go`
+- **Generate dispatch:** `internal/tools/generate/handler/toolgenerate_test.go`
 
 ---
 
@@ -201,4 +201,4 @@ last_verified_date: 2026-03-05
 | internal/testgen (generate, helpers) | >= 85% | >= 80% |
 | internal/testgen/heal | >= 85% | >= 80% |
 | internal/testgen (classify) | >= 85% | >= 80% |
-| cmd/browser-agent/internal/testgenhandler | >= 85% | >= 80% |
+| internal/tools/generate/testgen | >= 85% | >= 80% |

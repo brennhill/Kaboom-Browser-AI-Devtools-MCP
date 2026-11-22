@@ -33,7 +33,7 @@ This audit identified **47 issues** across the codebase categorized as:
 ### Critical Issues
 
 #### 1.1 WebSocket Event Array Desynchronization Risk
-**File:** [`internal/capture/websocket.go`](internal/capture/websocket.go:29-35)  
+**File:** [`internal/composition/capture/websocket.go`](internal/composition/capture/websocket.go:29-35)  
 **Severity:** Critical  
 **Type:** Memory Leak Risk
 
@@ -118,7 +118,7 @@ export function cleanupRequestTracking(): void {
 ---
 
 #### 1.3 Goroutine Leak in Query Cleanup
-**File:** [`internal/capture/query_dispatcher.go`](internal/capture/query_dispatcher.go:79-90)
+**File:** [`internal/composition/capture/query_dispatcher.go`](internal/composition/capture/query_dispatcher.go:79-90)
 **Severity:** High
 **Type:** Resource Leak
 
@@ -146,7 +146,7 @@ go func() {
 ### Medium Issues
 
 #### 1.4 Recording Storage No Cleanup ✅ FIXED
-**File:** [`internal/capture/recording_manager.go`](internal/capture/recording_manager.go:21-25)
+**File:** [`internal/composition/capture/recording_manager.go`](internal/composition/capture/recording_manager.go:21-25)
 **Severity:** Medium
 **Type:** Disk Space Leak
 
@@ -275,7 +275,7 @@ if (value && !SENSITIVE_HEADERS.includes(key.toLowerCase())) {
 ---
 
 #### 2.4 Settings File Permissions Too Permissive
-**File:** [`internal/capture/settings.go`](internal/capture/settings.go:106)  
+**File:** [`internal/composition/capture/settings.go`](internal/composition/capture/settings.go:106)  
 **Severity:** Medium  
 **Type:** Access Control Issue
 
@@ -297,7 +297,7 @@ if err := os.WriteFile(tmpPath, data, 0600); err != nil {
 ### High Issues
 
 #### 3.1 Lock Ordering Violation Risk
-**File:** [`internal/session/client_registry.go`](internal/session/client_registry.go:136-141)  
+**File:** [`internal/analysis/snapshots/client_registry.go`](internal/analysis/snapshots/client_registry.go:136-141)  
 **Severity:** High  
 **Type:** Deadlock Risk
 
@@ -347,7 +347,7 @@ flush(): void {
 ### Medium Issues
 
 #### 3.3 Query Dispatcher Broadcast Without Context
-**File:** [`internal/capture/query_dispatcher.go`](internal/capture/query_dispatcher.go:196)
+**File:** [`internal/composition/capture/query_dispatcher.go`](internal/composition/capture/query_dispatcher.go:196)
 **Severity:** Medium  
 **Type:** Concurrency Issue
 
@@ -367,7 +367,7 @@ qd.queryCond.Broadcast()
 ### High Issues
 
 #### 4.1 HTTP Handlers Lack Detailed Error Logging ✅ FIXED
-**File:** [`internal/capture/httpingest/handlers.go`](internal/capture/httpingest/handlers.go:15-42)
+**File:** [`internal/ingestion/http/handlers.go`](internal/ingestion/http/handlers.go:15-42)
 **Severity:** High
 **Type:** Insufficient Error Reporting
 
@@ -399,7 +399,7 @@ if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 ---
 
 #### 4.2 Settings Load Silent Failure
-**File:** [`internal/capture/settings.go`](internal/capture/settings.go:43-81)  
+**File:** [`internal/composition/capture/settings.go`](internal/composition/capture/settings.go:43-81)  
 **Severity:** Medium  
 **Type:** Silent Error
 
@@ -481,8 +481,8 @@ if (!response.ok) {
 | File | Lines | Status |
 |-------|--------|--------|
 | `src/background/pending-queries.ts` | 952 | ❌ Exceeds |
-| `internal/capture/types.go` | 653 | ❌ Exceeds |
-| `internal/session/types.go` | 694 | ❌ Exceeds |
+| `internal/composition/capture/types.go` | 653 | ❌ Exceeds |
+| `internal/analysis/snapshots/types.go` | 694 | ❌ Exceeds |
 | `src/background/message-handlers.ts` | 552 | ❌ Exceeds |
 | `src/lib/net/websocket.ts` | 776 | ⚠️ Near limit |
 
@@ -772,7 +772,7 @@ if (domLike.nodeType) {
 ### Low Issues
 
 #### 9.1 TODO Comments Without Issues
-**File:** [`internal/security/policy/mode.go`](internal/security/policy/mode.go:44,129,145,161,181)
+**File:** [`internal/analysis/security/policy/mode.go`](internal/analysis/security/policy/mode.go:44,129,145,161,181)
 **Severity:** Low  
 **Type:** Documentation Debt
 
@@ -875,17 +875,17 @@ export const DOM_QUERY_MAX_ELEMENTS = 100  // Why 100?
 
 ### Go Backend
 - `cmd/browser-agent/main.go`
-- `internal/capture/types.go`
-- `internal/capture/httpingest/handlers.go`
-- `internal/capture/query_dispatcher.go`
-- `internal/capture/recording_manager.go`
-- `internal/capture/settings.go`
-- `internal/capture/syncruntime/handler.go`
-- `internal/capture/websocket.go`
-- `internal/capture/memory.go`
-- `internal/session/types.go`
-- `internal/session/client_registry.go`
-- `internal/security/policy/mode.go`
+- `internal/composition/capture/types.go`
+- `internal/ingestion/http/handlers.go`
+- `internal/composition/capture/query_dispatcher.go`
+- `internal/composition/capture/recording_manager.go`
+- `internal/composition/capture/settings.go`
+- `internal/sync/runtime/handler.go`
+- `internal/composition/capture/websocket.go`
+- `internal/composition/capture/memory.go`
+- `internal/analysis/snapshots/types.go`
+- `internal/analysis/snapshots/client_registry.go`
+- `internal/analysis/security/policy/mode.go`
 - `internal/buffers/ring_buffer.go`
 
 ### TypeScript/JavaScript Frontend

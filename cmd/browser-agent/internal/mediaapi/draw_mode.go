@@ -12,11 +12,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push/adapters/http"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/response"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )

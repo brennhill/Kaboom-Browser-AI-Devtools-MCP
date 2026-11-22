@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
-	capturelogs "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/logstore"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/perfstore"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/http/openapi"
+	capturelogs "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/logs"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/perf"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/telemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )
 
 const validTypes = "logs, network_waterfall, network_bodies, websocket_events, actions, performance_snapshots, extension_logs, websocket_status"

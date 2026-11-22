@@ -14,7 +14,7 @@ last_verified_date: 2026-03-21
 ## Automated Gates
 
 1. `go test ./cmd/browser-agent -run Terminal -count=1`
-2. `go test ./internal/pty/...`
+2. `go test ./internal/terminal/pty/...`
 3. `node --test tests/extension/terminal-sidepanel/sidepanel-terminal.test.js`
 4. `npm run docs:check:strict`
 

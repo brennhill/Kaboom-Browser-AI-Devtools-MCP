@@ -7,7 +7,7 @@ package server
 import (
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )
 
 // LogSnapshot represents a snapshot of log state at a moment in time.

@@ -23,12 +23,12 @@ The binary (`kaboom-agentic-browser`) runs in one of three modes. `main()` in
 - **Bridge mode** (the default). Stdio MCP transport. It spawns or reuses a
   persistent HTTP daemon and forwards JSON-RPC between stdio and the daemon's
   `/mcp` endpoint. If the daemon dies, the bridge respawns it.
-  Code: `cmd/browser-agent/internal/bridge/bridge.go:Runner`.
+  Code: `internal/lifecycle/bridge/bridge.go:Runner`.
 - **Daemon mode** (`--daemon`). An HTTP server for the extension endpoints and
   `/mcp`. Code: `cmd/browser-agent/main_connection_mcp.go`, `cmd/browser-agent/server.go`.
 - **CLI mode** (`kaboom-agentic-browser observe errors ...`). It sends one tool
   call to a running daemon and formats the result.
-  Code: `cmd/browser-agent/internal/cli/cli.go:Run`.
+  Code: `internal/tools/cli/cli.go:Run`.
 
 ## Bounded contexts
 
@@ -38,16 +38,16 @@ public interface listed here. `make check-layering` enforces the arrows (see
 
 | Context | Owned state | Packages | Public interface | May depend on |
 | --- | --- | --- | --- | --- |
-| **Connection & Sync** | Extension session, **connection generation**, liveness and disconnect, settings and extension-log intake, **command contract ID**, the daemon projections of the **tracked tab** and **Pilot** | `internal/capture/syncruntime/` | `internal/capture/syncruntime/handler.go:Handler.HandleSync`, `internal/capture/syncruntime/runtime.go:Runtime` (read accessors: `Runtime.GetTrackingStatus`, `Runtime.IsPilotActionAllowed`, `Runtime.WaitForExtensionConnected`), wire `internal/capture/syncruntime/wire_sync.go` | Browser Command (`Owner` only), `internal/capture/logstore/`, leaf utilities |
-| **Browser Command** | Queue, delivery eligibility, acks, progress, results from every **result source**, expiry, **lost commands** | `internal/browsercommand/`, `internal/queries/` (types) | `internal/browsercommand/owner.go:Owner`, `internal/browsercommand/exchange.go:SyncExchange`, `internal/browsercommand/result.go:Result`, `internal/queries/types.go:QueryRunner` | stdlib only. No HTTP, MCP or capture |
-| **Observation Capture** | Ring buffers and queries for logs, network, WebSocket, actions, performance, extension logs | `internal/capture/telemetrystore/`, `internal/capture/logstore/`, `internal/capture/perfstore/`, `internal/capture/actionstore/`, `internal/capture/bodystore/`, `internal/capture/waterfallstore/`, `internal/capture/ringstore/` | Each store's `Store` type (for example `internal/capture/telemetrystore/store.go:Store`) | Its own ring stores, `internal/types/` |
-| **Extension Ingestion** | None (adapter). Validates extension uploads and writes them to their owners | `internal/capture/httpingest/`, `cmd/browser-agent/internal/mediaapi/` | `internal/capture/httpingest/handlers.go:Handlers` | Capture stores, Browser Command (`Result`, `SubmitResult`), Event Recording (storage reads) |
+| **Connection & Sync** | Extension session, **connection generation**, liveness and disconnect, settings and extension-log intake, **command contract ID**, the daemon projections of the **tracked tab** and **Pilot** | `internal/sync/runtime/` | `internal/sync/runtime/handler.go:Handler.HandleSync`, `internal/sync/runtime/runtime.go:Runtime` (read accessors: `Runtime.GetTrackingStatus`, `Runtime.IsPilotActionAllowed`, `Runtime.WaitForExtensionConnected`), wire `internal/sync/runtime/wire_sync.go` | Browser Command (`Owner` only), `internal/observation/store/logs/`, leaf utilities |
+| **Browser Command** | Queue, delivery eligibility, acks, progress, results from every **result source**, expiry, **lost commands** | `internal/browsercommand/`, `internal/browsercommand/query/` (types) | `internal/browsercommand/owner.go:Owner`, `internal/browsercommand/exchange.go:SyncExchange`, `internal/browsercommand/result.go:Result`, `internal/browsercommand/query/types.go:QueryRunner` | stdlib only. No HTTP, MCP or capture |
+| **Observation Capture** | Ring buffers and queries for logs, network, WebSocket, actions, performance, extension logs | `internal/observation/store/telemetry/`, `internal/observation/store/logs/`, `internal/observation/store/perf/`, `internal/observation/store/actions/`, `internal/observation/store/bodies/`, `internal/observation/store/waterfall/`, `internal/observation/store/ring/` | Each store's `Store` type (for example `internal/observation/store/telemetry/store.go:Store`) | Its own ring stores, `internal/platform/types/` |
+| **Extension Ingestion** | None (adapter). Validates extension uploads and writes them to their owners | `internal/ingestion/http/`, `cmd/browser-agent/internal/mediaapi/` | `internal/ingestion/http/handlers.go:Handlers` | Capture stores, Browser Command (`Result`, `SubmitResult`), Event Recording (storage reads) |
 | **Event Recording** | Event recordings, their disk persistence and quotas | `internal/recording/` (with `internal/recording/playback/`, `internal/recording/logdiff/`, `internal/recording/actionlog/`) | `internal/recording/manager.go:RecordingManager` | Capture stores (read), leaf state packages |
-| **Screen Recording** (daemon half) | Saved video files and their metadata | `cmd/browser-agent/internal/screenrec/` | `cmd/browser-agent/internal/screenrec/handlers.go:InteractHandler`, `cmd/browser-agent/internal/screenrec/save.go:HandleSave` | Browser Command (`Owner`, `ports.ResultSink`) |
-| **Application Use Cases** | None (workflows) | `internal/app/` | `internal/app/screenshot/screenshot.go:Service`, `internal/app/pageinfo/pageinfo.go:Service`, `internal/app/pagestorage/storage.go:Service`, `internal/app/a11yaudit/a11yaudit.go:Service`, `internal/app/ports/ports.go:ResultSink` | Browser Command (`QueryRunner`), leaf packages. No HTTP, MCP, capture or `internal/tools` |
-| **Tool Surface** | Per-call MCP state only (rate limits, response shaping) | `internal/mcp/`, `internal/schema/`, `internal/tools/`, `cmd/browser-agent/internal/toolobserve/`, `cmd/browser-agent/internal/toolinteract/`, `cmd/browser-agent/internal/toolanalyze/`, `cmd/browser-agent/internal/toolgenerate/`, `cmd/browser-agent/internal/toolconfigure/`, `cmd/browser-agent/internal/toolrecording/`, `cmd/browser-agent/internal/asynccommand/` | The five tools (observe, analyze, generate, configure, interact) | Everything above, through owners and use cases |
-| **Composition** | Object graph only | `cmd/browser-agent/server.go`, `cmd/browser-agent/internal/toolruntime/`, `internal/capture/capture.go` | `cmd/browser-agent/server.go:setupHTTPRoutes`, `cmd/browser-agent/internal/toolruntime/tools_core.go:NewToolHandler` | Everything |
-| **Process Lifecycle** | Bridge, daemon spawn and respawn, single instance, Doctor diagnostics | `cmd/browser-agent/internal/bridge/`, `cmd/browser-agent/internal/daemonlife/`, `internal/instancegov/`, `internal/statediag/` | `cmd/browser-agent/internal/bridge/bridge.go:Runner` | Leaf utilities |
+| **Screen Recording** (daemon half) | Saved video files and their metadata | `internal/screenrec/` | `internal/screenrec/handlers.go:InteractHandler`, `internal/screenrec/save.go:HandleSave` | Browser Command (`Owner`, `ports.ResultSink`) |
+| **Application Use Cases** | None (workflows) | `internal/app/` | `internal/page/app/screenshot/screenshot.go:Service`, `internal/page/app/pageinfo/pageinfo.go:Service`, `internal/page/app/storage/storage.go:Service`, `internal/analysis/app/a11yaudit/a11yaudit.go:Service`, `internal/browsercommand/ports/ports.go:ResultSink` | Browser Command (`QueryRunner`), leaf packages. No HTTP, MCP, capture or `internal/tools` |
+| **Tool Surface** | Per-call MCP state only (rate limits, response shaping) | `internal/tools/mcp/`, `internal/tools/schema/`, `internal/tools/`, `cmd/browser-agent/internal/toolobserve/`, `internal/tools/interact/handler/`, `cmd/browser-agent/internal/toolanalyze/`, `internal/tools/generate/handler/`, `internal/tools/configure/handler/`, `internal/tools/recording/`, `internal/tools/asynccommand/` | The five tools (observe, analyze, generate, configure, interact) | Everything above, through owners and use cases |
+| **Composition** | Object graph only | `cmd/browser-agent/server.go`, `cmd/browser-agent/internal/toolruntime/`, `internal/composition/capture/capture.go` | `cmd/browser-agent/server.go:setupHTTPRoutes`, `cmd/browser-agent/internal/toolruntime/tools_core.go:NewToolHandler` | Everything |
+| **Process Lifecycle** | Bridge, daemon spawn and respawn, single instance, Doctor diagnostics | `internal/lifecycle/bridge/`, `internal/lifecycle/daemon/`, `internal/lifecycle/instance/gov/`, `internal/lifecycle/doctor/statediag/` | `internal/lifecycle/bridge/bridge.go:Runner` | Leaf utilities |
 | **Product Telemetry** | Anonymous install and usage counters | `internal/telemetry/` | `internal/telemetry/beacon.go` | Leaf utilities |
 
 ### Context map
@@ -84,21 +84,21 @@ builds every box and is omitted.
 
 - `cmd/browser-agent/server.go:setupHTTPRoutes` builds the HTTP surface. It
   wires `/sync` through `cmd/browser-agent/server.go:newSyncHandler` to
-  `internal/capture/syncruntime/handler.go:NewHandler`, binds the ingestion
-  routes to `internal/capture/httpingest/handlers.go:Handlers`, and binds
-  `/recordings/save` to `cmd/browser-agent/internal/screenrec/save.go:HandleSave`.
+  `internal/sync/runtime/handler.go:NewHandler`, binds the ingestion
+  routes to `internal/ingestion/http/handlers.go:Handlers`, and binds
+  `/recordings/save` to `internal/screenrec/save.go:HandleSave`.
 - `cmd/browser-agent/internal/toolruntime/tools_core.go:NewToolHandler` builds
   the Tool Surface. It injects owners and use cases
   (`cmd/browser-agent/internal/toolruntime/usecase_wiring.go:newScreenshotService`)
   into each tool dispatcher.
-- `internal/capture/capture.go:NewCapture` constructs the stores and runtimes.
+- `internal/composition/capture/capture.go:NewCapture` constructs the stores and runtimes.
   Only `cmd/browser-agent` may call it. The **capture aggregate**
-  (`internal/capture/capture.go:Capture`) is a wiring object held only by the
+  (`internal/composition/capture/capture.go:Capture`) is a wiring object held only by the
   composition root (`cmd/browser-agent` and the `toolruntime` wiring). Every
   feature receives the owner it uses. Health, doctor, dashboard and the
-  operational API receive the `internal/capture/healthreader/reader.go:Owners`
-  bundle built by `internal/capture/capture.go:Capture.HealthOwners`. The MCP
-  guards (`cmd/browser-agent/internal/toolguard/`), `insecureproxy` and
+  operational API receive the `internal/observation/healthreader/reader.go:Owners`
+  bundle built by `internal/composition/capture/capture.go:Capture.HealthOwners`. The MCP
+  guards (`internal/tools/guard/`), `insecureproxy` and
   `mcpresponse` take `*syncruntime.Runtime`. `clientapi` and `terminal` take
   the client registry.
 
@@ -109,24 +109,24 @@ Each row is a cross-context operation. The **owner** decides the outcome. The
 
 | Operation | Owner | Flow and handoff contracts |
 | --- | --- | --- |
-| Command enqueue | Browser Command | Tool Surface → `Owner.Enqueue(PendingQuery, timeout, clientID)` (`internal/browsercommand/owner.go:Owner.Enqueue`). MCP-facing async wrapper: `cmd/browser-agent/internal/asynccommand/handler.go:Handler.EnqueuePendingQuery`. The returned **correlation ID** goes to the agent |
-| Command delivery | Browser Command (eligibility). Connection & Sync (transport) | Extension heartbeat → `Handler.HandleSync` → `Handler.GetPendingQueriesDisconnectAware` → `Owner.Pending`. Commands are stamped with the current **connection generation** in `buildSyncCommands` and returned as `SyncResponse.Commands` (`internal/capture/syncruntime/wire_sync.go:SyncCommand` ↔ `src/types/wire/wire-sync.ts`) |
+| Command enqueue | Browser Command | Tool Surface → `Owner.Enqueue(PendingQuery, timeout, clientID)` (`internal/browsercommand/owner.go:Owner.Enqueue`). MCP-facing async wrapper: `internal/tools/asynccommand/handler.go:Handler.EnqueuePendingQuery`. The returned **correlation ID** goes to the agent |
+| Command delivery | Browser Command (eligibility). Connection & Sync (transport) | Extension heartbeat → `Handler.HandleSync` → `Handler.GetPendingQueriesDisconnectAware` → `Owner.Pending`. Commands are stamped with the current **connection generation** in `buildSyncCommands` and returned as `SyncResponse.Commands` (`internal/sync/runtime/wire_sync.go:SyncCommand` ↔ `src/types/wire/wire-sync.ts`) |
 | Command ack and progress | Browser Command | Next heartbeat: `SyncRequest` last-ack and in-progress list → `Handler.applySyncExchange` builds `browsercommand.SyncExchange` → `Owner.ApplySyncExchange` under a `GenerationGate`. Reports past the grace period become **lost commands** (`internal/browsercommand/exchange.go:LostCommand`) |
 | Command result via /sync | Browser Command | Extension `SyncClient.queueCommandResult` → `SyncRequest` command results → `SyncExchange.Results` → applied as `SourceSync` only while the gate confirms the generation is current. **Stale work** is reported, not applied (`internal/browsercommand/exchange.go:StaleWork`) |
-| Command result out of band | Browser Command | `POST /query-result` → `internal/capture/httpingest/handlers.go:Handlers.HandleQueryResult` → `Owner.SubmitResult` (`SourceQueryResult`, validated by identity). Upload adapters complete commands the same way through `internal/app/ports/ports.go:ResultSink` (`cmd/browser-agent/internal/mediaapi/handler.go`, `cmd/browser-agent/internal/screenrec/save.go`) |
+| Command result out of band | Browser Command | `POST /query-result` → `internal/ingestion/http/handlers.go:Handlers.HandleQueryResult` → `Owner.SubmitResult` (`SourceQueryResult`, validated by identity). Upload adapters complete commands the same way through `internal/browsercommand/ports/ports.go:ResultSink` (`cmd/browser-agent/internal/mediaapi/handler.go`, `internal/screenrec/save.go`) |
 | MCP wait for result | Browser Command (state). Tool Surface (formatting) | `asynccommand.Handler` waits with `Owner.WaitCommand` (commands) or `Owner.WaitQueryResult` (**browser queries**), then formats with `Handler.FormatCommandResult` |
 | Disconnect and expiry | Connection & Sync (detects). Browser Command (fails work) | `Runtime.Disconnected` → `Owner.ExpireAll("extension_disconnected")`. A waiter that sees a disconnect calls `Owner.FailDisconnected` (a `SourceDaemon` result) |
 | Reconnect and generation bump | Connection & Sync | A new extension session in `SyncRequest` → `bumpSyncGenerationForNewSession`. Superseded requests → `rejectStaleGeneration`. The new generation is returned in `SyncResponse` and mirrored by the extension (`src/background/runtime-state/connection-generation.ts:setConnectionGeneration`). **Probe syncs** adopt nothing (`respondProbeSync`) |
-| Tab switch (synchronous) | Tab Tracking & Pilot (selection). Connection & Sync (projection) | `interact({action: "switch_tab"})` → toolinteract enqueues a command → the extension persists the new tab before it returns (`src/background/exec/browser-actions.ts:executeSwitchTabAction`) → the result reaches `applySwitchTabTracking` (`cmd/browser-agent/internal/toolinteract/interact_browser.go`) → `Runtime.UpdateTrackedTab`. This is a command-confirmed observation that opens a hold in `observeTrackingLocked` |
+| Tab switch (synchronous) | Tab Tracking & Pilot (selection). Connection & Sync (projection) | `interact({action: "switch_tab"})` → toolinteract enqueues a command → the extension persists the new tab before it returns (`src/background/exec/browser-actions.ts:executeSwitchTabAction`) → the result reaches `applySwitchTabTracking` (`internal/tools/interact/handler/interact_browser.go`) → `Runtime.UpdateTrackedTab`. This is a command-confirmed observation that opens a hold in `observeTrackingLocked` |
 | Tab switch (asynchronous: user pick, close, navigation) | Tab Tracking & Pilot | Chrome adapters update the tracked tab in `chrome.storage` → the next heartbeat's `SyncSettings` → `observeTrackingLocked`. The hold drops up to `staleHeartbeatAllowance` heartbeats that still name the old tab, then the extension wins |
 | Content readiness | Tab Tracking & Pilot (extension) | Extension-internal barrier (`src/background/runtime-state/content-readiness.ts:ContentReadinessBarrier`). The daemon sees only the heartbeat tab status (`Runtime.GetTabStatus`) |
 | Pilot gating | Tab Tracking & Pilot (intent). Connection & Sync (projection) | `SyncSettings.PilotEnabled` → `Runtime.IsPilotActionAllowed` gates interact actions in the daemon. The extension re-checks with `requireAiWebPilot` before it executes |
-| Event recording start, stop, persist | Event Recording | `configure({what: "event_recording_start"})` → `cmd/browser-agent/internal/toolrecording/handler.go:Handler.EventRecordingStart` → `RecordingManager.StartRecording`. Stop → `RecordingManager.StopRecording` persists to disk. Storage reads: `GET /recordings/storage` → `Handlers.HandleRecordingStorage` |
+| Event recording start, stop, persist | Event Recording | `configure({what: "event_recording_start"})` → `internal/tools/recording/handler.go:Handler.EventRecordingStart` → `RecordingManager.StartRecording`. Stop → `RecordingManager.StopRecording` persists to disk. Storage reads: `GET /recordings/storage` → `Handlers.HandleRecordingStorage` |
 | Screen recording start and stop | Screen Recording (extension owns the live lifecycle) | `interact({action: "screen_recording_start"})` → `InteractHandler.HandleRecordStart` → `Owner.Enqueue` (command `screen_recording_start`) → /sync → extension. See the extension guide for start, restore and stop |
 | Saved video | Screen Recording (daemon half) | The offscreen worker sends `POST /recordings/save` → `screenrec.HandleSave` writes the file and calls `SubmitResult` with the upload's query ID, which completes the stop command |
-| Screenshot | Application Use Cases | observe(screenshot) → `internal/tools/observe/page/` adapter → `internal/app/screenshot/screenshot.go:Service.Capture` → `QueryRunner` (Browser Command) → extension `screenshot` command. The adapter maps `Result` and `Failure` to MCP image blocks and errors |
+| Screenshot | Application Use Cases | observe(screenshot) → `internal/tools/observe/page/` adapter → `internal/page/app/screenshot/screenshot.go:Service.Capture` → `QueryRunner` (Browser Command) → extension `screenshot` command. The adapter maps `Result` and `Failure` to MCP image blocks and errors |
 | Observe reads | Observation Capture | `cmd/browser-agent/internal/toolobserve/dispatcher.go` → `internal/tools/observe/` modes → `internal/tools/observe/core/deps.go:Deps` (stores and Runtime). No browser command is involved |
-| Observation ingestion | Observation Capture (retention). Extension Ingestion (adapter) | Extension batchers → `/network-bodies`, `/network-waterfall`, `/enhanced-actions`, `/websocket-events`, `/performance-snapshots` → `Handlers` → stores. Extension logs ride `SyncRequest` into `internal/capture/logstore/` |
+| Observation ingestion | Observation Capture (retention). Extension Ingestion (adapter) | Extension batchers → `/network-bodies`, `/network-waterfall`, `/enhanced-actions`, `/websocket-events`, `/performance-snapshots` → `Handlers` → stores. Extension logs ride `SyncRequest` into `internal/observation/store/logs/` |
 
 ### Current behavior and target
 
@@ -150,11 +150,11 @@ Each row is a cross-context operation. The **owner** decides the outcome. The
 arrow is broken:
 
 - `scripts/contracts/layering/main.go` enforces the global matrix:
-  `internal/**` never imports `cmd/**`; `internal/types` is a leaf;
-  `internal/mcp` does not import tools or capture; the command module and
+  `internal/**` never imports `cmd/**`; `internal/platform/types` is a leaf;
+  `internal/tools/mcp` does not import tools or capture; the command module and
   `internal/app/**` have no HTTP, MCP or capture imports; `capture-root` allows
-  only `cmd/browser-agent`, its toolruntime wiring, the `internal/capture/`
-  tree and test-support packages to import `internal/capture`; `test-support`
+  only `cmd/browser-agent`, its toolruntime wiring, the `internal/composition/capture/`
+  tree and test-support packages to import `internal/composition/capture`; `test-support`
   keeps production code from importing test-support packages;
   `capture.NewCapture` is called only by the composition root.
 - `scripts/contracts/layering/command_owner.go` keeps the command owner as the
@@ -167,8 +167,8 @@ arrow is broken:
 ## Wire types
 
 Wire types are the source of truth for HTTP payload shapes. Go `wire_*.go`
-files (for example `internal/capture/syncruntime/wire_sync.go` and
-`internal/types/wire_network.go`) pair with TypeScript files in
+files (for example `internal/sync/runtime/wire_sync.go` and
+`internal/platform/types/wire_network.go`) pair with TypeScript files in
 `src/types/wire/`. `make check-wire-drift` enforces that they match.
 
 ## Key patterns
@@ -177,7 +177,7 @@ files (for example `internal/capture/syncruntime/wire_sync.go` and
   consumer-owned ports. The `.interface-baseline.json` ratchet rejects
   producer-owned and dead interfaces.
 - **Zero external dependencies.** stdlib only. Operator diagnostics go through
-  `internal/statediag/`.
+  `internal/lifecycle/doctor/statediag/`.
 - **Append-only I/O on hot paths.** Ring stores evict in a single pass.
 
 ## "Change X, edit Y" lookup
@@ -187,8 +187,8 @@ files (for example `internal/capture/syncruntime/wire_sync.go` and
 | Add an observe mode | `internal/tools/observe/` (mode) and `cmd/browser-agent/internal/toolobserve/registry.go` |
 | Add a transport-independent workflow | A new package under `internal/app/`, wired in `cmd/browser-agent/internal/toolruntime/usecase_wiring.go` |
 | Add a browser command | Daemon: enqueue through `Owner` from the tool adapter. Extension: `registerCommand` in `src/background/commands/` |
-| Change the sync protocol | `internal/capture/syncruntime/handler.go`, `internal/capture/syncruntime/wire_sync.go`, `src/types/wire/wire-sync.ts`, `src/background/sync/sync-client.ts` |
-| Add an extension HTTP endpoint | `internal/capture/httpingest/` (handler) and `cmd/browser-agent/server.go` (route) |
+| Change the sync protocol | `internal/sync/runtime/handler.go`, `internal/sync/runtime/wire_sync.go`, `src/types/wire/wire-sync.ts`, `src/background/sync/sync-client.ts` |
+| Add an extension HTTP endpoint | `internal/ingestion/http/` (handler) and `cmd/browser-agent/server.go` (route) |
 | Add a bounded-context rule | `scripts/contracts/layering/contexts.go`, with a test in `scripts/contracts/layering/contexts_test.go` |
 
 ## Testing

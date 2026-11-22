@@ -20,7 +20,7 @@ graph TB
     end
 
     subgraph "Layer 2: Integration Tests"
-        L2[internal/capture/<br/>async_queue_integration_test.go]
+        L2[internal/composition/capture/<br/>async_queue_integration_test.go]
         L2 -->|Tests| L2A[Full async flow<br/>MCP → Queue → Extension → Result]
         L2 -->|Tests| L2B[Multi-client isolation]
         L2 -->|Tests| L2C[Command expiration]
@@ -127,7 +127,7 @@ sequenceDiagram
         L1-->>Dev: ❌ BLOCKED<br/>See ADR-002
     end
 
-    Dev->>Dev: go test ./internal/capture
+    Dev->>Dev: go test ./internal/composition/capture
     Dev->>L2: Run integration tests
 
     alt Tests pass
@@ -193,11 +193,11 @@ graph LR
 ```mermaid
 graph TB
     subgraph "Protected Files (Layer 1 + 3)"
-        F1[internal/queries/dispatcher_queries.go<br/>303 lines - queue implementation]
-        F2[internal/capture/httpingest/handlers.go<br/>HTTP polling endpoints]
+        F1[internal/browsercommand/query/dispatcher_queries.go<br/>303 lines - queue implementation]
+        F2[internal/ingestion/http/handlers.go<br/>HTTP polling endpoints]
         F3[cmd/browser-agent/tools_core.go<br/>MCP tool handlers]
         F4[cmd/browser-agent/bridge.go<br/>MCP ↔ HTTP bridge]
-        F5[internal/queries/types.go<br/>Type definitions]
+        F5[internal/browsercommand/query/types.go<br/>Type definitions]
     end
 
     subgraph "Required Methods (14 total)"

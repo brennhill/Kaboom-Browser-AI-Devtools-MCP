@@ -6,9 +6,9 @@ package actionlog
 import (
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/telemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // Recorder owns normalization of AI actions before they enter telemetry.

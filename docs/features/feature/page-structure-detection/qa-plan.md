@@ -11,7 +11,7 @@ last_verified_date: 2026-03-05
 
 ## Automated Coverage
 - `cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go` (`HandlePageStructure` dispatch contract)
-- `internal/schema/invariants_test.go` (`page_structure` schema mode)
+- `internal/tools/schema/invariants_test.go` (`page_structure` schema mode)
 
 ## Required Scenarios
 1. Framework/global detection success path.

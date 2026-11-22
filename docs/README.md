@@ -29,7 +29,7 @@ last-verified: 2026-08-06
 
 ## Canonical Code Anchors
 - MCP request handling: `cmd/browser-agent/handler.go`
-- Tool schemas: `internal/schema/schema.go`
+- Tool schemas: `internal/tools/schema/schema.go`
 - Tool dispatch: `cmd/browser-agent/tools_core.go`
 - Extension startup composition: `src/background/init.ts`
 - Extension connection runtime: `src/background/orchestration/connection-monitor.ts`

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/styleprobe"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/page/styleprobe"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 // TestSeverityIsDerivedFromProvenance pins the invariant the whole triage axis

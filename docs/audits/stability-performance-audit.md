@@ -8,7 +8,7 @@ last_reviewed: 2026-02-16
 
 **Date:** 2026-02-14
 **Auditor:** Senior Reliability Engineer (automated)
-**Scope:** Go server (`cmd/browser-agent/`), capture package (`internal/capture/`), utility packages
+**Scope:** Go server (`cmd/browser-agent/`), capture package (`internal/composition/capture/`), utility packages
 **Version audited:** 0.7.12
 
 ---
@@ -70,7 +70,7 @@ Wrap all stdout writes in connect mode with `mcpStdoutMu.Lock()`/`mcpStdoutMu.Un
 
 ### FINDING 1.2 -- QueryDispatcher.Close() is not concurrency-safe
 
-- **Location:** `internal/queries/dispatcher.go`
+- **Location:** `internal/browsercommand/query/dispatcher.go`
 - **Category:** Concurrency
 - **Severity:** LOW
 
@@ -98,7 +98,7 @@ Use `sync.Once` to make Close truly safe for concurrent callers.
 
 ### FINDING 1.3 -- Lock hierarchy is well-documented and consistently followed
 
-- **Location:** `internal/capture/capture.go`, `internal/queries/dispatcher.go`
+- **Location:** `internal/composition/capture/capture.go`, `internal/browsercommand/query/dispatcher.go`
 - **Category:** Concurrency
 - **Severity:** N/A (Positive finding)
 
@@ -155,7 +155,7 @@ Use lazy initialization with `sync.Once` -- only create the store when first acc
 
 ### FINDING 2.2 -- WaitForResultWithClient spawns a 10ms ticker goroutine per blocking call
 
-- **Location:** `internal/capture/query_dispatcher.go:311-322`
+- **Location:** `internal/composition/capture/query_dispatcher.go:311-322`
 - **Category:** Resource Leak
 - **Severity:** LOW
 
@@ -455,7 +455,7 @@ No action needed.
 
 ### FINDING 5.3 -- completedResults map cleaned every 30 seconds with 60s TTL
 
-- **Location:** `internal/capture/query_dispatcher.go:374-415`
+- **Location:** `internal/composition/capture/query_dispatcher.go:374-415`
 - **Category:** Memory
 - **Severity:** LOW
 
@@ -476,7 +476,7 @@ No action needed. The eager-cleanup-on-access pattern keeps the map tight.
 
 ### FINDING 6.1 -- Capture.Close() does not stop all background goroutines
 
-- **Location:** `internal/capture/capture-struct.go:184-188`
+- **Location:** `internal/composition/capture/capture-struct.go:184-188`
 - **Category:** Shutdown
 - **Severity:** MEDIUM
 

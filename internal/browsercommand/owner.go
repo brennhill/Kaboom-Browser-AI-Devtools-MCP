@@ -8,10 +8,10 @@
 // browser extension: queueing, delivery acknowledgment, results, expiry,
 // disconnect handling and missing-progress reconciliation.
 //
-// It is transport independent: it must not import net/http, internal/mcp,
-// internal/capture/** or cmd/** (enforced by scripts/contracts/layering).
+// It is transport independent: it must not import net/http, internal/tools/mcp,
+// internal/composition/capture/** or cmd/** (enforced by scripts/contracts/layering).
 // Connection identity, liveness and generation stay with the daemon connection
-// owner (internal/capture/syncruntime.Runtime); generation-sensitive work
+// owner (internal/sync/runtime.Runtime); generation-sensitive work
 // enters through ApplySyncExchange with a GenerationGate supplied by that owner.
 package browsercommand
 
@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/internal/dispatch"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
 )
 
 // Owner is the single owner of browser-command lifecycle transitions.

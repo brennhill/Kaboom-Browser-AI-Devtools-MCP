@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty"
 )
 
 func TestResolveStartDir(t *testing.T) {

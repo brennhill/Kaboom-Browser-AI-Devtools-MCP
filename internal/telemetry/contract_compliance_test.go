@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/incident"
 )
 
 // captureBeacon sets up a test server and returns a channel that receives beacon payloads.

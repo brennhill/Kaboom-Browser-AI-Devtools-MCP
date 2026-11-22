@@ -28,7 +28,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/synctranscript"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/transcript"
 )
 
 const (

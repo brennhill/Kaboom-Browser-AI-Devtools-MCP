@@ -21,10 +21,10 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/spawnpolicy"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/wstransport"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/clientstore"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
-	ptydiag "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/diagnostics"
-	ptyupload "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/clientstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty"
+	ptydiag "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty/diagnostics"
+	ptyupload "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty/upload"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 

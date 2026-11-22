@@ -288,17 +288,17 @@ describe('Tooling contracts', () => {
     for (const currentOwner of [
       'internal/browsercommand/owner.go',
       'internal/browsercommand/internal/dispatch/dispatcher_results.go',
-      'internal/capture/syncruntime/handler.go',
+      'internal/sync/runtime/handler.go',
       'internal/toolobserve/dispatcher.go',
-      'internal/toolinteract/interact_browser.go',
-      'internal/bridge/bridge.go'
+      'internal/tools/interact/handler/interact_browser.go',
+      'internal/lifecycle/bridge/bridge.go'
     ]) {
       assert.ok(script.includes(currentOwner), `missing canonical owner ${currentOwner}`)
     }
     for (const deletedSurface of [
-      'internal/capture/query_dispatcher.go',
-      'internal/capture/types.go',
-      'internal/queries/dispatcher',
+      'internal/composition/capture/query_dispatcher.go',
+      'internal/composition/capture/types.go',
+      'internal/browsercommand/query/dispatcher',
       'tools_observe.go',
       'bridge_adapter.go',
       'toolObserveCommandResult'

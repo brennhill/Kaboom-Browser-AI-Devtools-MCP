@@ -62,7 +62,7 @@ Tests: cold start, tool calls, concurrent clients, stdout purity, persistence, g
 
 **TS strictness:** No `@ts-nocheck` and no new explicit `any` in authored `src/` TS (`make check-ts-strictness`; ratchet in `.ts-strictness-baseline.json`).
 
-**Go layering (hexagonal contract):** `make check-layering` enforces the dependency matrix — `internal/**` ↛ `cmd/**`, `internal/types` stays a leaf, `internal/mcp` ↛ `internal/tools`/`internal/capture`, `internal/schema` ↔ `internal/tools` stay siblings, and `capture.NewCapture` is constructed only in the composition root (`cmd/browser-agent`). Also: exported interfaces ≤7 methods (hard) and not producer-owned/dead (ratchet via `.interface-baseline.json`, `make interface-baseline-update`).
+**Go layering (hexagonal contract):** `make check-layering` enforces the dependency matrix — `internal/**` ↛ `cmd/**`, `internal/platform/types` stays a leaf, `internal/tools/mcp` ↛ `internal/tools`/`internal/composition/capture`, `internal/tools/schema` ↔ `internal/tools` stay siblings, and `capture.NewCapture` is constructed only in the composition root (`cmd/browser-agent`). Also: exported interfaces ≤7 methods (hard) and not producer-owned/dead (ratchet via `.interface-baseline.json`, `make interface-baseline-update`).
 
 **Secrets:** Never commit credentials. Pre-commit and `make check-secrets` pattern-scan staged/tracked files; gitleaks (pinned, `make security-check` + CI) scans full git history. Intentional fake-credential fixtures must be listed in `.secrets-allowlist` (and `.gitleaks.toml`) with a reason.
 

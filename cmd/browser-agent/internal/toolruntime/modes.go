@@ -10,7 +10,7 @@ package toolruntime
 import (
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/generate/handler"
 )
 
 // DispatchableModes maps each of the five tool names to the modes its dispatcher

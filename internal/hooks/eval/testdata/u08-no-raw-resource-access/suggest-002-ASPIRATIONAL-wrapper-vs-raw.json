@@ -1,0 +1,14 @@
+{
+  "description": "ASPIRATIONAL U8 Suggest: project has a writeFile helper but edit uses raw os.WriteFile — should suggest using the wrapper",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "internal/hooks/hook_policy.go", "new_string": "os.WriteFile(logPath, logData, 0644)" }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["U8", "wrapper", "raw", "os.WriteFile"],
+    "max_latency_ms": 5000
+  }
+}

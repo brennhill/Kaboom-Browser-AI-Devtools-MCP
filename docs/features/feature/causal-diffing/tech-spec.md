@@ -195,9 +195,9 @@ The AI's natural workflow becomes:
 
 The `get_causal_diff` tool, baseline resource fingerprints, moving-average updates, and probable-cause/recommendation generation are not implemented. Planned: a causal-diff MCP mode in the Go server backed by stored per-URL resource fingerprints, plus unit tests.
 
-Building blocks that already exist in `internal/performance`:
-- `ComputeResourceDiffForNav` (`internal/performance/diff_resource.go`) categorizes added/removed/resized/retimed resources by exact URL (no query-param normalization or path-prefix grouping yet).
-- `ResourceDiff` and a placeholder `CausalDiffResult` response type (`internal/performance/types.go`).
-- `ComputePerfDiff` (`internal/performance/diff.go`) produces timing deltas, currently surfaced as `perf_diff` on interact results.
+Building blocks that already exist in `internal/observation/performance`:
+- `ComputeResourceDiffForNav` (`internal/observation/performance/diff_resource.go`) categorizes added/removed/resized/retimed resources by exact URL (no query-param normalization or path-prefix grouping yet).
+- `ResourceDiff` and a placeholder `CausalDiffResult` response type (`internal/observation/performance/types.go`).
+- `ComputePerfDiff` (`internal/observation/performance/diff.go`) produces timing deltas, currently surfaced as `perf_diff` on interact results.
 
 Extension side: `parseResourceTiming` in `src/lib/net/network.ts` declares the `renderBlockingStatus` field on resource timing entries but does not yet forward it to the server; planned work is to include it in performance snapshots.

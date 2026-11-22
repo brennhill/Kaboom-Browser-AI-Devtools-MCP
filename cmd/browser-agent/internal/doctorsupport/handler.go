@@ -10,9 +10,9 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefile"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/incident"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/file"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 type arguments struct {

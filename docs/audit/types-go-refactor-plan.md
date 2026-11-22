@@ -9,7 +9,7 @@ last-verified: 2026-02-08
 
 # types.go Refactoring Plan (653 LOC → ~400 LOC)
 
-**File:** [`internal/capture/types.go`](internal/capture/types.go) (653 lines)
+**File:** [`internal/composition/capture/types.go`](internal/composition/capture/types.go) (653 lines)
 
 **Goal:** Split into focused files by domain/concern.
 
@@ -91,7 +91,7 @@ last-verified: 2026-02-08
 
 ## Proposed File Structure
 
-### 1. `internal/capture/interfaces.go` (~80 LOC)
+### 1. `internal/composition/capture/interfaces.go` (~80 LOC)
 **Purpose:** Abstracted component interfaces
 
 **Contents:**
@@ -103,7 +103,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 2. `internal/capture/type-aliases.go` (~30 LOC)
+### 2. `internal/composition/capture/type-aliases.go` (~30 LOC)
 **Purpose:** Type aliases for imported packages
 
 **Contents:**
@@ -117,7 +117,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 3. `internal/capture/session-types.go` (~50 LOC)
+### 3. `internal/composition/capture/session-types.go` (~50 LOC)
 **Purpose:** Session tracking types
 
 **Contents:**
@@ -128,7 +128,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 4. `internal/capture/security-types.go` (~50 LOC)
+### 4. `internal/composition/capture/security-types.go` (~50 LOC)
 **Purpose:** Security threat flagging
 
 **Contents:**
@@ -139,7 +139,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 5. `internal/capture/network-types.go` (~200 LOC)
+### 5. `internal/composition/capture/network-types.go` (~200 LOC)
 **Purpose:** Network waterfall types
 
 **Contents:**
@@ -154,7 +154,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 6. `internal/capture/websocket-types.go` (~250 LOC)
+### 6. `internal/composition/capture/websocket-types.go` (~250 LOC)
 **Purpose:** WebSocket event and connection tracking types
 
 **Contents:**
@@ -179,7 +179,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 7. `internal/capture/extension-logging-types.go` (~100 LOC)
+### 7. `internal/composition/capture/extension-logging-types.go` (~100 LOC)
 **Purpose:** Extension logging types
 
 **Contents:**
@@ -193,7 +193,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 8. `internal/capture/enhanced-actions-types.go` (~80 LOC)
+### 8. `internal/composition/capture/enhanced-actions-types.go` (~80 LOC)
 **Purpose:** Enhanced actions types
 
 **Contents:**
@@ -206,7 +206,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 9. `internal/capture/internal-types.go` (~150 LOC)
+### 9. `internal/composition/capture/internal-types.go` (~150 LOC)
 **Purpose:** Internal types used by Capture struct
 
 **Contents:**
@@ -221,7 +221,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 10. `internal/capture/constants.go` (~80 LOC)
+### 10. `internal/composition/capture/constants.go` (~80 LOC)
 **Purpose:** Buffer capacity and configuration constants
 
 **Contents:**
@@ -237,7 +237,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 11. `internal/capture/buffer-types.go` (~120 LOC)
+### 11. `internal/composition/capture/buffer-types.go` (~120 LOC)
 **Purpose:** Ring buffer types for Capture composition
 
 **Contents:**
@@ -250,7 +250,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 12. `internal/capture/capture-struct.go` (~100 LOC)
+### 12. `internal/composition/capture/capture-struct.go` (~100 LOC)
 **Purpose:** Main Capture struct and factory function
 
 **Contents:**
@@ -281,7 +281,7 @@ last-verified: 2026-02-08
 
 ### Phase 3: Test
 
-1. Run `go test ./internal/capture/...` to ensure no regressions
+1. Run `go test ./internal/composition/capture/...` to ensure no regressions
 2. Run full test suite to verify overall functionality
 
 ### Phase 4: Remove Old Code
@@ -303,7 +303,7 @@ last-verified: 2026-02-08
 
 ## Import Structure After Refactoring
 
-### In `internal/capture/types.go`:
+### In `internal/composition/capture/types.go`:
 ```go
 import (
 	"encoding/json"
@@ -344,9 +344,9 @@ For each new file:
 - [ ] Add package declaration (`package capture`)
 - [ ] Add necessary imports
 - [ ] Verify no circular dependencies
-- [ ] Run `go test ./internal/capture/[new-file].go`
+- [ ] Run `go test ./internal/composition/capture/[new-file].go`
 - [ ] Update imports in `types.go`
-- [ ] Run `go build ./internal/capture/`
+- [ ] Run `go build ./internal/composition/capture/`
 - [ ] Run full test suite
 - [ ] Remove moved code from `types.go`
 - [ ] Update documentation if needed

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema/interact"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/schema"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/schema/interact"
 )
 
 func TestToolModeSpecs_AllToolsPresent(t *testing.T) {

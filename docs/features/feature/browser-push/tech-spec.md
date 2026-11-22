@@ -368,7 +368,7 @@ The daemon inspects:
 - `params.clientInfo.name` — for client-specific behavior
 - Notifications are assumed available for all stdio clients (part of base MCP spec)
 
-**Shipped**: the bridge fast path handles `initialize` (`Runner.handleFastPath` in `cmd/browser-agent/internal/bridge/bridge_fastpath.go`) and stores capabilities via the protocol layer; parsing lives in `ExtractClientCapabilities` (`cmd/browser-agent/internal/pushapi/runtime.go`). The extension can query them through `GET /push/capabilities`.
+**Shipped**: the bridge fast path handles `initialize` (`Runner.handleFastPath` in `internal/lifecycle/bridge/bridge_fastpath.go`) and stores capabilities via the protocol layer; parsing lives in `ExtractClientCapabilities` (`internal/push/adapters/http/runtime.go`). The extension can query them through `GET /push/capabilities`.
 
 ## observe({what: "inbox"}) — New Mode
 
@@ -473,10 +473,10 @@ export function installPushCommandListener() {
 | Push router (sampling → notification → inbox) | `internal/push/router.go` (tests: `internal/push/router_test.go`) |
 | MCP sampling request builder | `internal/push/sampling.go` (tests: `internal/push/sampling_test.go`) |
 | Push types | `internal/push/types.go` |
-| Client capability parsing | `cmd/browser-agent/internal/pushapi/runtime.go` (`ExtractClientCapabilities`) |
-| HTTP handlers (`/push/screenshot`, `/push/message`, `/push/capabilities`), annotation delivery | `cmd/browser-agent/internal/pushapi/handler.go` (`DeliverAnnotations`) |
+| Client capability parsing | `internal/push/adapters/http/runtime.go` (`ExtractClientCapabilities`) |
+| HTTP handlers (`/push/screenshot`, `/push/message`, `/push/capabilities`), annotation delivery | `internal/push/adapters/http/handler.go` (`DeliverAnnotations`) |
 | Route registration (incl. `/push/drain`) and router wiring | `cmd/browser-agent/server.go` |
-| Bridge-side push drain relay | `cmd/browser-agent/internal/bridge/pushrelay/relay.go` |
+| Bridge-side push drain relay | `internal/lifecycle/bridge/pushrelay/relay.go` |
 | Draw-mode completion → push | `cmd/browser-agent/internal/mediaapi/draw_mode.go` |
 | `observe({what: "inbox"})` and response piggyback | `cmd/browser-agent/internal/toolobserve/inbox.go`, routed in `cmd/browser-agent/internal/toolobserve/dispatcher.go` |
 | Blocking annotation wait | `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` |

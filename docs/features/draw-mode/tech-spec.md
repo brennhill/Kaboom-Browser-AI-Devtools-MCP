@@ -416,13 +416,13 @@ The original plan proposed flat `cmd/browser-agent/tools_*.go` files and a `quer
 
 | File | Purpose |
 |------|---------|
-| `cmd/browser-agent/internal/toolinteract/interact_page.go` | `HandleDrawModeStart`: queues the `draw_mode` query for the extension |
+| `internal/tools/interact/handler/interact_page.go` | `HandleDrawModeStart`: queues the `draw_mode` query for the extension |
 | `cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go` | Registers `draw_mode_start` in the interact dispatch table |
 | `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go` | Routes `annotations` and `annotation_detail` analyze modes |
 | `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` | `annotations` and `annotation_detail` handlers, bounded waiting, response shaping |
 | `cmd/browser-agent/internal/mediaapi/draw_mode.go` | `HandleDrawModeComplete` for `POST /draw-mode/complete` (registered in `cmd/browser-agent/server.go`), screenshot save |
 | `internal/annotation/` | In-memory annotation storage, TTL, detail lookup, persistence, and cleanup |
-| `internal/schema/interact/actions.go`, `internal/schema/analyze.go` | Schema registration for `draw_mode_start` and the analyze modes |
+| `internal/tools/schema/interact/actions.go`, `internal/tools/schema/analyze.go` | Schema registration for `draw_mode_start` and the analyze modes |
 | `cmd/browser-agent/testdata/mcp-tools-list.golden.json` | Golden tool-list data |
 
 ---

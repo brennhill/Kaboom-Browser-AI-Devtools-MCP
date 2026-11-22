@@ -59,9 +59,9 @@ The call **blocks for up to 55 seconds** waiting for annotations to arrive. This
 
 3. **CommandTracker** (`internal/browsercommand/internal/dispatch/dispatcher_commands.go`): Provides `WaitForCommand(correlationID, timeout)` which blocks using a `commandNotify` channel. `ApplyCommandResult(correlationID, status, result, err)` closes the channel to wake all waiters. The waiter registration uses a 10-minute TTL to give users ample drawing time.
 
-4. **Observe handler** (`cmd/browser-agent/internal/asynccommand/handler.go`): Waits through the canonical command tracker and returns either the terminal result or the current pending lifecycle state.
+4. **Observe handler** (`internal/tools/asynccommand/handler.go`): Waits through the canonical command tracker and returns either the terminal result or the current pending lifecycle state.
 
-5. **Bridge** (`cmd/browser-agent/internal/bridge/`): Applies the bounded MCP request timeout policy while the daemon owns command waiting and lifecycle state.
+5. **Bridge** (`internal/lifecycle/bridge/`): Applies the bounded MCP request timeout policy while the daemon owns command waiting and lifecycle state.
 
 ### LLM Usage Patterns
 

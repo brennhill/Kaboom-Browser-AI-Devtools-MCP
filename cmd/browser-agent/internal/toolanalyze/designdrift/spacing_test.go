@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/styleprobe"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/page/styleprobe"
 )
 
 // stackedElement places an element in a vertical stack at a known offset.

@@ -9,7 +9,7 @@ last_verified_date: 2026-03-05
 
 # CLI Interface — Tech Spec
 
-> **Status: superseded (reviewed 2026-11-21).** The separate `kaboom-cmd` binary described below was never built. CLI access shipped instead as a CLI mode of the main `kaboom-mcp` binary: when the first argument is a tool name (`kaboom-mcp interact click --selector ...`), `cli.IsCLIMode` routes to `cli.Run` in `cmd/browser-agent/internal/cli/cli.go`, which ensures the daemon is running (`EnsureDaemon`), posts an MCP `tools/call` over HTTP (`cmd/browser-agent/internal/cli/cli_transport.go`), and formats the result as `human`, `json`, or `csv` (`cmd/browser-agent/internal/cli/cli_output.go`). Per-tool argument parsing lives in `cmd/browser-agent/internal/cli/parser/`. Config precedence is flags > `KABOOM_PORT`/`KABOOM_FORMAT` env vars > defaults. Read the rest of this document as the original design proposal; `kaboom-cmd` command lines map to `kaboom-mcp` with the same tool/action arguments.
+> **Status: superseded (reviewed 2026-11-21).** The separate `kaboom-cmd` binary described below was never built. CLI access shipped instead as a CLI mode of the main `kaboom-mcp` binary: when the first argument is a tool name (`kaboom-mcp interact click --selector ...`), `cli.IsCLIMode` routes to `cli.Run` in `internal/tools/cli/cli.go`, which ensures the daemon is running (`EnsureDaemon`), posts an MCP `tools/call` over HTTP (`internal/tools/cli/cli_transport.go`), and formats the result as `human`, `json`, or `csv` (`internal/tools/cli/cli_output.go`). Per-tool argument parsing lives in `internal/tools/cli/parser/`. Config precedence is flags > `KABOOM_PORT`/`KABOOM_FORMAT` env vars > defaults. Read the rest of this document as the original design proposal; `kaboom-cmd` command lines map to `kaboom-mcp` with the same tool/action arguments.
 
 **Feature:** `kaboom-cmd` binary for direct CLI access to all MCP tools, enabling script-based automation, CI/CD integration, and future web client support.
 
@@ -528,7 +528,7 @@ kaboom-cmd generate <format> [options]
 
 ```
 kaboom-mcp (single binary; CLI mode when argv[1] is a tool name)
-  cmd/browser-agent/internal/cli/
+  internal/tools/cli/
     cli.go            Run, ResolveCLIConfig, env/flag overrides, EnsureDaemon
     cli_transport.go  CallTool / PostToolCall (JSON-RPC tools/call over HTTP)
     cli_output.go     FormatHuman / FormatJSON / FormatCSV

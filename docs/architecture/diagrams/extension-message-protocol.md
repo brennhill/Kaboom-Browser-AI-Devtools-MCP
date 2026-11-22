@@ -26,8 +26,8 @@ graph TB
 
     subgraph Server["🟠 Go Server (cmd/browser-agent/)"]
         Handler["HTTP Handler<br/>handler.go"]
-        Capture["Capture Manager<br/>internal/capture/"]
-        Session["Session Manager<br/>internal/session/"]
+        Capture["Capture Manager<br/>internal/composition/capture/"]
+        Session["Session Manager<br/>internal/analysis/snapshots/"]
     end
 
     subgraph Messages["📨 HTTP Messages<br/>(JSON)"]
@@ -586,7 +586,7 @@ If extension posts too many errors:
 ### Implementation Files
 
 **HTTP Handlers:**
-- `internal/capture/httpingest/handlers.go` - All endpoint implementations
+- `internal/ingestion/http/handlers.go` - All endpoint implementations
   - `/pending-queries` - PendingQueries()
   - `/dom-result` - DOMResult()
   - `/sync` - Sync()
@@ -600,13 +600,13 @@ If extension posts too many errors:
 - `src/background/sync/batchers.ts` - Buffered delivery
 
 **Types:**
-- `internal/types/protocol.go` - Message types
+- `internal/platform/types/protocol.go` - Message types
 - `src/types/runtime-messages.ts` - Cross-context runtime message contracts
 - `src/types/capture/` and `src/types/runtime/` - Focused telemetry and runtime types
 
 **Middleware:**
 - `cmd/browser-agent/server_middleware.go` - Auth, rate limit
-- `internal/session/verify.go` - Token verification
+- `internal/analysis/snapshots/verify.go` - Token verification
 
 ### Related Diagrams
 - [C2: Containers](c2-containers.md) - Component overview

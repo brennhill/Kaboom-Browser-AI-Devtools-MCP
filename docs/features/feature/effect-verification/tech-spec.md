@@ -13,12 +13,12 @@ last_reviewed: 2026-09-05
 
 | Component | Responsibility |
 | --- | --- |
-| `cmd/browser-agent/internal/actioneffects/effects.go` | `Mark`, `Deps`, `Budget`, `Open`, `Collect`. Reads the capture buffers and builds the attributed set. |
-| `cmd/browser-agent/internal/actioneffects/classify.go` | `Classify`, `Effects.Payload`, `ApplyRetryAdvice`, `DOMChangeFrom`. Turns the attributed set into an outcome and the retry advice it implies. |
-| `cmd/browser-agent/internal/interactdispatch/effects.go` | Decides which calls earn a window, resolves and clamps the budget, attaches the block. |
-| `cmd/browser-agent/internal/interactdispatch/handler.go` | Opens the mark before `toolrouting.Dispatch` and closes the window after it. |
+| `internal/tools/interact/effects/effects.go` | `Mark`, `Deps`, `Budget`, `Open`, `Collect`. Reads the capture buffers and builds the attributed set. |
+| `internal/tools/interact/effects/classify.go` | `Classify`, `Effects.Payload`, `ApplyRetryAdvice`, `DOMChangeFrom`. Turns the attributed set into an outcome and the retry advice it implies. |
+| `internal/tools/interact/dispatch/effects.go` | Decides which calls earn a window, resolves and clamps the budget, attaches the block. |
+| `internal/tools/interact/dispatch/handler.go` | Opens the mark before `toolrouting.Dispatch` and closes the window after it. |
 | `cmd/browser-agent/tools_interact_dispatch.go` | `buildEffectDeps` names the production readers. |
-| `internal/mcp/response_content.go` | `ReadResultPayload` / `MutateResultPayload` — the shared decode/mutate/re-encode of a tool result's JSON payload behind its summary line. |
+| `internal/tools/mcp/response_content.go` | `ReadResultPayload` / `MutateResultPayload` — the shared decode/mutate/re-encode of a tool result's JSON payload behind its summary line. |
 
 ## Control flow
 

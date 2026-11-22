@@ -9,31 +9,31 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 export const TOOL_SPECS = [
   {
     tool: 'observe',
-    schemaPath: 'internal/schema/observe.go',
+    schemaPath: 'internal/tools/schema/observe.go',
     docPath: 'gokaboom.dev/src/content/docs/reference/observe.md',
     enumType: 'what'
   },
   {
     tool: 'analyze',
-    schemaPath: 'internal/schema/analyze.go',
+    schemaPath: 'internal/tools/schema/analyze.go',
     docPath: 'gokaboom.dev/src/content/docs/reference/analyze.md',
     enumType: 'what'
   },
   {
     tool: 'configure',
-    schemaPath: 'internal/schema/configure/properties_core.go',
+    schemaPath: 'internal/tools/schema/configure/properties_core.go',
     docPath: 'gokaboom.dev/src/content/docs/reference/configure.md',
     enumType: 'what'
   },
   {
     tool: 'generate',
-    schemaPath: 'internal/schema/generate.go',
+    schemaPath: 'internal/tools/schema/generate.go',
     docPath: 'gokaboom.dev/src/content/docs/reference/generate.md',
     enumType: 'what'
   },
   {
     tool: 'interact',
-    schemaPath: 'internal/schema/interact/actions.go',
+    schemaPath: 'internal/tools/schema/interact/actions.go',
     docPath: 'gokaboom.dev/src/content/docs/reference/interact.md',
     enumType: 'interactSpecs',
     specsVar: 'actionSpecs'

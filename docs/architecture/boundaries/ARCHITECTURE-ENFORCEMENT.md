@@ -50,7 +50,7 @@ On 2026-02-02, we deleted the async queue implementation during refactoring. Thi
 **File**: `.git/hooks/pre-commit`
 
 **What it checks**:
-- ✅ Critical files exist ([queries.go](internal/queries/dispatcher_queries.go), [handlers.go](internal/capture/httpingest/handlers.go), [tools_core.go](cmd/browser-agent/tools_core.go))
+- ✅ Critical files exist ([queries.go](internal/browsercommand/query/dispatcher_queries.go), [handlers.go](internal/ingestion/http/handlers.go), [tools_core.go](cmd/browser-agent/tools_core.go))
 - ✅ Required methods exist (CreatePendingQuery, GetCommandResult, etc.)
 - ✅ No stub implementations
 
@@ -62,7 +62,7 @@ On 2026-02-02, we deleted the async queue implementation during refactoring. Thi
 
 **Example output**:
 ```bash
-❌ COMMIT BLOCKED: Critical file 'internal/queries/dispatcher_queries.go' is missing!
+❌ COMMIT BLOCKED: Critical file 'internal/browsercommand/query/dispatcher_queries.go' is missing!
 
    This file implements the async queue-and-poll pattern.
    Without it, ALL interact() commands will timeout.
@@ -80,7 +80,7 @@ chmod +x .git/hooks/pre-commit
 
 ### Layer 2: Integration Tests 🧪
 
-**File**: `internal/capture/async_queue_integration_test.go`
+**File**: `internal/composition/capture/async_queue_integration_test.go`
 
 **What it tests**:
 ```
@@ -95,7 +95,7 @@ MCP retrieves status
 ✅ Full flow verified
 ```
 
-**When it runs**: `go test ./internal/capture`
+**When it runs**: `go test ./internal/composition/capture`
 
 **Can be bypassed**: No (would need to delete test file)
 
@@ -103,7 +103,7 @@ MCP retrieves status
 
 **Run locally**:
 ```bash
-go test -v ./internal/capture -run TestAsyncQueueIntegration
+go test -v ./internal/composition/capture -run TestAsyncQueueIntegration
 ```
 
 **Example output**:
@@ -147,8 +147,8 @@ go test -v ./internal/capture -run TestAsyncQueueIntegration
 🏗️  Validating Kaboom architecture...
 
 1️⃣  Checking critical files...
-   ✅ internal/queries/dispatcher_queries.go
-   ✅ internal/capture/httpingest/handlers.go
+   ✅ internal/browsercommand/query/dispatcher_queries.go
+   ✅ internal/ingestion/http/handlers.go
    ✅ cmd/browser-agent/tools_core.go
 
 2️⃣  Checking required methods in queries.go...
@@ -221,7 +221,7 @@ cat docs/architecture/decisions/ADR-002-async-queue-immutability.md
 ./scripts/quality/verification/validate-architecture.sh
 
 # Run integration tests
-go test -v ./internal/capture -run TestAsyncQueueIntegration
+go test -v ./internal/composition/capture -run TestAsyncQueueIntegration
 ```
 
 ### ⚠️ I need to modify the async queue
@@ -236,10 +236,10 @@ go test -v ./internal/capture -run TestAsyncQueueIntegration
 ### 🚨 I accidentally broke the architecture
 
 1. **Don't panic** - We have backups
-2. **Check git history** - `git log --oneline -- internal/queries/dispatcher_queries.go`
-3. **Restore from commit** - `git checkout <commit> -- internal/queries/dispatcher_queries.go`
+2. **Check git history** - `git log --oneline -- internal/browsercommand/query/dispatcher_queries.go`
+3. **Restore from commit** - `git checkout <commit> -- internal/browsercommand/query/dispatcher_queries.go`
 4. **Run validation** - `./scripts/quality/verification/validate-architecture.sh`
-5. **Run tests** - `go test ./internal/capture`
+5. **Run tests** - `go test ./internal/composition/capture`
 
 ### 🔓 I need to bypass pre-commit hook
 
@@ -314,16 +314,16 @@ Update enforcement layers when:
 
 ```bash
 # Test pre-commit hook
-rm internal/queries/dispatcher_queries.go  # Delete critical file
+rm internal/browsercommand/query/dispatcher_queries.go  # Delete critical file
 git add -A
 git commit -m "test"  # Should block
-git checkout internal/queries/dispatcher_queries.go  # Restore
+git checkout internal/browsercommand/query/dispatcher_queries.go  # Restore
 
 # Test validation script
 ./scripts/quality/verification/validate-architecture.sh  # Should pass
 
 # Test integration tests
-go test ./internal/capture -run TestAsyncQueueIntegration  # Should pass
+go test ./internal/composition/capture -run TestAsyncQueueIntegration  # Should pass
 ```
 
 ---
@@ -390,7 +390,7 @@ Since implementing enforcement (2026-02-02):
 - Check GitHub Actions logs
 
 **Emergencies?**
-- Restore from git: `git checkout <last-good-commit> -- internal/capture/`
+- Restore from git: `git checkout <last-good-commit> -- internal/composition/capture/`
 - Deploy v5.3.0 (last known good)
 - Escalate to on-call engineer
 
@@ -401,7 +401,7 @@ Since implementing enforcement (2026-02-02):
 - [ADR-001: Async Queue Pattern](../platform/README.md) - Original design
 - [ADR-002: Async Queue Immutability](../decisions/ADR-002-async-queue-immutability.md) - This enforcement
 - [async-queue-correlation-tracking.md](../../core/product/README.md) - Implementation
-- [async_queue_integration_test.go](internal/capture/async_queue_integration_test.go) - Tests
+- [async_queue_integration_test.go](internal/composition/capture/async_queue_integration_test.go) - Tests
 
 ---
 

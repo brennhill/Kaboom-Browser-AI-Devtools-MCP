@@ -586,5 +586,5 @@ This feature ships with **zero new code**.
 
 - [Kaboom target architecture](../features/core/target-architecture.md)
 - [v5.1 Completed Features](../roadmap.md#completed-features-canonical-list)
-- [Test-generation handler](../../cmd/browser-agent/internal/testgenhandler/generate.go)
+- [Test-generation handler](../../internal/tools/generate/testgen/generate.go)
 - [v6.0 Roadmap](../roadmap.md)

@@ -94,7 +94,7 @@ Shared types (planned, in a new watchdog package under `cmd/browser-agent/intern
 - Add `WatchdogAlert` struct containing alert details
 - Add `WatchdogThresholds` struct containing configurable thresholds
 
-Configure dispatch (`cmd/browser-agent/internal/toolconfigure/dispatcher.go`, with the mode registered in `cmd/browser-agent/internal/toolruntime/tools_configure.go`):
+Configure dispatch (`internal/tools/configure/handler/dispatcher.go`, with the mode registered in `cmd/browser-agent/internal/toolruntime/tools_configure.go`):
 - Add a new `what: "watchdog"` mode with sub-actions: `start`, `status`, `stop`
 - Start creates session, captures baseline, spawns checker goroutine
 - Status returns current session state with alerts

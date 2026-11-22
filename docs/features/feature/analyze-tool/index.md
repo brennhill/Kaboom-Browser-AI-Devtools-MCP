@@ -8,30 +8,30 @@ last_reviewed: 2026-11-21
 code_paths:
   - cmd/browser-agent/internal/toolruntime/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
-  - cmd/browser-agent/internal/playbooks/resources/guides.go
+  - internal/tools/playbooks/resources/guides.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
   - internal/analysis/apicontract/runtime/handler.go
   - cmd/browser-agent/internal/toolanalyze/inspect/forms.go
   - cmd/browser-agent/internal/toolanalyze/inspect/dom.go
   - cmd/browser-agent/internal/toolanalyze/visual/handler.go
-  - internal/app/screenshot/screenshot.go
+  - internal/page/app/screenshot/screenshot.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
   - cmd/browser-agent/internal/toolanalyze/designdrift/handler.go
   - cmd/browser-agent/internal/toolanalyze/verificationhandler/handler.go
-  - internal/verification/contract.go
-  - internal/verification/evidence.go
-  - internal/verification/store.go
+  - internal/analysis/verification/contract.go
+  - internal/analysis/verification/evidence.go
+  - internal/analysis/verification/store.go
   - internal/annotation/draw_sessions_handler.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/deps.go
-  - cmd/browser-agent/internal/asynccommand/handler.go
+  - internal/tools/asynccommand/handler.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go
   - cmd/browser-agent/internal/toolanalyze/navigation.go
   - cmd/browser-agent/internal/toolanalyze/linkvalidation/handler.go
   - cmd/browser-agent/internal/toolanalyze/securityaudit/handler.go
-  - cmd/browser-agent/internal/toolresp/toolresp.go
-  - internal/mcp/response.go
+  - internal/tools/response/toolresp.go
+  - internal/tools/mcp/response.go
   - internal/annotation/store.go
   - internal/annotation/store_results.go
   - internal/tools/analyze/args_parse.go
@@ -43,7 +43,7 @@ code_paths:
   - internal/tools/analyze/imagediff/grid.go
   - internal/tools/analyze/imagediff/regions.go
   - internal/tools/analyze/imagediff/imageio.go
-  - internal/schema/analyze.go
+  - internal/tools/schema/analyze.go
   - src/background.ts
   - src/background/commands/analyze.ts
   - src/background/exec/frame-targeting.ts
@@ -72,9 +72,9 @@ test_paths:
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
   - cmd/browser-agent/internal/toolanalyze/verificationhandler/handler_test.go
-  - internal/verification/contract_test.go
-  - internal/verification/evidence_test.go
-  - internal/verification/store_test.go
+  - internal/analysis/verification/contract_test.go
+  - internal/analysis/verification/evidence_test.go
+  - internal/analysis/verification/store_test.go
   - internal/annotation/store_lifecycle_test.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/linkvalidation/handler_test.go
@@ -105,7 +105,7 @@ rather than retained as a prospective interface.
 - Status: shipped
 - Tool: `analyze`
 - Mode key: `what`
-- Contract source: `internal/schema/analyze.go`
+- Contract source: `internal/tools/schema/analyze.go`
 
 ## Specs
 - Product: `product-spec.md`
@@ -122,7 +122,7 @@ analyze, inspect, observe, audit, and visual dependency groups. Analyze-owned
 telemetry and security access uses explicit function fields, so there is no
 catch-all host interface or root forwarding surface.
 Analyze actions receive queueing, waiting, and accessibility execution directly
-from `internal/asynccommand.Handler`; `ToolHandler` no longer implements an
+from `internal/tools/asynccommand.Handler`; `ToolHandler` no longer implements an
 asynchronous host contract.
 The background service-worker entrypoint owns startup only. Analysis tests and
 runtime code import their focused owner modules rather than an entrypoint facade.

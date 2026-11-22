@@ -1,0 +1,14 @@
+{
+  "description": "U1 Suggest: edit discards error from os.WriteFile — convention summary should give LLM context about project error patterns",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "internal/hooks/session.go", "new_string": "os.WriteFile(path, data, 0644)" }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["PROJECT CONVENTIONS", "os.WriteFile(", "fmt.Errorf("],
+    "max_latency_ms": 5000
+  }
+}

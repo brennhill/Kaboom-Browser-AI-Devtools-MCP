@@ -59,7 +59,7 @@ Planned (none of this exists yet):
 
 **Server files**:
 - `internal/tools/observe/page/page_state.go` (`RunA11yAudit`, modified): pass `enhanced` flag to extension
-- `internal/schema/analyze.go` (modified): declare the `enhanced` parameter
+- `internal/tools/schema/analyze.go` (modified): declare the `enhanced` parameter
 
 **Trade-offs**:
 - Opt-in via `enhanced: true` flag (not always-on) to avoid slowing down standard a11y audits

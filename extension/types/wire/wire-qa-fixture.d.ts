@@ -1,5 +1,5 @@
 /**
- * @fileoverview Wire types for deterministic QA fixtures — matches internal/qafixture/wire_fixture.go
+ * @fileoverview Wire types for deterministic QA fixtures — matches internal/testgen/qafixture/wire_fixture.go
  *
  * Canonical TypeScript definitions for the versioned QA fixture command payload.
  * Changes here MUST be mirrored in the Go counterpart. Run `make check-wire-drift`.

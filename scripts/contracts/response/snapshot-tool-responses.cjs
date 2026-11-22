@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // snapshot-tool-responses.cjs — Capture the CURRENT response shape of every MCP mode.
 //
-// Purpose: MCP tool responses have no declared contract (internal/mcp/protocol.go
+// Purpose: MCP tool responses have no declared contract (internal/tools/mcp/protocol.go
 // declares InputSchema and nothing for output), so there is nothing for a response
 // to drift from. This captures what the hardened tools actually return today, which
 // becomes the declared contract rather than a redesign of 163 payloads.

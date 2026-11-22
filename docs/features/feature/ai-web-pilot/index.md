@@ -6,9 +6,9 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolguard/guards.go
+  - internal/tools/guard/guards.go
   - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolinteract/action_owners.go
+  - internal/tools/interact/handler/action_owners.go
   - src/popup.ts
   - src/popup/ai-web-pilot.ts
   - scripts/templates/partials/_dom-selectors.tpl
@@ -26,13 +26,13 @@ code_paths:
   - src/content/ui/subtitle.ts
   - src/content/ui/toast.ts
   - src/content/ui/tracked-hover-launcher.ts
-  - internal/capture/syncruntime/tracking_projection.go
+  - internal/sync/runtime/tracking_projection.go
 test_paths:
-  - internal/capture/syncruntime/extension_state_unit_test.go
-  - cmd/browser-agent/internal/asynccommand/execute_test.go
-  - cmd/browser-agent/internal/toolguard/guards_test.go
-  - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
-  - cmd/browser-agent/internal/asynccommand/handler_test.go
+  - internal/sync/runtime/extension_state_unit_test.go
+  - internal/tools/asynccommand/execute_test.go
+  - internal/tools/guard/guards_test.go
+  - internal/tools/interact/handler/contracts/gates_test.go
+  - internal/tools/asynccommand/handler_test.go
   - tests/extension/pilot/pilot-toggle.test.js
   - tests/extension/pilot/pilot-command-response.test.js
   - tests/extension/content/content-message-correlation.test.js
@@ -66,7 +66,7 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 Pilot, extension-connectivity, tracked-tab, and CSP preconditions are owned by
-`internal/toolguard`. Tool adapters receive those canonical guard methods
+`internal/tools/guard`. Tool adapters receive those canonical guard methods
 directly; package-main no longer carries a duplicate guard surface.
 The popup's batched storage read calls `applyAiWebPilotToggle` directly. There
 is no self-loading compatibility initializer or second storage-read path.

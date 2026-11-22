@@ -79,7 +79,7 @@
 - 5 tools only: observe, generate, configure, interact, analyze.
 - New modes register in the dispatch registry (`*_registry.go`), not inline.
 - Use `method()` wrapper for ToolHandler methods in registries.
-- MCP responses use the canonical `internal/mcp/toolresp` package directly.
+- MCP responses use the canonical `internal/tools/mcp/toolresp` package directly.
 - WebSocket < 0.1ms, HTTP < 0.5ms performance budgets.
 
 ## Documentation Contract

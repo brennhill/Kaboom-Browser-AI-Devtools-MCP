@@ -18,7 +18,7 @@ last_verified_date: 2026-03-05
 
 # Technical Spec: Memory Enforcement
 
-> **Status (reviewed 2026-11-21): server-side design superseded.** The global server-side threshold eviction described below (soft/hard/critical limits, minimal mode, periodic 10s check, `isMemoryExceeded`/`calcTotalMemory`) was removed in "refactor: Remove global memory enforcement". The server now bounds memory per buffer instead: the network-body store has an entry capacity plus an 8MB byte limit (`defaultMemoryLimit` in `internal/capture/bodystore/store.go`), and the WebSocket event store has a 4MB byte limit (`wsBufferMemoryLimit` in `internal/capture/telemetrystore/store.go`); both evict oldest-first on push. The **extension-side** section (20MB soft / 50MB hard, 30s check) is implemented as described. The server-side sections are kept as design history only.
+> **Status (reviewed 2026-11-21): server-side design superseded.** The global server-side threshold eviction described below (soft/hard/critical limits, minimal mode, periodic 10s check, `isMemoryExceeded`/`calcTotalMemory`) was removed in "refactor: Remove global memory enforcement". The server now bounds memory per buffer instead: the network-body store has an entry capacity plus an 8MB byte limit (`defaultMemoryLimit` in `internal/observation/store/bodies/store.go`), and the WebSocket event store has a 4MB byte limit (`wsBufferMemoryLimit` in `internal/observation/store/telemetry/store.go`); both evict oldest-first on push. The **extension-side** section (20MB soft / 50MB hard, 30s check) is implemented as described. The server-side sections are kept as design history only.
 
 ## Purpose
 
@@ -208,6 +208,6 @@ This lets the AI agent understand memory pressure and adjust its behavior (e.g.,
 
 ## File Locations
 
-Server implementation (per-buffer caps that replaced global enforcement): `internal/capture/bodystore/store.go` and `internal/capture/telemetrystore/store.go`, with tests in `internal/capture/bodystore/store_test.go` and `internal/capture/pipelinetest/memory_test.go`.
+Server implementation (per-buffer caps that replaced global enforcement): `internal/observation/store/bodies/store.go` and `internal/observation/store/telemetry/store.go`, with tests in `internal/observation/store/bodies/store_test.go` and `internal/observation/testsupport/pipeline/memory_test.go`.
 
 Extension implementation: memory pressure checks in `src/background/caches/cache-limits.ts` (limits also in `src/lib/constants.ts`), with tests in `tests/extension/performance/memory.test.js` and `tests/extension/performance/cache-limits.test.js`.

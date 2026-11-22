@@ -8,7 +8,7 @@ last_reviewed: 2026-08-04
 
 ## Automated Coverage
 
-`internal/workflowverify/runner_test.go` uses a deterministic executor to cover validation, ordered execution, invariant failures, evidence filtering, cancellation, cleanup ordering, cleanup failures, and verdict selection.
+`internal/analysis/workflowverify/runner_test.go` uses a deterministic executor to cover validation, ordered execution, invariant failures, evidence filtering, cancellation, cleanup ordering, cleanup failures, and verdict selection.
 
 ## Required Scenarios
 
@@ -23,4 +23,4 @@ last_reviewed: 2026-08-04
 
 ## Release Gate
 
-Run `go test ./internal/workflowverify ./internal/verification` and the repository race and coverage gates.
+Run `go test ./internal/analysis/workflowverify ./internal/analysis/verification` and the repository race and coverage gates.

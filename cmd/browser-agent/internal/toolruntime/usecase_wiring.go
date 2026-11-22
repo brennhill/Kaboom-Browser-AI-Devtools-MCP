@@ -8,15 +8,15 @@ package toolruntime
 import (
 	"context"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/a11yaudit"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pageinfo"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pagestorage"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/screenshot"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/healthreader"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/telemetrystore"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/app/a11yaudit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/healthreader"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/telemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/page/app/pageinfo"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/page/app/screenshot"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/page/app/storage"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/sync/runtime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
 )
 

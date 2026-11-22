@@ -201,7 +201,7 @@ func (h *ToolHandler) toolConfigureClear(req JSONRPCRequest, args json.RawMessag
 }
 ```
 
-Register `clear` with the canonical `internal/toolconfigure.Dispatcher`.
+Register `clear` with the canonical `internal/tools/configure/handler.Dispatcher`.
 Composition supplies a handler that calls `toolconfigure.HandleClear` with
 explicit capture, log, inbox, and annotation owners; no `ToolHandler`
 forwarding method or central switch is retained.
@@ -347,7 +347,7 @@ func TestClearAllBuffers(t *testing.T) {
 
 ### Integration Tests
 
-**File:** `cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go`
+**File:** `internal/tools/configure/handler/handlers_coverage_test.go`
 
 ```go
 func TestToolConfigureClearNetwork(t *testing.T) {
@@ -502,7 +502,7 @@ configure({what: "clear", buffer: "network"})
 - [ ] Add `ClearAllBuffers()` helper
 - [ ] Add `buffer` parameter to configure tool schema
 - [ ] Add `toolConfigureClear()` handler
-- [ ] Update `internal/toolconfigure.Dispatcher`
+- [ ] Update `internal/tools/configure/handler.Dispatcher`
 
 ### Testing
 
@@ -533,7 +533,7 @@ configure({what: "clear", buffer: "network"})
 | `cmd/browser-agent/buffer_clear.go` | +200 | NEW: Clear methods and helpers |
 | `cmd/browser-agent/buffer_clear_test.go` | +300 | NEW: Unit tests |
 | `cmd/browser-agent/tools_core.go` | +80 | Add buffer param, toolConfigureClear |
-| `cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go` | +100 | Configure-owner tests |
+| `internal/tools/configure/handler/handlers_coverage_test.go` | +100 | Configure-owner tests |
 | **Total** | **~680 lines** | **1-2 hours** |
 
 ---

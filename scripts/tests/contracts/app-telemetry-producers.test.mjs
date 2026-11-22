@@ -31,7 +31,7 @@ test('generic Go lifecycle beacon surface stays deleted', async () => {
 
 test('runtime errors use the closed incident registry', async () => {
   const beacon = await source('internal/telemetry/beacon.go')
-  const registry = await source('internal/incident/registry.go')
+  const registry = await source('internal/lifecycle/doctor/incident/registry.go')
   assert.match(beacon, /func AppError\(code incident\.Code\)/)
   assert.doesNotMatch(beacon, /classifyAppError|normalizeAppErrorCode/)
   assert.match(registry, /PrivacyBoundedProductMetadata/)

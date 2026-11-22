@@ -8,8 +8,8 @@ package securityaudit
 import (
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 )
 
 // ============================================

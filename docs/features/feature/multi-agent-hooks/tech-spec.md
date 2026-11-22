@@ -8,12 +8,12 @@ links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
-  - internal/hook/hook_policy.go
+  - internal/hooks/hook_policy.go
   - cmd/hooks/main.go
-  - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
+  - internal/tools/configure/handler/qualitygates/handler.go
   - cmd/browser-agent/tools_configure.go
 test_paths:
-  - internal/hook/hook_policy_test.go
+  - internal/hooks/hook_policy_test.go
   - cmd/hooks/main_test.go
   - cmd/browser-agent/tools_configure_quality_gates_test.go
 ---
@@ -28,11 +28,11 @@ test_paths:
 
 ## Requirement Mapping
 
-- MULTI_AGENT_001 -> `internal/hook/hook_policy.go:DetectAgent()`
-- MULTI_AGENT_002 -> `internal/hook/hook_policy.go:WriteOutput()` switch on agent
+- MULTI_AGENT_001 -> `internal/hooks/hook_policy.go:DetectAgent()`
+- MULTI_AGENT_002 -> `internal/hooks/hook_policy.go:WriteOutput()` switch on agent
 - MULTI_AGENT_003 -> No change needed — input format is already compatible
-- MULTI_AGENT_004 -> `internal/hook/session.go:SessionID()` checks env vars first
-- MULTI_AGENT_005 -> `cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go` writes the managed hook configuration
+- MULTI_AGENT_004 -> `internal/hooks/session.go:SessionID()` checks env vars first
+- MULTI_AGENT_005 -> `internal/tools/configure/handler/qualitygates/handler.go` writes the managed hook configuration
 - MULTI_AGENT_006 -> Future work, tracked separately
 - MULTI_AGENT_007 -> No change needed — already one binary
 
@@ -49,7 +49,7 @@ test_paths:
 │         └────────────────┼──────────────────┘        │
 │                          │                           │
 │              ┌───────────▼───────────┐               │
-│              │  internal/hook/       │               │
+│              │  internal/hooks/       │               │
 │              │  (agent-agnostic      │               │
 │              │   logic layer)        │               │
 │              └───────────┬───────────┘               │

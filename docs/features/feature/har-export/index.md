@@ -6,18 +6,18 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolgenerate/dispatcher.go
-  - cmd/browser-agent/internal/toolgenerate/deps.go
-  - cmd/browser-agent/internal/toolgenerate/artifacts_har_impl.go
-  - internal/mcp/response.go
-  - internal/export/har/export.go
-  - internal/export/har/conversion.go
-  - internal/export/har/filters.go
-  - internal/export/har/helpers.go
+  - internal/tools/generate/handler/dispatcher.go
+  - internal/tools/generate/handler/deps.go
+  - internal/tools/generate/handler/artifacts_har_impl.go
+  - internal/tools/mcp/response.go
+  - internal/observation/export/har/export.go
+  - internal/observation/export/har/conversion.go
+  - internal/observation/export/har/filters.go
+  - internal/observation/export/har/helpers.go
 test_paths:
-  - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
-  - internal/export/har/export_test.go
-  - internal/export/har/coverage_test.go
+  - internal/tools/generate/handler/handlers_coverage_test.go
+  - internal/observation/export/har/export_test.go
+  - internal/observation/export/har/coverage_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -46,11 +46,11 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-- MCP adapter: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
-- Composition: `cmd/browser-agent/internal/toolgenerate/deps.go` receives the
+- MCP adapter: `internal/tools/generate/handler/dispatcher.go`
+- Composition: `internal/tools/generate/handler/deps.go` receives the
   canonical capture owner and version value directly, without ToolHandler getters.
-- Generate handler: `cmd/browser-agent/internal/toolgenerate/artifacts_har_impl.go`
-- Export implementation: `internal/export/har/`
+- Generate handler: `internal/tools/generate/handler/artifacts_har_impl.go`
+- Export implementation: `internal/observation/export/har/`
 - HAR serialization, conversion, filtering, path handling, and their tests are
   one dependency-free package. It has no dependency on SARIF concerns and no
   root export facade.

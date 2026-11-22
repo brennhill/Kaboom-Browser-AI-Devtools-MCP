@@ -4,7 +4,7 @@
 package ciapi
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )
 
 // SnapshotResponse is the aggregated state returned by GET /snapshot.

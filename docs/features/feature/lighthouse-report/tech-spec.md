@@ -57,7 +57,7 @@ estimated savings, and diagnostics. The trimmed response targets under five kilo
 agent polls for completion through `observe({what: "command_result"})`. Pending and failed
 commands are observable through `observe({what: "pending_commands"})` and
 `observe({what: "failed_commands"})`, consistent with the existing command-result enum in
-`internal/schema/observe.go`.
+`internal/tools/schema/observe.go`.
 
 ## Data Flows
 
@@ -170,7 +170,7 @@ Agent polls observe({what: "command_result"}) and receives the structured report
 - The analyze dispatch registry (`cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`).
 - The CDP attach/detach lifecycle (`src/background/dom/cdp/cdp-dispatch.ts`).
 - The asynchronous command pattern and command-result polling
-  (`cmd/browser-agent/internal/toolinteract/interact_dom.go`,
+  (`internal/tools/interact/handler/interact_dom.go`,
   `observe({what: "command_result"})`).
 - For Option A, a Lighthouse CLI in the user's PATH.
 

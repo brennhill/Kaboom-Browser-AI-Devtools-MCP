@@ -28,15 +28,15 @@ code_paths:
   - scripts/build/run-go-integration.sh
   - scripts/build/run-go-coverage.sh
   - scripts/build/generate-command-contract.js
-  - internal/commandcontract/generated.go
+  - internal/browsercommand/contract/generated.go
   - src/types/runtime/command-contract.ts
   - scripts/uat/orchestration/uat-result-lib.sh
   - scripts/tests/framework/framework.sh
   - scripts/tests/framework/process-census.sh
   - scripts/uat/runners/test-all-tools-comprehensive.sh
-  - internal/extclient/extclient.go
-  - internal/capture/syncruntime/handler.go
-  - cmd/browser-agent/internal/httpguard/middleware.go
+  - internal/sync/extclient/extclient.go
+  - internal/sync/runtime/handler.go
+  - internal/platform/httpguard/middleware.go
   - scripts/tests/framework/uat-artifacts.sh
   - scripts/tests/framework/uat-user-state.sh
   - scripts/tests/framework/uat-user-state.test.sh
@@ -49,19 +49,19 @@ code_paths:
   - .go-architecture-baseline.json
   - scripts/uat/runners/test-all-tools-comprehensive.sh
   - scripts/maintenance/cleanup-test-daemons.sh
-  - cmd/browser-agent/internal/testowner/testowner.go
+  - internal/lifecycle/testsupport/testowner/testowner.go
   - cmd/browser-agent/internal/integrationtest/harness.go
   - cmd/browser-agent/server.go
-  - cmd/browser-agent/internal/testpages/http.go
-  - cmd/browser-agent/internal/testpages/websocket.go
-  - cmd/browser-agent/internal/wsframe/frame.go
-  - internal/statefault/fault.go
-  - internal/statefault/store.go
-  - internal/capturefixture/sync.go
-  - cmd/browser-agent/internal/asynccommand/handler.go
-  - internal/synctranscript/transcript.go
-  - internal/synctranscript/replay.go
-  - internal/synctranscript/capture.go
+  - internal/composition/http/testpages/http.go
+  - internal/composition/http/testpages/websocket.go
+  - internal/platform/wsframe/frame.go
+  - internal/platform/state/fault/fault.go
+  - internal/platform/state/fault/store.go
+  - internal/observation/testsupport/fixture/sync.go
+  - internal/tools/asynccommand/handler.go
+  - internal/browsercommand/transcript/transcript.go
+  - internal/browsercommand/transcript/replay.go
+  - internal/browsercommand/transcript/capture.go
   - cmd/kaboom-replay-extension/main.go
   - scripts/tests/framework/uat-replay.sh
   - scripts/tests/framework/json.sh
@@ -71,7 +71,7 @@ code_paths:
   - scripts/quality/workflows/check-destructive-git.mjs
   - .github/workflows/connected-canary.yml
   - .raw-jq-baseline.json
-  - internal/wirecodec/decode.go
+  - internal/platform/wirecodec/decode.go
   - scripts/contracts/wiredecode/main.go
   - .wire-decode-exemptions.json
   - scripts/contracts/goarchitecture/main.go
@@ -86,32 +86,32 @@ test_paths:
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/uat/orchestration/uat-result-lib.test.mjs
   - cmd/browser-agent/internal/integrationtest/harness_test.go
-  - cmd/browser-agent/internal/asynccommand/handler_test.go
+  - internal/tools/asynccommand/handler_test.go
   - tests/cli/contracts/smoke-layout-contract.test.cjs
   - tests/extension/contracts/tooling-contracts.test.js
   - cmd/browser-agent/integration/bridge/faststart_extended_test.go
   - cmd/browser-agent/integration/runtime/persistence_test.go
   - cmd/browser-agent/integration/runtime/reliability_lifecycle_test.go
   - cmd/browser-agent/integration/bridge/stdio_silence_test.go
-  - cmd/browser-agent/internal/testpages/websocket_test.go
+  - internal/composition/http/testpages/websocket_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs
   - tests/cli/uat-runner/uat-runner-accounting.test.cjs
   - tests/cli/uat-assertions/assertion-falsifiability.test.cjs
   - tests/cli/uat-assertions/repo-glob.cjs
-  - cmd/browser-agent/internal/testowner/testowner_test.go
+  - internal/lifecycle/testsupport/testowner/testowner_test.go
   - cmd/browser-agent/integration/runtime/orphan_reaping_test.go
   - tests/cli/uat-assertions/test-daemon-cleanup.test.cjs
   - tests/cli/uat-assertions/connected-fixture-determinism.test.cjs
-  - internal/synctranscript/transcript_test.go
-  - internal/synctranscript/replay_test.go
-  - internal/synctranscript/capture_test.go
+  - internal/browsercommand/transcript/transcript_test.go
+  - internal/browsercommand/transcript/replay_test.go
+  - internal/browsercommand/transcript/capture_test.go
   - cmd/browser-agent/integration/replay/replay_test.go
   - scripts/tests/framework/json.test.sh
   - scripts/quality/workflows/check-raw-jq.test.mjs
   - scripts/quality/workflows/check-destructive-git.test.mjs
-  - internal/wirecodec/decode_test.go
+  - internal/platform/wirecodec/decode_test.go
   - scripts/contracts/wiredecode/main_test.go
-  - internal/perftrace/http_test.go
+  - internal/observation/perftrace/http_test.go
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/cli/contracts/test-layout-contract.test.cjs
   - scripts/smoke-tests/interact/14-browser-push.sh
@@ -150,14 +150,14 @@ test_paths:
   - scripts/tests/workflows/cat-29-reproduction.sh
   - scripts/tests/workflows/cat-30-recording-automation.sh
   - scripts/tests/workflows/cat-31-link-crawling.sh
-  - cmd/browser-agent/internal/testpages/testpages_test.go
-  - cmd/browser-agent/internal/wsframe/frame_test.go
-  - internal/statefault/fault_test.go
-  - internal/statefault/boundary_test.go
-  - internal/statefault/store_test.go
-  - internal/capturefixture/sync_test.go
-  - internal/extclient/extclient_test.go
-  - internal/capture/syncruntime/sync_test.go
+  - internal/composition/http/testpages/testpages_test.go
+  - internal/platform/wsframe/frame_test.go
+  - internal/platform/state/fault/fault_test.go
+  - internal/platform/state/fault/boundary_test.go
+  - internal/platform/state/fault/store_test.go
+  - internal/observation/testsupport/fixture/sync_test.go
+  - internal/sync/extclient/extclient_test.go
+  - internal/sync/runtime/sync_test.go
   - scripts/tests/browser/mode-content-expectations.sh
   - scripts/tests/framework/uat-fixture-state.sh
   - scripts/contracts/uatcoverage/category_resolution_test.go
@@ -259,12 +259,12 @@ while the security gate rejects unchecked narrowing conversions.
 
 ## Code and Tests
 
-`internal/capturefixture` is the reviewed exception to the zero-new-export
+`internal/observation/testsupport/fixture` is the reviewed exception to the zero-new-export
 ratchet for this change. Its eight narrow helpers are test-only consumers of
 canonical capture boundaries: sync-backed settings and connection state,
 cached Pilot state, tracked-tab updates, and explicit disconnect lifecycle.
 The package is not imported by release binaries and replaces a larger set of
-unsafe mutation methods that previously compiled into `internal/capture`.
+unsafe mutation methods that previously compiled into `internal/composition/capture`.
 
 - An action whose arguments name fixture DOM establishes the fixture first.
   Nineteen actions did not: `interact/highlight` looked for `#sf-btn` on whatever
@@ -362,7 +362,7 @@ unsafe mutation methods that previously compiled into `internal/capture`.
   ratcheted public-surface budgets, the 800-line and 10-file physical limits,
   dormant-test detection, circular dependency reporting, and zero non-trivial
   clones across background/popup.
-- Persisted-state owner tests share the stable `internal/statefault` fixture
+- Persisted-state owner tests share the stable `internal/platform/state/fault` fixture
   vocabulary for read, write, sync, rename, directory-sync, quota, corruption,
   partial-write, cancellation, and restart failures. Scenarios are deterministic,
   never retain private test sentinels, and expose only redacted classified errors.
@@ -412,10 +412,10 @@ unsafe mutation methods that previously compiled into `internal/capture`.
   corrupt fixtures for every daemon-owned state family, and verifies startup,
   deterministic fallback, Doctor lifecycle history, and raw-value redaction.
 - UAT category suites: `scripts/tests/cat-*.sh`
-- HTTP fixtures and embedded test pages: `cmd/browser-agent/internal/testpages/http.go`
-- WebSocket harness: `cmd/browser-agent/internal/testpages/websocket.go`
-- RFC 6455 frame codec (shared with the terminal relay): `cmd/browser-agent/internal/wsframe/frame.go`
-- Behavior tests: `cmd/browser-agent/internal/testpages/testpages_test.go`, `cmd/browser-agent/internal/wsframe/frame_test.go`
+- HTTP fixtures and embedded test pages: `internal/composition/http/testpages/http.go`
+- WebSocket harness: `internal/composition/http/testpages/websocket.go`
+- RFC 6455 frame codec (shared with the terminal relay): `internal/platform/wsframe/frame.go`
+- Behavior tests: `internal/composition/http/testpages/testpages_test.go`, `internal/platform/wsframe/frame_test.go`
 
 ## The offline categories gate every build
 

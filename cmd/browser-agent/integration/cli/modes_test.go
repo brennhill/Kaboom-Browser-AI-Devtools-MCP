@@ -12,7 +12,7 @@ import (
 	"time"
 
 	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
-	corebridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
+	corebridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/bridge/framing"
 )
 
 func TestCLIEarlyExitModes(t *testing.T) {

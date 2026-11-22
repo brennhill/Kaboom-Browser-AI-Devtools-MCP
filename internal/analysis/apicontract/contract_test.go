@@ -10,7 +10,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )
 
 func TestAPIContractPackageRespectsTenFileBoundary(t *testing.T) {

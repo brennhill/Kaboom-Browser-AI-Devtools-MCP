@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/sessionrelay"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/testsync"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty"
 )
 
 func waitForTrue(t *testing.T, cond func() bool, within time.Duration) {

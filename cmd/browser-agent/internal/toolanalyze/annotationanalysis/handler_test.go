@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asynccommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/asynccommand"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 type annotationTestLogs struct {
@@ -44,7 +44,7 @@ func createTestToolHandler(t *testing.T) *annotationTestHarness {
 	t.Cleanup(store.Close)
 	captured := capture.NewCapture()
 	commands := asynccommand.New(asynccommand.Deps{
-		Commands:            captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry(),
+		Commands: captured.Commands(), Extension: captured.Extension(), Performance: captured.Performance(), Telemetry: captured.Telemetry(),
 		AttachEvidence:     func(string, map[string]any) {},
 		AttachRetryContext: func(string, map[string]any, string, string) {},
 	})

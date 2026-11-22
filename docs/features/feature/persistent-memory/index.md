@@ -8,23 +8,23 @@ last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/server.go
   - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolconfigure/session.go
-  - internal/persistence/persistence_context.go
-  - internal/persistence/persistence_crud.go
-  - internal/persistence/persistence_dirty.go
-  - internal/persistence/persistence_store.go
-  - internal/persistence/persistence_types.go
-  - internal/statefile/statefile.go
-  - internal/statediag/collector.go
+  - internal/tools/configure/handler/session.go
+  - internal/platform/state/persistence/persistence_context.go
+  - internal/platform/state/persistence/persistence_crud.go
+  - internal/platform/state/persistence/persistence_dirty.go
+  - internal/platform/state/persistence/persistence_store.go
+  - internal/platform/state/persistence/persistence_types.go
+  - internal/platform/state/file/statefile.go
+  - internal/lifecycle/doctor/statediag/collector.go
   - internal/tools/configure/capabilities/modespecs_configure.go
 test_paths:
-  - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
+  - internal/tools/interact/handler/interactstate/state_test.go
   - cmd/browser-agent/composition_test.go
   - tests/architecture/user-state-loaders.test.cjs
-  - internal/persistence/persistence_branches_test.go
-  - internal/statediag/collector_test.go
-  - cmd/browser-agent/internal/toolconfigure/session_test.go
-  - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
+  - internal/platform/state/persistence/persistence_branches_test.go
+  - internal/lifecycle/doctor/statediag/collector_test.go
+  - internal/tools/configure/handler/session_test.go
+  - internal/tools/configure/handler/handlers_coverage_test.go
   - scripts/contracts/stdout_protocol_test.go
   - cmd/browser-agent/integration/bridge/stdio_silence_test.go
 last_verified_version: 0.7.12
@@ -54,10 +54,10 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-- `cmd/browser-agent/internal/toolconfigure/session.go` owns the canonical store request contract: `store_action`, `namespace`, `key`, and `data`.
+- `internal/tools/configure/handler/session.go` owns the canonical store request contract: `store_action`, `namespace`, `key`, and `data`.
 - `internal/tools/configure/capabilities/modespecs_configure.go` exposes the same canonical parameters in capability metadata.
-- `cmd/browser-agent/internal/toolconfigure/session_test.go` and `cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go` cover store behavior and its advertised contract.
-- `cmd/browser-agent/internal/toolconfigure/session_test.go` exercises the
+- `internal/tools/configure/handler/session_test.go` and `internal/tools/configure/handler/handlers_coverage_test.go` cover store behavior and its advertised contract.
+- `internal/tools/configure/handler/session_test.go` exercises the
   canonical store request. The repository-wide static stdout contract and the
   installed bridge transport suite prove that handlers cannot pollute MCP
   framing without coupling this feature to root process globals.

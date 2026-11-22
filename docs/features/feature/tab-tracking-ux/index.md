@@ -56,12 +56,12 @@ code_paths:
   - src/background/push-handler.ts
   - src/background/recording/capture.ts
   - src/background/commands/observe.ts
-  - internal/capture/syncruntime/tracking_projection.go
-  - internal/capture/syncruntime/runtime.go
-  - internal/capture/syncruntime/handler.go
-  - cmd/browser-agent/internal/toolinteract/interact_browser.go
+  - internal/sync/runtime/tracking_projection.go
+  - internal/sync/runtime/runtime.go
+  - internal/sync/runtime/handler.go
+  - internal/tools/interact/handler/interact_browser.go
 test_paths:
-  - internal/capture/syncruntime/extension_state_unit_test.go
+  - internal/sync/runtime/extension_state_unit_test.go
   - tests/extension/tab-state/tab-state.test.js
   - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/tab-state/tab-state.test.js
@@ -183,7 +183,7 @@ by the storage-change listener for selection, and by the navigate, close and
 readiness adapters.
 
 The daemon applies one ordering rule, `observeTrackingLocked` in
-`internal/capture/syncruntime/tracking_projection.go`, to both kinds of
+`internal/sync/runtime/tracking_projection.go`, to both kinds of
 observation. A synchronous `switch_tab` result (`UpdateTrackedTab`) applies at
 once and opens a hold on the confirmed tab. A `/sync` heartbeat that names the
 held tab closes the hold. A heartbeat that names another tab is stale: its

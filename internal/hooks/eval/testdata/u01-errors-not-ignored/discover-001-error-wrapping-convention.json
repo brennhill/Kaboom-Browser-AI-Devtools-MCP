@@ -1,0 +1,17 @@
+{
+  "description": "U1 Discovery: convention summary should surface error wrapping pattern (fmt.Errorf) used across the project",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "func processInput(in Input) error {\n\treturn nil\n}"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["PROJECT CONVENTIONS", "fmt.Errorf("],
+    "max_latency_ms": 5000
+  }
+}

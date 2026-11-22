@@ -8,10 +8,10 @@ last_reviewed: 2026-08-04
 
 ## Automated Coverage
 
-- `internal/verification/contract_test.go` covers schema validation and verdict aggregation.
-- `internal/verification/evidence_test.go` covers redaction, hashing, provenance, authenticity, and freshness.
-- `internal/verification/store_test.go` covers atomic persistence, permissions, and restart lookup.
-- `internal/state/paths_test.go` covers deterministic state paths.
+- `internal/analysis/verification/contract_test.go` covers schema validation and verdict aggregation.
+- `internal/analysis/verification/evidence_test.go` covers redaction, hashing, provenance, authenticity, and freshness.
+- `internal/analysis/verification/store_test.go` covers atomic persistence, permissions, and restart lookup.
+- `internal/platform/state/paths/paths_test.go` covers deterministic state paths.
 - `cmd/browser-agent/internal/toolanalyze/verificationhandler/handler_test.go` covers define/evaluate request handling.
 
 ## Required Scenarios
@@ -27,4 +27,4 @@ last_reviewed: 2026-08-04
 
 ## Release Gate
 
-Run `go test ./internal/verification ./internal/state ./cmd/browser-agent/internal/toolanalyze/verificationhandler` plus wire-drift and schema contract checks.
+Run `go test ./internal/analysis/verification ./internal/platform/state/paths ./cmd/browser-agent/internal/toolanalyze/verificationhandler` plus wire-drift and schema contract checks.

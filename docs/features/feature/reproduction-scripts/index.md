@@ -6,28 +6,28 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolgenerate/dispatcher.go
-  - cmd/browser-agent/internal/toolgenerate/deps.go
-  - internal/reproduction/reproduction.go
-  - internal/reproduction/reproduction_kaboom.go
-  - internal/reproduction/reproduction_playwright.go
-  - internal/reproduction/reproduction_selectors.go
-  - internal/reproduction/reproduction_locators.go
-  - internal/reproduction/reproduction_utils.go
+  - internal/tools/generate/handler/dispatcher.go
+  - internal/tools/generate/handler/deps.go
+  - internal/recording/reproduction/reproduction.go
+  - internal/recording/reproduction/reproduction_kaboom.go
+  - internal/recording/reproduction/reproduction_playwright.go
+  - internal/recording/reproduction/reproduction_selectors.go
+  - internal/recording/reproduction/reproduction_locators.go
+  - internal/recording/reproduction/reproduction_utils.go
   - src/lib/page/reproduction.ts
-  - internal/capture/actionstore/store.go
+  - internal/observation/store/actions/store.go
 test_paths:
-  - cmd/browser-agent/internal/toolgenerate/toolgenerate_test.go
+  - internal/tools/generate/handler/toolgenerate_test.go
   - scripts/tests/workflows/cat-29-reproduction.sh
   - internal/tools/interact/reproduction_test.go
-  - internal/reproduction/reproduction_test.go
-  - internal/reproduction/reproduction_locators_test.go
-  - internal/reproduction/golden_test.go
+  - internal/recording/reproduction/reproduction_test.go
+  - internal/recording/reproduction/reproduction_locators_test.go
+  - internal/recording/reproduction/golden_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - tests/extension/reproduction/reproduction-script-fixture.js
   - tests/extension/reproduction/reproduction-script-generation.test.js
   - tests/extension/reproduction/reproduction-script.test.js
-  - internal/capture/actionstore/store_test.go
+  - internal/observation/store/actions/store_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -55,7 +55,7 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-- MCP adapter and script formatting: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
+- MCP adapter and script formatting: `internal/tools/generate/handler/dispatcher.go`
 - `output_format` accepts `kaboom-agentic-browser` or `playwright`. The rejection
   advice used to read "Use 'kaboom' or 'playwright'" — a value
   `ValidateOutputFormat` rejects — so a caller following the recovery playbook
@@ -74,7 +74,7 @@ Both backends here now emit, per targeted step, the two locators that survive a 
 selector does not — accessibility role plus accessible name, and the viewport coordinate with its
 frame — and a header stating what the recording session pinned. The fallback order
 (`selector -> ax -> coordinate`) and the pin report live in
-`internal/reproduction/reproduction_locators.go`.
+`internal/recording/reproduction/reproduction_locators.go`.
 
 See [Session to test](../session-to-test/index.md) for the full contract, the reasoning behind the
 order, and the extension-side capture and pinning.

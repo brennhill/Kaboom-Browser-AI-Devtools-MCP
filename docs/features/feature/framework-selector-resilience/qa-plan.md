@@ -27,7 +27,7 @@ last_verified_date: 2026-03-05
 
 ## Failure Triage Checklist
 
-1. Confirm fixture build output exists in the generated (gitignored) `frameworks/` subdirectory of `cmd/browser-agent/internal/testpages/pages/`.
+1. Confirm fixture build output exists in the generated (gitignored) `frameworks/` subdirectory of `internal/composition/http/testpages/pages/`.
 2. Check diagnostics for first failing framework and step.
 3. Confirm framework detection payload from `analyze(page_structure)`.
 4. Validate that fixture semantic contract IDs/text still exist.

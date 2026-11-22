@@ -6,12 +6,12 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-05
 code_paths:
-  - internal/performance/tracecorr/correlate.go
+  - internal/observation/performance/tracecorr/correlate.go
   - internal/tools/observe/session/session.go
   - src/lib/net/network.ts
-  - cmd/browser-agent/internal/cli/parser/observe_analyze.go
+  - internal/tools/cli/parser/observe_analyze.go
 test_paths:
-  - internal/performance/tracecorr/correlate_test.go
+  - internal/observation/performance/tracecorr/correlate_test.go
   - tests/extension/network-http/network-waterfall.test.js
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-04

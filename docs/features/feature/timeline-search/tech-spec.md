@@ -263,7 +263,7 @@ observe({
 ### Existing implementation to extend:
 - `internal/tools/observe/timeline/correlation.go` — current `timeline` and `error_bundles` modes (merging and sorting across buffers)
 - `cmd/browser-agent/internal/toolobserve/dispatcher.go` — observe mode dispatch
-- `internal/schema/observe.go` — observe `what` enum
+- `internal/tools/schema/observe.go` — observe `what` enum
 
 ### Planned (not yet created):
 - Query parser and executor, event indexer, causality analyzer, export manager and event normalization types, most likely as additions to the `internal/tools/observe/timeline` package

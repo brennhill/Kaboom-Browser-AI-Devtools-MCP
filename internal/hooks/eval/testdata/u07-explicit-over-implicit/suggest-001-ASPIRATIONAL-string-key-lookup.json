@@ -1,0 +1,17 @@
+{
+  "description": "ASPIRATIONAL U7 Suggest: using string literal keys for map lookups — should suggest typed constants or enum",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "func getConfig(settings map[string]string) string {\n\treturn settings[\"max_retries\"]\n}"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["U7", "string literal", "typed constant"],
+    "max_latency_ms": 5000
+  }
+}

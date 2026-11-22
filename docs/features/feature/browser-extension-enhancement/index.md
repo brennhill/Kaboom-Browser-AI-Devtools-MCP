@@ -66,17 +66,17 @@ code_paths:
   - src/popup/recording/recording.ts
   - src/offscreen/recording-worker.ts
   - cmd/browser-agent/internal/health/doctor_live_checks.go
-  - internal/commandcontract/generated.go
-  - cmd/browser-agent/internal/daemonlife/
-  - cmd/browser-agent/internal/screenrec/
-  - cmd/browser-agent/internal/sequencehandler/
-  - cmd/browser-agent/internal/summarypref/
-  - cmd/browser-agent/internal/toolinteract/interactstate/
-  - internal/noise/
-  - internal/persistence/
+  - internal/browsercommand/contract/generated.go
+  - internal/lifecycle/daemon/
+  - internal/screenrec/
+  - internal/recording/sequence/
+  - internal/tools/summarypref/
+  - internal/tools/interact/handler/interactstate/
+  - internal/observation/noise/
+  - internal/platform/state/persistence/
   - internal/recording/
-  - internal/statediag/collector.go
-  - internal/statediag/store.go
+  - internal/lifecycle/doctor/statediag/collector.go
+  - internal/lifecycle/doctor/statediag/store.go
   - internal/telemetry/install_id.go
   - extension/popup.html
   - extension/popup.css
@@ -93,9 +93,9 @@ test_paths:
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/system-doctor/system-doctor-ui.test.js
   - cmd/browser-agent/internal/health/health_coverage_test.go
-  - cmd/browser-agent/internal/asynccommand/handler_test.go
+  - internal/tools/asynccommand/handler_test.go
   - cmd/browser-agent/internal/health/health_test.go
-  - internal/statediag/collector_test.go
+  - internal/lifecycle/doctor/statediag/collector_test.go
   - tests/extension/popup-shell/popup-features.test.js
   - tests/extension/popup-shell/popup-toggles.test.js
   - tests/extension/ui-controls/toggle-feature.test.js

@@ -21,8 +21,8 @@ last_verified_date: 2026-03-28
 - `src/background/ui/terminal-workspace.ts`
 - `src/background/ui/tracked-tab-state.ts`
 - `src/content/ui/terminal-panel-bridge.ts`
-- `internal/pty/manager.go`
-- `internal/pty/session.go`
+- `internal/terminal/pty/manager.go`
+- `internal/terminal/pty/session.go`
 - `src/content/ui/terminal-widget-session.ts`
 - `src/content/ui/terminal-widget-types.ts`
 

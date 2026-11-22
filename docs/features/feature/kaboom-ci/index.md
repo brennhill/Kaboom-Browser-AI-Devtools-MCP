@@ -40,20 +40,20 @@ test_paths:
   - tests/extension/contracts/tooling-contracts.test.js
   - scripts/docs/features/check-feature-bundles.test.mjs
   - cmd/browser-agent/composition_test.go
-  - cmd/browser-agent/internal/toolpostprocess/postprocess_test.go
-  - internal/mcp/errors_test.go
+  - internal/tools/postprocess/postprocess_test.go
+  - internal/tools/mcp/errors_test.go
   - internal/browsercommand/internal/dispatch/dispatcher_test.go
   - tests/cli/runtime/cli-integration.test.cjs
   - tests/cli/runtime/config.test.cjs
   - tests/cli/runtime/doctor.test.cjs
   - tests/cli/lifecycle/server-install-hardening.test.cjs
   - tests/site/gokaboom-domain-contract.test.js
-  - internal/capture/syncruntime/integrationtest/sync_security_mode_test.go
-  - internal/qafixture/fixture_test.go
-  - internal/qafixture/registry_test.go
-  - internal/redaction/redaction_fuzz_test.go
-  - internal/security/scan/scan_test.go
-  - internal/statediag/collector_test.go
+  - internal/sync/runtime/integrationtest/sync_security_mode_test.go
+  - internal/testgen/qafixture/fixture_test.go
+  - internal/testgen/qafixture/registry_test.go
+  - internal/platform/redaction/redaction_fuzz_test.go
+  - internal/analysis/security/scan/scan_test.go
+  - internal/lifecycle/doctor/statediag/collector_test.go
   - scripts/ci/run-targeted-mutations.test.mjs
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-05

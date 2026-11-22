@@ -11,10 +11,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/a11yaudit"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/pagestorage"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/syncruntime"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/app/a11yaudit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/page/app/storage"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/sync/runtime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 )
 

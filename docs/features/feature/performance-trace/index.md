@@ -8,13 +8,13 @@ last_reviewed: 2026-08-08
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/performance_trace.go
-  - cmd/browser-agent/internal/cli/parser/observe_analyze.go
+  - internal/tools/cli/parser/observe_analyze.go
   - cmd/browser-agent/server.go
-  - internal/perftrace/http.go
-  - internal/perftrace/manager.go
-  - internal/perftrace/wire_trace.go
-  - internal/schema/analyze.go
-  - internal/state/paths.go
+  - internal/observation/perftrace/http.go
+  - internal/observation/perftrace/manager.go
+  - internal/observation/perftrace/wire_trace.go
+  - internal/tools/schema/analyze.go
+  - internal/platform/state/paths/paths.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - src/background/commands/analyze.ts
   - src/background/commands/helpers.ts
@@ -24,8 +24,8 @@ code_paths:
 test_paths:
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/performance_trace_test.go
   - cmd/browser-agent/composition_test.go
-  - internal/perftrace/http_test.go
-  - internal/perftrace/manager_test.go
+  - internal/observation/perftrace/http_test.go
+  - internal/observation/perftrace/manager_test.go
   - tests/extension/performance-trace/performance-trace.test.js
   - tests/extension/performance-trace/performance-trace-target-refusal.test.js
 last_verified_version: 0.9.0

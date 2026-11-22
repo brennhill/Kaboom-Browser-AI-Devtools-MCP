@@ -11,11 +11,11 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
   - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
-  - cmd/browser-agent/internal/mcpendpoint/handler.go
-  - cmd/browser-agent/internal/mcpresponse/owner.go
+  - internal/tools/mcpserver/endpoint/handler.go
+  - internal/tools/mcpserver/response/owner.go
   - cmd/browser-agent/internal/terminal/intent/store.go
   - cmd/browser-agent/internal/terminal/intent/handlers.go
-  - internal/schema/analyze.go
+  - internal/tools/schema/analyze.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - plugin/kaboom-workflows/commands/audit.md
   - npm/kaboom-agentic-browser/skills/audit/SKILL.md
@@ -29,8 +29,8 @@ code_paths:
 test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
-  - cmd/browser-agent/internal/mcpresponse/owner_test.go
-  - cmd/browser-agent/internal/mcpendpoint/handler_test.go
+  - internal/tools/mcpserver/response/owner_test.go
+  - internal/tools/mcpserver/endpoint/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
   - cmd/browser-agent/internal/terminal/intent/store_test.go

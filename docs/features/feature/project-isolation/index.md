@@ -6,13 +6,13 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-03
 code_paths:
-  - internal/state/paths.go
-  - internal/persistence/persistence_store.go
+  - internal/platform/state/paths/paths.go
+  - internal/platform/state/persistence/persistence_store.go
 test_paths:
-  - internal/state/paths_test.go
-  - internal/state/paths_coverage_test.go
-  - internal/state/no_facade_test.go
-  - internal/persistence/persistence_test.go
+  - internal/platform/state/paths/paths_test.go
+  - internal/platform/state/paths/paths_coverage_test.go
+  - internal/platform/state/paths/no_facade_test.go
+  - internal/platform/state/persistence/persistence_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -40,7 +40,7 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Shared runtime state resolves through `internal/state` and honors
+Shared runtime state resolves through `internal/platform/state/paths` and honors
 `KABOOM_STATE_DIR` as its explicit isolation boundary. The package exposes only
 canonical paths; callers do not read, migrate, or delete historical locations.
 Content-addressed QA artifacts use the canonical `evidence` directory beneath

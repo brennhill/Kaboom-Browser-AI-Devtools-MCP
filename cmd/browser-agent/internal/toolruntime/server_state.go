@@ -11,21 +11,21 @@
 package toolruntime
 
 import (
-	appruntime "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/appruntime"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	terminalintent "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/intent"
 	terminalstatus "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/status"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/activecodebase"
 	annotationruntime "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation/runtime"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/resetter"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/incident"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/listenport"
+	appruntime "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/appruntime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/incident"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/listenport"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/resetter"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/warningqueue"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/warningqueue"
 )
 
 // StateDiagnostics is the Doctor collector the runtime reports recoverable

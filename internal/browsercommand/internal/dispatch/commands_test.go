@@ -7,7 +7,7 @@ package dispatch
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
 	"strings"
 	"testing"
 	"time"

@@ -70,11 +70,11 @@ test('explicitly exempts generated and vendored output', async () => {
     ...Array.from({ length: 11 }, (_, index) => `node_modules/package/file-${index + 1}.js`),
     ...Array.from(
       { length: 11 },
-      (_, index) => `cmd/browser-agent/internal/testpages/pages/frameworks/chunks/generated-${index + 1}.js`
+      (_, index) => `internal/composition/http/testpages/pages/frameworks/chunks/generated-${index + 1}.js`
     ),
     ...Array.from(
       { length: 11 },
-      (_, index) => `cmd/browser-agent/internal/testpages/pages/_next/chunks/generated-${index + 1}.js`
+      (_, index) => `internal/composition/http/testpages/pages/_next/chunks/generated-${index + 1}.js`
     ),
     ...Array.from(
       { length: 11 },

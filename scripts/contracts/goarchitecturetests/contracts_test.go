@@ -200,7 +200,7 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 }
 
 func TestMCPToolBackendIsExecutionOnly(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "mcpcall", "handler.go"))
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "internal", "tools", "mcpserver", "call", "handler.go"))
 	if err != nil {
 		t.Fatalf("read MCP call owner: %v", err)
 	}
@@ -218,7 +218,7 @@ func TestMCPToolBackendIsExecutionOnly(t *testing.T) {
 }
 
 func TestBrowserActionsExposeOnlyCanonicalDispatch(t *testing.T) {
-	path := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "toolinteract", "interact_browser.go")
+	path := filepath.Join(projectRoot(), "internal", "tools", "interact", "handler", "interact_browser.go")
 	parsed, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
 	if err != nil {
 		t.Fatalf("parse browser actions: %v", err)
@@ -258,7 +258,7 @@ func TestObserveDispatcherDoesNotRequireHostInterfaces(t *testing.T) {
 
 func TestUnusedToolHostContractsStayDeleted(t *testing.T) {
 	for _, relativePath := range []string{
-		"internal/mcp/deps.go",
+		"internal/tools/mcp/deps.go",
 		"internal/tools/analyze/deps.go",
 		"internal/tools/configure/deps.go",
 		"internal/tools/interact/deps.go",
@@ -293,9 +293,9 @@ func TestActionRecordingDoesNotReturnToToolHandler(t *testing.T) {
 
 func TestNavigateEnrichmentBelongsToInteractOwner(t *testing.T) {
 	checks := map[string]string{
-		"cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go":                   "func (h *ToolHandler) enrichNavigateResponse(",
-		"cmd/browser-agent/internal/toolinteract/action_owners.go":       "EnrichNavigateResponse func(",
-		"cmd/browser-agent/internal/toolinteract/action_runtime_test.go": "EnrichNavigateResponse:",
+		"cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go": "func (h *ToolHandler) enrichNavigateResponse(",
+		"internal/tools/interact/handler/action_owners.go":                  "EnrichNavigateResponse func(",
+		"internal/tools/interact/handler/action_runtime_test.go":            "EnrichNavigateResponse:",
 	}
 	for relativePath, forbidden := range checks {
 		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
@@ -310,7 +310,7 @@ func TestNavigateEnrichmentBelongsToInteractOwner(t *testing.T) {
 
 func TestClientRegistryUsesCanonicalConcreteOwner(t *testing.T) {
 	checks := map[string][]string{
-		"internal/capture/clientstore/owner.go": {
+		"internal/observation/clientstore/owner.go": {
 			"type Registry interface",
 			"registry Registry",
 			"Registry() Registry",
@@ -342,7 +342,7 @@ func TestDaemonRecoveryPrimitivesDoNotReturnToMain(t *testing.T) {
 	if _, err := os.Stat(sourcePath); !os.IsNotExist(err) {
 		t.Fatalf("main recovery compatibility surface still exists: %s", sourcePath)
 	}
-	canonicalPath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "daemonrecovery", "reclaimer.go")
+	canonicalPath := filepath.Join(projectRoot(), "internal", "lifecycle", "daemon", "recovery", "reclaimer.go")
 	source, err := os.ReadFile(canonicalPath)
 	if err != nil {
 		t.Fatalf("read canonical daemon recovery owner: %v", err)
@@ -355,7 +355,7 @@ func TestDaemonRecoveryPrimitivesDoNotReturnToMain(t *testing.T) {
 }
 
 func TestPassiveTelemetryDoesNotLeakIntoEndpointOwner(t *testing.T) {
-	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "mcpendpoint", "handler.go")
+	sourcePath := filepath.Join(projectRoot(), "internal", "tools", "mcpserver", "endpoint", "handler.go")
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
 		t.Fatalf("read MCP endpoint owner: %v", err)
@@ -374,7 +374,7 @@ func TestPassiveTelemetryDoesNotLeakIntoEndpointOwner(t *testing.T) {
 }
 
 func TestResponsePolicyDoesNotLeakIntoEndpointOwner(t *testing.T) {
-	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "mcpendpoint", "handler.go")
+	sourcePath := filepath.Join(projectRoot(), "internal", "tools", "mcpserver", "endpoint", "handler.go")
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
 		t.Fatalf("read MCP endpoint owner: %v", err)
@@ -394,7 +394,7 @@ func TestResponsePolicyDoesNotLeakIntoEndpointOwner(t *testing.T) {
 }
 
 func TestStatelessProtocolResponsesDoNotLeakIntoEndpointOwner(t *testing.T) {
-	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "mcpendpoint", "handler.go")
+	sourcePath := filepath.Join(projectRoot(), "internal", "tools", "mcpserver", "endpoint", "handler.go")
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
 		t.Fatalf("read MCP endpoint owner: %v", err)
@@ -414,7 +414,7 @@ func TestStatelessProtocolResponsesDoNotLeakIntoEndpointOwner(t *testing.T) {
 }
 
 func TestToolCallPipelineDoesNotLeakIntoEndpointOwner(t *testing.T) {
-	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "mcpendpoint", "handler.go")
+	sourcePath := filepath.Join(projectRoot(), "internal", "tools", "mcpserver", "endpoint", "handler.go")
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
 		t.Fatalf("read MCP endpoint owner: %v", err)
@@ -435,7 +435,7 @@ func TestToolCallPipelineDoesNotLeakIntoEndpointOwner(t *testing.T) {
 }
 
 func TestJSONRPCRouterDoesNotLeakIntoEndpointOwner(t *testing.T) {
-	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "mcpendpoint", "handler.go")
+	sourcePath := filepath.Join(projectRoot(), "internal", "tools", "mcpserver", "endpoint", "handler.go")
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
 		t.Fatalf("read MCP endpoint owner: %v", err)
@@ -537,7 +537,7 @@ func TestToolCatalogDoesNotReturnToCompositionRoot(t *testing.T) {
 }
 
 func TestTestGenerationDoesNotRequireHostInterface(t *testing.T) {
-	relativePath := "cmd/browser-agent/internal/testgenhandler/handler.go"
+	relativePath := "internal/tools/generate/testgen/handler.go"
 	source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
 	if err != nil {
 		t.Fatalf("read %s: %v", relativePath, err)
@@ -549,8 +549,8 @@ func TestTestGenerationDoesNotRequireHostInterface(t *testing.T) {
 
 func TestGeneratePackagesDoNotRequireHostInterfaces(t *testing.T) {
 	for relativePath, forbidden := range map[string]string{
-		"cmd/browser-agent/internal/toolgenerate/deps.go":                 "type Deps interface {",
-		"cmd/browser-agent/internal/toolgenerate/annotations/handlers.go": "type Deps interface {",
+		"internal/tools/generate/handler/deps.go":                 "type Deps interface {",
+		"internal/tools/generate/handler/annotations/handlers.go": "type Deps interface {",
 	} {
 		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
 		if err != nil {
@@ -563,7 +563,7 @@ func TestGeneratePackagesDoNotRequireHostInterfaces(t *testing.T) {
 }
 
 func TestIssueReportDoesNotRequireHostInterface(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join(projectRoot(), "internal", "issuereport", "handler.go"))
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "internal", "tools", "issuereport", "handler.go"))
 	if err != nil {
 		t.Fatalf("read issue report handler: %v", err)
 	}
@@ -591,11 +591,7 @@ func TestAnalyzePackagesDoNotRequireCatchAllHost(t *testing.T) {
 func TestInteractTestsDoNotMirrorRootAccessor(t *testing.T) {
 	sourcePath := filepath.Join(
 		projectRoot(),
-		"cmd",
-		"browser-agent",
-		"internal",
-		"toolinteract",
-		"interact_dom_test.go",
+		"internal", "tools", "interact", "handler", "interact_dom_test.go",
 	)
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
@@ -614,10 +610,10 @@ func TestInteractTestsDoNotMirrorRootAccessor(t *testing.T) {
 
 func TestPackagesDoNotReexportCanonicalLogEntry(t *testing.T) {
 	for _, relativePath := range []string{
-		"internal/mcp/types.go",
+		"internal/tools/mcp/types.go",
 		"internal/server/main_handlers.go",
-		"internal/pagination/entries.go",
-		"internal/security/scan/scan.go",
+		"internal/observation/pagination/entries.go",
+		"internal/analysis/security/scan/scan.go",
 		"cmd/browser-agent/internal/logstore/store.go",
 	} {
 		path := filepath.Join(projectRoot(), relativePath)
@@ -639,7 +635,7 @@ func TestEvidenceCaptureHasNoCompatibilityShim(t *testing.T) {
 		t.Fatalf("evidence compatibility shim still exists: %s", shimPath)
 	}
 
-	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "toolinteract", "action_owners.go")
+	sourcePath := filepath.Join(projectRoot(), "internal", "tools", "interact", "handler", "action_owners.go")
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
 		t.Fatalf("read evidence implementation: %v", err)
@@ -657,7 +653,7 @@ func TestHardeningLintTracksCanonicalRouteAndGoroutineOwners(t *testing.T) {
 	}
 	text := string(source)
 	for _, canonicalOwner := range []string{
-		"cmd/browser-agent/internal/clientapi/handler.go",
+		"internal/tools/clientreg/http/handler.go",
 		"internal/util/response.go",
 	} {
 		if !strings.Contains(text, canonicalOwner) {
@@ -668,9 +664,9 @@ func TestHardeningLintTracksCanonicalRouteAndGoroutineOwners(t *testing.T) {
 
 func TestFeaturePackagesDoNotMirrorGuardContract(t *testing.T) {
 	for _, relativePath := range []string{
-		"cmd/browser-agent/internal/toolinteract/action_owners.go",
-		"cmd/browser-agent/internal/toolinteract/interactupload/upload.go",
-		"cmd/browser-agent/internal/screenrec/deps.go",
+		"internal/tools/interact/handler/action_owners.go",
+		"internal/tools/interact/handler/interactupload/upload.go",
+		"internal/screenrec/deps.go",
 	} {
 		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
 		if err != nil {
@@ -687,7 +683,7 @@ func TestFeaturePackagesDoNotMirrorGuardContract(t *testing.T) {
 // isAuthoredGoFile reports whether a walked entry is Go source a human wrote.
 //
 // Dot-prefixed .go files are excluded. Tools write scratch files into the repository
-// root — internal/hook/eval creates ".kaboom-eval-oversized-*.go" there — and under
+// root — internal/hooks/eval creates ".kaboom-eval-oversized-*.go" there — and under
 // `go test ./...` those packages run concurrently with this walk. Without this filter
 // the walk parses a scratch file that the tool then deletes, and the whole suite fails
 // with "no such file or directory" on a file that was never authored source.

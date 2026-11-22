@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/app/ports"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/ports"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
 

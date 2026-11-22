@@ -40,24 +40,24 @@ code_paths:
   - docs/specs/versioning/
   - docs/architecture/diagrams/quality/5-layer-protection.md
   - kaboom-code-standards.md
-  - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
+  - internal/tools/configure/handler/qualitygates/handler.go
   - cmd/browser-agent/internal/toolruntime/tools_configure.go
   - cmd/browser-agent/internal/toolruntime/tools_core.go
   - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
   - cmd/browser-agent/internal/toolruntime/server_state.go
   - cmd/browser-agent/internal/toolruntime/modes.go
-  - cmd/browser-agent/internal/censuscmd/census.go
-  - cmd/browser-agent/internal/retentionsweep/retention.go
+  - internal/lifecycle/instance/censuscmd/census.go
+  - internal/lifecycle/retention/sweep/retention.go
   - .folder-size-baseline.json
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
+  - internal/tools/configure/handler/dispatcher.go
   - internal/tools/configure/capabilities/modespecs_configure.go
-  - internal/schema/configure/properties_core.go
-  - internal/schema/configure/properties_runtime.go
-  - internal/hook/hook_policy.go
-  - internal/hook/compress_output.go
-  - internal/hook/conventions/conventions.go
-  - internal/tracking/token_tracker.go
-  - internal/tracking/stats_endpoint.go
+  - internal/tools/schema/configure/properties_core.go
+  - internal/tools/schema/configure/properties_runtime.go
+  - internal/hooks/hook_policy.go
+  - internal/hooks/compress_output.go
+  - internal/hooks/conventions/conventions.go
+  - internal/hooks/tokensavings/token_tracker.go
+  - internal/hooks/tokensavings/stats_endpoint.go
   - cmd/hooks/main.go
   - scripts/quality/contracts/check-folder-size.cjs
   - scripts/contracts/complexity/main.go
@@ -96,20 +96,20 @@ code_paths:
   - scripts/build/merge-go-coverage.mjs
   - scripts/build/openapi-tooling.test.mjs
   - .prettierignore
-  - internal/testsync/testsync.go
+  - internal/platform/testsync/testsync.go
   - package.json
   - .github/workflows/ci.yml
 test_paths:
   - tests/docs/documentation-link-parser.test.js
   - scripts/docs/lint-documentation.py
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/internal/toolconfigure/qualitygates/handler_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
+  - internal/tools/configure/handler/qualitygates/handler_test.go
   - cmd/hooks/main_test.go
-  - internal/hook/hook_policy_test.go
-  - internal/hook/compress_output_test.go
-  - internal/hook/conventions/conventions_test.go
-  - internal/tracking/token_tracker_test.go
-  - internal/tracking/stats_endpoint_test.go
+  - internal/hooks/hook_policy_test.go
+  - internal/hooks/compress_output_test.go
+  - internal/hooks/conventions/conventions_test.go
+  - internal/hooks/tokensavings/token_tracker_test.go
+  - internal/hooks/tokensavings/stats_endpoint_test.go
   - scripts/quality/contracts/file-length/check-file-length.test.mjs
   - scripts/quality/contracts/check-folder-size.test.mjs
   - scripts/contracts/complexity/main_test.go
@@ -128,7 +128,7 @@ test_paths:
   - cmd/browser-agent/internal/responsegate/harness_test.go
   - cmd/browser-agent/internal/responsegate/refusal_test.go
   - cmd/browser-agent/internal/toolruntime/composition_test.go
-  - cmd/browser-agent/internal/retentionsweep/retention_test.go
+  - internal/lifecycle/retention/sweep/retention_test.go
   - scripts/contracts/responsecontract/cat33_test.go
   - scripts/contracts/responsecontract/ratchet_test.go
   - scripts/contracts/responsecontract/diff_test.go
@@ -137,7 +137,7 @@ test_paths:
   - scripts/tests/contracts/go-coverage-profile.test.mjs
   - scripts/tests/contracts/go-coverage-baseline.test.mjs
   - scripts/build/openapi-tooling.test.mjs
-  - internal/testsync/testsync_test.go
+  - internal/platform/testsync/testsync_test.go
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/setup/test-install-hooks-only.sh
   - scripts/docs/features/check-feature-paths.test.mjs
@@ -166,7 +166,7 @@ release so clean CI installs remain deterministic and audit-clean.
 | **Status**    | in-progress                             |
 | **Tool**      | configure                               |
 | **Mode**      | `what="setup_quality_gates"`            |
-| **Schema**    | `internal/schema/configure/properties_runtime.go` |
+| **Schema**    | `internal/tools/schema/configure/properties_runtime.go` |
 | **Issue**     | [#506](https://github.com/brennhill/kaboom-agentic-browser-devtools-mcp/issues/506) |
 
 ## Specs
@@ -200,7 +200,7 @@ state growth, turning instance ownership and minimal public interfaces into
 deterministic merge gates instead of review-only preferences.
 
 `make check-response-contract` gates the MCP tool response body, a boundary that
-had no declared contract at all: `internal/mcp` declares an input schema and
+had no declared contract at all: `internal/tools/mcp` declares an input schema and
 nothing for output, so a handler could drop, rename or retype a field and every
 layer stayed green. `.mcp-response-contract.json` declares, per mode, the
 response's field paths and JSON types — never its values — plus the async
@@ -314,9 +314,9 @@ file and 600KB total, so extension footprint growth is a reviewable event;
 missing bundle artifacts fail rather than passing as a size win.
 
 `make check-layering` pins the hexagonal shape of the Go tree with a hard
-dependency matrix: `internal/**` never imports `cmd/**`, `internal/types`
-is the innermost leaf, `internal/mcp` (protocol) never imports the tool
-domain or the capture port, `internal/schema` and `internal/tools` remain
+dependency matrix: `internal/**` never imports `cmd/**`, `internal/platform/types`
+is the innermost leaf, `internal/tools/mcp` (protocol) never imports the tool
+domain or the capture port, `internal/tools/schema` and `internal/tools` remain
 siblings, and `capture.NewCapture` is constructed only by the composition
 root in `cmd/browser-agent`. The same gate enforces interface segregation
 (exported interfaces ≤7 methods, hard) and, via a downward-only
@@ -365,7 +365,7 @@ performance gate from silently disappearing from pull requests.
 3. **`kaboom-code-standards.md`** — plain markdown coding conventions, read by Haiku
 4. **Claude Code hooks** — PostToolUse on Edit/Write (quality gates) and Bash (output compression)
 5. **Haiku review** — ~$0.0001/edit, findings injected as `additionalContext`
-6. **Token tracking** — `internal/tracking/` tracks compression savings, logs on shutdown, persists lifetime stats to `~/.kaboom/stats/lifetime.json`
+6. **Token tracking** — `internal/hooks/tokensavings/` tracks compression savings, logs on shutdown, persists lifetime stats to `~/.kaboom/stats/lifetime.json`
 
 ## Install
 

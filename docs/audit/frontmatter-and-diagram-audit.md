@@ -111,9 +111,9 @@ package packagename
 #### Domain Logic (HIGH PRIORITY)
 | Missing | Type | Files Affected |
 |---------|------|-----------------|
-| Security Analysis Pipeline | Flowchart | internal/security/csp.go, sri.go, flagging.go |
+| Security Analysis Pipeline | Flowchart | internal/analysis/security/csp.go, sri.go, flagging.go |
 | Error Clustering | Flowchart | internal/analysis/clustering.go |
-| Session/Registry Management | Sequence + State | internal/session/*, client_registry.go |
+| Session/Registry Management | Sequence + State | internal/analysis/snapshots/*, client_registry.go |
 | Buffer Architecture | State Machine | internal/buffers/ring_buffer.go, ttl.go |
 | Test Generation | Flowchart | cmd/browser-agent/testgen*.go |
 
@@ -163,9 +163,9 @@ All files have excellent documentation. No updates required.
 
 ### Best Documented Packages
 ✅ **Perfect Documentation:**
-- `internal/types/` - Comprehensive package docs + clear file headers
-- `internal/capture/` - Detailed doc.go explaining architecture + TTL
-- `internal/pagination/` - RFC-compliant design documented
+- `internal/platform/types/` - Comprehensive package docs + clear file headers
+- `internal/composition/capture/` - Detailed doc.go explaining architecture + TTL
+- `internal/observation/pagination/` - RFC-compliant design documented
 - `cmd/browser-agent/` - All 35 files have clear purpose headers
 
 ### All Locations Reference Core/Feature Docs

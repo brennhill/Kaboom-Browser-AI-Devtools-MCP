@@ -9,7 +9,7 @@ last_reviewed: 2026-08-04
 ## Automated Coverage
 
 - `scripts/ci/run-flake-detection.test.mjs` verifies deterministic planning, artifact fields, failure preservation, replay commands, bounded output, retry classification, and telemetry opt-out.
-- `internal/flakerepro/runner_test.go` verifies attempt validation, immutable original evidence, deterministic perturbations, cancellation, and verdict aggregation.
+- `internal/analysis/flakerepro/runner_test.go` verifies attempt validation, immutable original evidence, deterministic perturbations, cancellation, and verdict aggregation.
 
 ## Required Scenarios
 
@@ -22,4 +22,4 @@ last_reviewed: 2026-08-04
 
 ## Release Gate
 
-Run `npm run docs:check:strict`, the JavaScript flake-runner tests, the Go `internal/flakerepro` tests, and the workflow syntax checks used by CI.
+Run `npm run docs:check:strict`, the JavaScript flake-runner tests, the Go `internal/analysis/flakerepro` tests, and the workflow syntax checks used by CI.

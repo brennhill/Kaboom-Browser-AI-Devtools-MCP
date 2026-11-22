@@ -14,9 +14,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/styleprobe"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/wirecodec"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/page/styleprobe"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/wirecodec"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 // maxProbeElements is the element cap requested from the page. Higher than the
