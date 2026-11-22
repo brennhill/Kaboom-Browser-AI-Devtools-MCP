@@ -31,7 +31,7 @@ public interface listed here. Details are in the architecture guides.
 | **Extension Ingestion** | HTTP endpoints that accept extension uploads and write them to their owners | `internal/ingestion/http/`, `cmd/browser-agent/internal/mediaapi/` | — |
 | **Event Recording** | Recordings of user-flow events, their persistence, playback and diff | `internal/recording/`, `internal/tools/recording/` | — |
 | **Screen Recording** | Live tab video capture and saved video files | `internal/screenrec/` (MCP start/stop, saved-video path) | `src/background/recording/`, `src/offscreen/recording-worker.ts`, `src/popup/recording/` |
-| **Application Use Cases** | Transport-independent workflows behind the tools | `internal/app/` | — |
+| **Application Use Cases** | Transport-independent workflows behind the tools, each in its owning context's app folder | `internal/page/app/`, `internal/analysis/app/` | — |
 | **Tool Surface** | The five MCP tools: schemas, dispatch, response shaping | `internal/tools/mcp/`, `internal/tools/schema/`, `internal/tools/`, `cmd/browser-agent/internal/toolobserve/`, `internal/tools/interact/handler/`, `internal/tools/asynccommand/` | — |
 | **Composition** | Construction and wiring of every owner | `cmd/browser-agent/server.go`, `cmd/browser-agent/internal/toolruntime/`, `internal/composition/capture/capture.go` | `src/background/init.ts`, `src/background.ts` |
 | **Process Lifecycle** | Bridge, daemon spawn/respawn, single-instance governance | `internal/lifecycle/bridge/`, `internal/lifecycle/daemon/`, `internal/lifecycle/instance/gov/` | — |

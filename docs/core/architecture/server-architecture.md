@@ -44,7 +44,7 @@ public interface listed here. `make check-layering` enforces the arrows (see
 | **Extension Ingestion** | None (adapter). Validates extension uploads and writes them to their owners | `internal/ingestion/http/`, `cmd/browser-agent/internal/mediaapi/` | `internal/ingestion/http/handlers.go:Handlers` | Capture stores, Browser Command (`Result`, `SubmitResult`), Event Recording (storage reads) |
 | **Event Recording** | Event recordings, their disk persistence and quotas | `internal/recording/` (with `internal/recording/playback/`, `internal/recording/logdiff/`, `internal/recording/actionlog/`) | `internal/recording/manager.go:RecordingManager` | Capture stores (read), leaf state packages |
 | **Screen Recording** (daemon half) | Saved video files and their metadata | `internal/screenrec/` | `internal/screenrec/handlers.go:InteractHandler`, `internal/screenrec/save.go:HandleSave` | Browser Command (`Owner`, `ports.ResultSink`) |
-| **Application Use Cases** | None (workflows) | `internal/app/` | `internal/page/app/screenshot/screenshot.go:Service`, `internal/page/app/pageinfo/pageinfo.go:Service`, `internal/page/app/storage/storage.go:Service`, `internal/analysis/app/a11yaudit/a11yaudit.go:Service`, `internal/browsercommand/ports/ports.go:ResultSink` | Browser Command (`QueryRunner`), leaf packages. No HTTP, MCP, capture or `internal/tools` |
+| **Application Use Cases** | None (workflows) | `internal/page/app/`, `internal/analysis/app/` (each context's app folder) | `internal/page/app/screenshot/screenshot.go:Service`, `internal/page/app/pageinfo/pageinfo.go:Service`, `internal/page/app/storage/storage.go:Service`, `internal/analysis/app/a11yaudit/a11yaudit.go:Service`, `internal/browsercommand/ports/ports.go:ResultSink` | Browser Command (`QueryRunner`), leaf packages. No HTTP, MCP, capture or `internal/tools` |
 | **Tool Surface** | Per-call MCP state only (rate limits, response shaping) | `internal/tools/mcp/`, `internal/tools/schema/`, `internal/tools/`, `cmd/browser-agent/internal/toolobserve/`, `internal/tools/interact/handler/`, `cmd/browser-agent/internal/toolanalyze/`, `internal/tools/generate/handler/`, `internal/tools/configure/handler/`, `internal/tools/recording/`, `internal/tools/asynccommand/` | The five tools (observe, analyze, generate, configure, interact) | Everything above, through owners and use cases |
 | **Composition** | Object graph only | `cmd/browser-agent/server.go`, `cmd/browser-agent/internal/toolruntime/`, `internal/composition/capture/capture.go` | `cmd/browser-agent/server.go:setupHTTPRoutes`, `cmd/browser-agent/internal/toolruntime/tools_core.go:NewToolHandler` | Everything |
 | **Process Lifecycle** | Bridge, daemon spawn and respawn, single instance, Doctor diagnostics | `internal/lifecycle/bridge/`, `internal/lifecycle/daemon/`, `internal/lifecycle/instance/gov/`, `internal/lifecycle/doctor/statediag/` | `internal/lifecycle/bridge/bridge.go:Runner` | Leaf utilities |
@@ -133,7 +133,7 @@ Each row is a cross-context operation. The **owner** decides the outcome. The
 - **Done (jdm5.2 to jdm5.6):** one command owner (`internal/browsercommand/`)
   with a private dispatcher, generation-gated sync exchanges, validated result
   sources, the tracked-tab ordering rule, explicit recording ownership, and
-  four transport-independent use cases in `internal/app/`. Only the
+  four transport-independent use cases in `internal/page/app/` and `internal/analysis/app/`. Only the
   composition root holds `*capture.Capture` (jdm5.5). Every tool, health,
   guard and API package takes the owners it uses, and the `capture-root`
   layering rule enforces it. Per-client dispatcher helpers were deleted.
@@ -152,7 +152,7 @@ arrow is broken:
 - `scripts/contracts/layering/main.go` enforces the global matrix:
   `internal/**` never imports `cmd/**`; `internal/platform/types` is a leaf;
   `internal/tools/mcp` does not import tools or capture; the command module and
-  `internal/app/**` have no HTTP, MCP or capture imports; `capture-root` allows
+  `internal/*/app/**` have no HTTP, MCP or capture imports; `capture-root` allows
   only `cmd/browser-agent`, its toolruntime wiring, the `internal/composition/capture/`
   tree and test-support packages to import `internal/composition/capture`; `test-support`
   keeps production code from importing test-support packages;
@@ -185,7 +185,7 @@ files (for example `internal/sync/runtime/wire_sync.go` and
 | Want to... | Edit |
 | --- | --- |
 | Add an observe mode | `internal/tools/observe/` (mode) and `cmd/browser-agent/internal/toolobserve/registry.go` |
-| Add a transport-independent workflow | A new package under `internal/app/`, wired in `cmd/browser-agent/internal/toolruntime/usecase_wiring.go` |
+| Add a transport-independent workflow | A new package under the owning context's app folder (for example `internal/page/app/`), wired in `cmd/browser-agent/internal/toolruntime/usecase_wiring.go` |
 | Add a browser command | Daemon: enqueue through `Owner` from the tool adapter. Extension: `registerCommand` in `src/background/commands/` |
 | Change the sync protocol | `internal/sync/runtime/handler.go`, `internal/sync/runtime/wire_sync.go`, `src/types/wire/wire-sync.ts`, `src/background/sync/sync-client.ts` |
 | Add an extension HTTP endpoint | `internal/ingestion/http/` (handler) and `cmd/browser-agent/server.go` (route) |

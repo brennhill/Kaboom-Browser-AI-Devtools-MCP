@@ -284,7 +284,7 @@ func TestApplicationUseCasesHaveNoTransportDependencies(t *testing.T) {
 		"internal/page/app/screenshot/http.go":    "package screenshot\n\nimport _ \"net/http\"\n",
 		"internal/page/app/screenshot/mcp.go":     "package screenshot\n\nimport _ \"" + modulePrefix + "internal/tools/mcp\"\n",
 		"internal/page/app/screenshot/capture.go": "package screenshot\n\nimport _ \"" + modulePrefix + "internal/composition/capture\"\n",
-		"internal/app/other/adapter.go":           "package other\n\nimport _ \"" + modulePrefix + "internal/tools/observe/page\"\n",
+		"internal/page/app/other/adapter.go":      "package other\n\nimport _ \"" + modulePrefix + "internal/tools/observe/page\"\n",
 		// Clean: use cases may depend on the command module and leaf utilities.
 		"internal/page/app/screenshot/service.go": "package screenshot\n\nimport (\n\t_ \"context\"\n\t_ \"" + modulePrefix + "internal/browsercommand/query\"\n)\n",
 		// Clean: adapters depending on the use case.

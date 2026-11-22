@@ -485,11 +485,14 @@ func commandModuleForbidden(imp string) bool {
 }
 
 // applicationModule reports whether pkg is a transport-independent application
-// use case (internal/app/**).
+// use case: internal/<context>/app/** in any bounded context.
 func applicationModule(pkg string) bool {
-	return isPkgOrSub(pkg, modulePrefix+"internal/app") ||
-		isPkgOrSub(pkg, modulePrefix+"internal/page/app") ||
-		isPkgOrSub(pkg, modulePrefix+"internal/analysis/app")
+	rel, ok := strings.CutPrefix(pkg, modulePrefix+"internal/")
+	if !ok {
+		return false
+	}
+	parts := strings.Split(rel, "/")
+	return len(parts) >= 2 && parts[1] == "app"
 }
 
 // applicationModuleForbidden reports whether imp is a transport, the broad

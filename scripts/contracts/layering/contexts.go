@@ -45,7 +45,7 @@ func boundedContexts() []boundedContext {
 				"internal/observation/store/ring", "internal/observation/store/wsconn", "internal/observation/pressure",
 			},
 			forbidden: []string{
-				"net/http", "internal/tools/mcp", "internal/tools", "internal/app", "internal/page/app", "internal/analysis/app",
+				"net/http", "internal/tools/mcp", "internal/tools", "internal/page/app", "internal/analysis/app",
 				"internal/browsercommand", "internal/browsercommand/query",
 				"internal/sync/runtime", "internal/ingestion/http", "internal/recording",
 			},
@@ -57,7 +57,7 @@ func boundedContexts() []boundedContext {
 			packages: []string{"internal/recording"},
 			excluded: []string{"internal/recording/replay", "internal/recording/sequence"},
 			forbidden: []string{
-				"net/http", "internal/tools/mcp", "internal/app", "internal/page/app", "internal/analysis/app",
+				"net/http", "internal/tools/mcp", "internal/page/app", "internal/analysis/app",
 				"internal/browsercommand", "internal/browsercommand/query",
 				"internal/sync/runtime", "internal/ingestion/http",
 			},
@@ -68,7 +68,7 @@ func boundedContexts() []boundedContext {
 			name:     "Connection & Sync",
 			packages: []string{"internal/sync/runtime"},
 			forbidden: []string{
-				"internal/tools/mcp", "internal/tools", "internal/app", "internal/page/app", "internal/analysis/app", "internal/recording",
+				"internal/tools/mcp", "internal/tools", "internal/page/app", "internal/analysis/app", "internal/recording",
 				"internal/ingestion/http",
 			},
 			forbiddenExact: []string{"internal/composition/capture"},
@@ -78,7 +78,7 @@ func boundedContexts() []boundedContext {
 			name:     "Extension Ingestion",
 			packages: []string{"internal/ingestion/http"},
 			forbidden: []string{
-				"internal/tools/mcp", "internal/tools", "internal/app", "internal/page/app", "internal/analysis/app", "internal/sync/runtime",
+				"internal/tools/mcp", "internal/tools", "internal/page/app", "internal/analysis/app", "internal/sync/runtime",
 			},
 			forbiddenExact: []string{"internal/composition/capture"},
 			why:            "HTTP ingestion writes to its owners' ports; it is not a tool or sync adapter",
