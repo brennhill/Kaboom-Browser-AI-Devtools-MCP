@@ -19,19 +19,21 @@ func toolsLayer(internal string) bool {
 // captureTree lists the packages that formerly lived under internal/capture. They
 // remain the capture tree for the capture-root rule and the command-module
 // transport rule even though they now sit in their bounded contexts.
-var captureTree = []string{
-	"internal/composition/capture", "internal/capture/settingscache", "internal/sync/runtime",
-	"internal/ingestion/http", "internal/observation/store", "internal/observation/pressure",
-	"internal/observation/clientstore", "internal/observation/featureusage",
-	"internal/observation/healthreader", "internal/observation/resetter",
-	"internal/observation/testsupport/pipeline", "internal/observation/testsupport/websocket",
-	"internal/recording/testsupport",
+func captureTree() []string {
+	return []string{
+		"internal/composition/capture", "internal/capture/settingscache", "internal/sync/runtime",
+		"internal/ingestion/http", "internal/observation/store", "internal/observation/pressure",
+		"internal/observation/clientstore", "internal/observation/featureusage",
+		"internal/observation/healthreader", "internal/observation/resetter",
+		"internal/observation/testsupport/pipeline", "internal/observation/testsupport/websocket",
+		"internal/recording/testsupport",
+	}
 }
 
 // inCaptureTree reports whether a full import/package path is in the former capture tree.
 func inCaptureTree(path string) bool {
 	rel := strings.TrimPrefix(path, modulePrefix)
-	for _, p := range captureTree {
+	for _, p := range captureTree() {
 		if isPkgOrSub(rel, p) {
 			return true
 		}

@@ -53,8 +53,8 @@ CRITICAL_FILES=(
     "$CMD_DIR/internal/toolruntime/tools_core.go"
     "$CMD_DIR/internal/toolruntime/tools_interact_dispatch.go"
     "$CMD_DIR/internal/toolobserve/dispatcher.go"
-    "$CMD_DIR/internal/toolinteract/interact_browser.go"
-    "$CMD_DIR/internal/bridge/bridge.go"
+    "internal/tools/interact/handler/interact_browser.go"
+    "internal/lifecycle/bridge/bridge.go"
 )
 
 for file in "${CRITICAL_FILES[@]}"; do
@@ -95,8 +95,8 @@ require_method "HandleSync" "internal/sync/runtime/handler.go"
 require_method "CommandResult" "$CMD_DIR/internal/toolobserve/dispatcher.go"
 require_method "pendingCommands" "$CMD_DIR/internal/toolobserve/dispatcher.go"
 require_method "FailedCommands" "$CMD_DIR/internal/toolobserve/dispatcher.go"
-require_method "handleExecuteJS" "$CMD_DIR/internal/toolinteract/interact_browser.go"
-require_method "handleNavigate" "$CMD_DIR/internal/toolinteract/interact_browser.go"
+require_method "handleExecuteJS" "internal/tools/interact/handler/interact_browser.go"
+require_method "handleNavigate" "internal/tools/interact/handler/interact_browser.go"
 
 if grep -q 'queries.*\\[\\]interface{}{}' internal/ingestion/http/handlers.go; then
     fail "STUB DETECTED: handlers.go returns an empty query array"
