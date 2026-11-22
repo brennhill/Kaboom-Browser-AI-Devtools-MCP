@@ -28,7 +28,7 @@ Decisions are stored in `.kaboom/decisions.json` in the project root (same direc
   {
     "id": "use-shared-http-client",
     "pattern": "http.Client{",
-    "rule": "Use the shared HTTP client from internal/util/http.go. Do not create new http.Client instances.",
+    "rule": "Use the shared HTTP client from internal/platform/util/http.go. Do not create new http.Client instances.",
     "scope": "*.go",
     "locked_at": "2026-03-07T14:30:00Z",
     "locked_by": "team"
@@ -60,7 +60,7 @@ When one or more decisions match:
 ```
 [Decision Guard] 1 locked decision applies to this edit:
 
-  use-shared-http-client: Use the shared HTTP client from internal/util/http.go. Do not create new http.Client instances.
+  use-shared-http-client: Use the shared HTTP client from internal/platform/util/http.go. Do not create new http.Client instances.
 
 Comply with these decisions or update .kaboom/decisions.json if they are outdated.
 ```
@@ -70,7 +70,7 @@ When multiple match:
 ```
 [Decision Guard] 2 locked decisions apply to this edit:
 
-  use-shared-http-client: Use the shared HTTP client from internal/util/http.go.
+  use-shared-http-client: Use the shared HTTP client from internal/platform/util/http.go.
   error-format: Error messages must follow: "{OPERATION}: {ROOT_CAUSE}. {RECOVERY_ACTION}"
 
 Comply with these decisions or update .kaboom/decisions.json if they are outdated.
@@ -84,7 +84,7 @@ Comply with these decisions or update .kaboom/decisions.json if they are outdate
 kaboom-hooks lock-decision \
   --id "use-shared-http-client" \
   --pattern "http.Client{" \
-  --rule "Use the shared HTTP client from internal/util/http.go" \
+  --rule "Use the shared HTTP client from internal/platform/util/http.go" \
   --scope "*.go"
 ```
 

@@ -9,9 +9,9 @@ code_paths:
   - internal/lifecycle/upgrade/binarywatch/watcher.go
   - cmd/browser-agent/config.go
   - internal/lifecycle/startupconfig/runtime.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
-  - cmd/browser-agent/internal/operationalapi/handler.go
+  - internal/composition/http/operational/handler.go
   - internal/tools/mcpserver/endpoint/handler.go
   - cmd/browser-agent/server.go
   - cmd/browser-agent/openapi.json
@@ -22,7 +22,7 @@ test_paths:
   - internal/tools/configure/handler/dispatcher_test.go
   - internal/lifecycle/upgrade/binarywatch/watcher_test.go
   - internal/lifecycle/startupconfig/runtime_test.go
-  - cmd/browser-agent/internal/operationalapi/health_test.go
+  - internal/composition/http/operational/health_test.go
   - internal/tools/mcpserver/endpoint/handler_test.go
   - cmd/browser-agent/composition_test.go
   - tests/extension/contracts/no-compatibility-facades.test.js

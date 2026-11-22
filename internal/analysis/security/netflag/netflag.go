@@ -13,7 +13,7 @@ package netflag
 
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 )
 
 // Analyze runs the full set of origin/resource checks for one network entry.

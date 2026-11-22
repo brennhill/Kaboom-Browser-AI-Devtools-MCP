@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-09-05
 code_paths:
   - cmd/browser-agent/server.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_core.go
   - internal/tools/configure/handler/session.go
   - internal/platform/state/persistence/persistence_context.go
   - internal/platform/state/persistence/persistence_crud.go

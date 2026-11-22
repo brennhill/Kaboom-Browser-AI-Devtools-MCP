@@ -10,7 +10,7 @@ code_paths:
   - internal/tools/interact/effects/classify.go
   - internal/tools/interact/dispatch/effects.go
   - internal/tools/interact/dispatch/handler.go
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
   - internal/tools/interact/handler/action_owners.go
   - internal/tools/cli/parser/interact.go
   - internal/tools/cli/parser/flags.go

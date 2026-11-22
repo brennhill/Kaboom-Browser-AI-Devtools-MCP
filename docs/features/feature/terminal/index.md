@@ -6,29 +6,29 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - internal/activecodebase/store.go
-  - cmd/browser-agent/internal/terminal/status/status.go
+  - internal/lifecycle/activecodebase/store.go
+  - internal/terminal/adapters/status/status.go
   - internal/terminal/pty/upload/upload.go
   - src/content/ui/hover/screenshot-feedback.ts
   - src/content/ui/panel/host-tab.ts
   - src/content/ui/panel/shell.ts
   - src/content/ui/panel/status-indicators.ts
-  - cmd/browser-agent/internal/terminal/wstransport/ws.go
+  - internal/terminal/adapters/wstransport/ws.go
   - src/lib/brand.ts
-  - cmd/browser-agent/internal/terminal/handlers.go
-  - cmd/browser-agent/internal/terminal/spawnpolicy/retry.go
-  - cmd/browser-agent/internal/terminal/sessionrelay/relay.go
-  - cmd/browser-agent/internal/terminal/server.go
-  - cmd/browser-agent/internal/terminal/supervisor/supervisor.go
+  - internal/terminal/adapters/handlers.go
+  - internal/terminal/adapters/spawnpolicy/retry.go
+  - internal/terminal/adapters/sessionrelay/relay.go
+  - internal/terminal/adapters/server.go
+  - internal/terminal/adapters/supervisor/supervisor.go
   - cmd/browser-agent/main_connection_mcp.go
   - internal/lifecycle/daemon/lifecycle.go
   - internal/lifecycle/install/native/installer.go
-  - cmd/browser-agent/internal/terminal/intent/handlers.go
-  - cmd/browser-agent/internal/terminal/intent/store.go
-  - cmd/browser-agent/internal/terminal/directorybrowser/browser.go
-  - cmd/browser-agent/internal/terminal/dimensions/dimensions.go
-  - cmd/browser-agent/internal/terminal/assets/assets.go
-  - cmd/browser-agent/internal/terminal/assets/terminal_assets/terminal.html
+  - internal/terminal/adapters/intent/handlers.go
+  - internal/terminal/adapters/intent/store.go
+  - internal/terminal/adapters/directorybrowser/browser.go
+  - internal/terminal/adapters/dimensions/dimensions.go
+  - internal/terminal/adapters/assets/assets.go
+  - internal/terminal/adapters/assets/terminal_assets/terminal.html
   - extension/sidepanel.html
   - extension/sidepanel.js
   - src/content/ui/terminal-panel-bridge.ts
@@ -57,22 +57,22 @@ code_paths:
   - scripts/tests/framework/framework.sh
   - scripts/tests/workflows/cat-28-terminal.sh
 test_paths:
-  - internal/activecodebase/store_test.go
-  - cmd/browser-agent/internal/terminal/status/status_test.go
+  - internal/lifecycle/activecodebase/store_test.go
+  - internal/terminal/adapters/status/status_test.go
   - tests/extension/terminal-reconnect/terminal-html-liveness.test.js
-  - cmd/browser-agent/internal/terminal/sessionrelay/relay_rebind_test.go
-  - cmd/browser-agent/internal/terminal/sessionrelay/relay_test.go
-  - cmd/browser-agent/internal/terminal/fakes_test.go
-  - cmd/browser-agent/internal/terminal/spawnpolicy/retry_test.go
-  - cmd/browser-agent/internal/terminal/sandbox_error_test.go
-  - cmd/browser-agent/internal/terminal/handlers_start_decisions_test.go
+  - internal/terminal/adapters/sessionrelay/relay_rebind_test.go
+  - internal/terminal/adapters/sessionrelay/relay_test.go
+  - internal/terminal/adapters/fakes_test.go
+  - internal/terminal/adapters/spawnpolicy/retry_test.go
+  - internal/terminal/adapters/sandbox_error_test.go
+  - internal/terminal/adapters/handlers_start_decisions_test.go
   - tests/extension/terminal-session/terminal-start-pending.test.js
   - tests/extension/branding/brand-metadata.test.js
   - tests/extension/terminal-session/terminal-write-guard.test.js
-  - cmd/browser-agent/internal/terminal/handlers_test.go
-  - cmd/browser-agent/internal/terminal/handlers_extra_test.go
-  - cmd/browser-agent/internal/terminal/wstransport/ws_panic_test.go
-  - cmd/browser-agent/internal/terminal/supervisor/supervisor_test.go
+  - internal/terminal/adapters/handlers_test.go
+  - internal/terminal/adapters/handlers_extra_test.go
+  - internal/terminal/adapters/wstransport/ws_panic_test.go
+  - internal/terminal/adapters/supervisor/supervisor_test.go
   - tests/extension/terminal-sidepanel/sidepanel-terminal-fixture.js
   - tests/extension/terminal-sidepanel/sidepanel-terminal-io.test.js
   - tests/extension/terminal-sidepanel/sidepanel-terminal-ui.test.js
@@ -80,7 +80,7 @@ test_paths:
   - tests/extension/terminal-session/terminal-widget-session-branding.test.js
   - tests/extension/terminal-session/terminal-root-folder.test.js
   - tests/extension/terminal-session/terminal-session-start-errors.test.js
-  - cmd/browser-agent/internal/terminal/handlers_logging_test.go
+  - internal/terminal/adapters/handlers_logging_test.go
   - tests/extension/terminal-panel/terminal-panel-presence.test.js
   - tests/extension/terminal-panel/terminal-panel-close-and-scope.test.js
   - tests/extension/terminal-panel/terminal-panel-open-failure.test.js
@@ -101,20 +101,20 @@ test_paths:
   - internal/terminal/pty/diagnostics/diagnostics_test.go
   - internal/terminal/pty/fanout/fanout_test.go
   - internal/terminal/pty/upload/upload_test.go
-  - cmd/browser-agent/internal/terminal/wstransport/session_end_signal_test.go
-  - cmd/browser-agent/internal/terminal/wstransport/frame_writer_deadline_test.go
-  - cmd/browser-agent/internal/terminal/wstransport/handlers_fanout_test.go
-  - cmd/browser-agent/internal/terminal/wstransport/handlers_replay_deadline_test.go
-  - cmd/browser-agent/internal/terminal/wstransport/ws_integration_test.go
-  - cmd/browser-agent/internal/terminal/wstransport/test_support_test.go
-  - cmd/browser-agent/internal/terminal/sessionrelay/relay_boundary_test.go
-  - cmd/browser-agent/internal/terminal/sessionrelay/relay_replace_test.go
-  - cmd/browser-agent/internal/terminal/sessionrelay/relay_close_test.go
-  - cmd/browser-agent/internal/terminal/sessionrelay/relay_init_test.go
-  - cmd/browser-agent/internal/terminal/intent/handlers_test.go
-  - cmd/browser-agent/internal/terminal/intent/store_test.go
-  - cmd/browser-agent/internal/terminal/directorybrowser/browser_test.go
-  - cmd/browser-agent/internal/terminal/dimensions/dimensions_test.go
+  - internal/terminal/adapters/wstransport/session_end_signal_test.go
+  - internal/terminal/adapters/wstransport/frame_writer_deadline_test.go
+  - internal/terminal/adapters/wstransport/handlers_fanout_test.go
+  - internal/terminal/adapters/wstransport/handlers_replay_deadline_test.go
+  - internal/terminal/adapters/wstransport/ws_integration_test.go
+  - internal/terminal/adapters/wstransport/test_support_test.go
+  - internal/terminal/adapters/sessionrelay/relay_boundary_test.go
+  - internal/terminal/adapters/sessionrelay/relay_replace_test.go
+  - internal/terminal/adapters/sessionrelay/relay_close_test.go
+  - internal/terminal/adapters/sessionrelay/relay_init_test.go
+  - internal/terminal/adapters/intent/handlers_test.go
+  - internal/terminal/adapters/intent/store_test.go
+  - internal/terminal/adapters/directorybrowser/browser_test.go
+  - internal/terminal/adapters/dimensions/dimensions_test.go
   - internal/lifecycle/daemon/startup_throttle_test.go
   - internal/lifecycle/install/native/connect_refused_test.go
   - tests/extension/terminal-reconnect/terminal-html-reconnect.test.js
@@ -535,10 +535,10 @@ Note: `/config/active-codebase` is on the **main** daemon server (not terminal s
 
 | File | Responsibility |
 |------|---------------|
-| `cmd/browser-agent/internal/terminal/supervisor/supervisor.go` | Restart/backoff supervision and graceful shutdown behind explicit host callbacks |
+| `internal/terminal/adapters/supervisor/supervisor.go` | Restart/backoff supervision and graceful shutdown behind explicit host callbacks |
 | `cmd/browser-agent/main_connection_mcp.go` | Terminal server startup, explicit live-state callback composition, supervision, and graceful shutdown |
 | `cmd/browser-agent/terminal_handlers.go` | All HTTP handlers: page, WS, start, stop, validate, config |
-| `cmd/browser-agent/internal/terminal/assets/terminal_assets/terminal.html` | xterm.js terminal page with WS reconnect and postMessage bridge |
+| `internal/terminal/adapters/assets/terminal_assets/terminal.html` | xterm.js terminal page with WS reconnect and postMessage bridge |
 | `extension/sidepanel.html` | Side panel shell that loads the terminal host |
 | `src/sidepanel.ts` | Side panel UI: terminal shell, terminal iframe, write guard, session restore |
 | `src/content/ui/terminal-panel-bridge.ts` | Content-script bridge for opening the panel and forwarding writes |

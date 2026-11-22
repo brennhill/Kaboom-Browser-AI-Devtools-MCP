@@ -6,11 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
-  - cmd/browser-agent/internal/toolobserve/dispatcher.go
-  - cmd/browser-agent/internal/toolobserve/deps.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/tools/observe/handler/dispatcher.go
+  - internal/tools/observe/handler/deps.go
+  - internal/composition/toolruntime/tools_core.go
   - internal/tools/recording/handler.go
   - internal/tools/recording/helpers.go
   - internal/composition/capture/capture.go
@@ -143,7 +143,7 @@ canonical owners directly; root one-line forwarding wrappers are prohibited.
 
 - Core recording lifecycle and listener wiring:
   - `cmd/browser-agent/tools_configure.go`
-  - `cmd/browser-agent/internal/toolobserve/dispatcher.go`
+  - `internal/tools/observe/handler/dispatcher.go`
   - `cmd/browser-agent/tools_core.go`
   - `internal/tools/recording/handler.go`
 - Only one recording runs at a time, and the running one must stay reachable.

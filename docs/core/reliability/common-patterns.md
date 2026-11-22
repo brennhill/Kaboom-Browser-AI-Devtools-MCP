@@ -7,7 +7,7 @@ Use this as a hard checklist during design, coding, and review.
 
 - Server dispatch and mode resolution:
   - `internal/tools/routing/routing.go`
-  - `cmd/browser-agent/internal/toolobserve/dispatcher.go`
+  - `internal/tools/observe/handler/dispatcher.go`
   - `cmd/browser-agent/tools_configure.go`
 - Shared async query path:
   - `internal/tools/asynccommand/handler.go`

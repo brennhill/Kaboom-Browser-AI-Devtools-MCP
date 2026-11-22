@@ -4,7 +4,7 @@
   "interfaces": {
     "internal/analysis/snapshots/snapshot-manager.go:CaptureStateReader": "producer-owned",
     "internal/observation/pagination/pagination.go:Sequenced": "producer-owned",
-    "internal/server/log_accessor.go:LogReader": "producer-owned",
+    "internal/composition/serverlog/log_accessor.go:LogReader": "producer-owned",
     "internal/tools/issuereport/submit.go:CommandRunner": "producer-owned",
     "internal/tools/module/registry.go:Module": "producer-owned"
   }

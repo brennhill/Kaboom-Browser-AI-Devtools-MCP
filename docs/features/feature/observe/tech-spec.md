@@ -16,9 +16,9 @@ last_verified_date: 2026-03-05
 # Observe Tech Spec (TARGET)
 
 ## Dispatcher
-- Entry: `(*toolobserve.Dispatcher).Handle` in `cmd/browser-agent/internal/toolobserve/dispatcher.go`
+- Entry: `(*toolobserve.Dispatcher).Handle` in `internal/tools/observe/handler/dispatcher.go`
 - The dispatcher owns its mode registry, keyed by `what`; callers do not access a second registry surface.
-- Response augmentation helpers: `cmd/browser-agent/internal/toolobserve/response.go`
+- Response augmentation helpers: `internal/tools/observe/handler/response.go`
 
 ## Data Sources
 1. Server log buffers (`errors`, `logs`, `timeline`, `error_bundles`)
@@ -55,9 +55,9 @@ last_verified_date: 2026-03-05
 - If expansion script execution fails, screenshot capture degrades to CDP layout-only sizing; if CDP attach/capture fails, behavior degrades to viewport capture.
 
 ## Code Anchors
-- `cmd/browser-agent/internal/toolobserve/dispatcher.go`
-- `cmd/browser-agent/internal/toolobserve/response.go`
-- `cmd/browser-agent/internal/toolobserve/inbox.go`
+- `internal/tools/observe/handler/dispatcher.go`
+- `internal/tools/observe/handler/response.go`
+- `internal/tools/observe/handler/inbox.go`
 - `internal/browsercommand/internal/dispatch/dispatcher_queries.go`
 - `internal/browsercommand/internal/dispatch/dispatcher_commands.go`
 - `src/background/commands/observe.ts`

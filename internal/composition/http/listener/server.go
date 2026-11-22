@@ -11,7 +11,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/httpguard"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 )
 
 // Deps supplies diagnostics that couple listener failures to daemon recovery.

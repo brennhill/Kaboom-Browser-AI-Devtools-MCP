@@ -400,7 +400,7 @@ Avoid abbreviations except well-known ones (URL, ID, HTTP, JSON, API).
 
 <!-- Add project-specific patterns here. Be specific — vague rules cause false positives.
 
-Good: "Request validation must use validateAndRespond() from internal/util/guards.go.
+Good: "Request validation must use validateAndRespond() from internal/platform/util/guards.go.
        Do not write inline if/else validation chains."
 
 Bad:  "Use good patterns." (too vague, will flag everything)

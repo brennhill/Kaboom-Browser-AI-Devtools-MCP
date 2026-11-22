@@ -57,7 +57,7 @@ Not yet implemented as a standalone `observe` mode. Planned:
 - Extension: a new best-practices audit module in the TypeScript extension (`src/`), invoked from the page-inspection path, holding audit logic and severity classification.
 - Server: a new `observe` mode handler for `best_practices_audit` in the observe tool package.
 
-Current state: `analyze({what: "audit"})` already reports a `best_practices` category (`cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go`), but it is backed by the third-party script audit (`securityaudit.HandleThirdPartyAudit`) and scored by `scoreBestPractices` in `cmd/browser-agent/internal/toolanalyze/audit_scoring.go`. HTTPS, deprecated-API, and security-header checks described above are not part of it.
+Current state: `analyze({what: "audit"})` already reports a `best_practices` category (`internal/tools/analyze/handler/combinedaudit/handler.go`), but it is backed by the third-party script audit (`securityaudit.HandleThirdPartyAudit`) and scored by `scoreBestPractices` in `internal/tools/analyze/handler/audit_scoring.go`. HTTPS, deprecated-API, and security-header checks described above are not part of it.
 
 **Trade-offs**:
 - Extension-side analysis because requires DOM and network access

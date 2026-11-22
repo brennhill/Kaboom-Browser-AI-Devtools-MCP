@@ -21,11 +21,11 @@ code_paths:
   - internal/annotation/store_sessions.go
   - internal/annotation/store_results.go
   - internal/annotation/draw_sessions_handler.go
-  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
-  - cmd/browser-agent/internal/mediaapi/draw_mode.go
-  - cmd/browser-agent/internal/mediaapi/screenshots.go
-  - cmd/browser-agent/internal/mediaapi/handler.go
+  - internal/tools/analyze/handler/annotationanalysis/handler.go
+  - internal/tools/analyze/handler/analyzedispatch/dispatcher.go
+  - internal/ingestion/media/draw_mode.go
+  - internal/ingestion/media/screenshots.go
+  - internal/ingestion/media/handler.go
   - internal/tools/generate/handler/dispatcher.go
   - internal/tools/generate/handler/deps.go
   - internal/tools/generate/handler/annotations/handlers.go
@@ -52,16 +52,16 @@ test_paths:
   - internal/annotation/named_test.go
   - internal/annotation/store_lifecycle_test.go
   - internal/annotation/store_maintenance_test.go
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/draw_sessions_test.go
-  - cmd/browser-agent/internal/mediaapi/annotation_store_test.go
-  - cmd/browser-agent/internal/mediaapi/draw_mode_http_test.go
-  - cmd/browser-agent/internal/mediaapi/handler_test.go
+  - internal/tools/analyze/handler/analyzedispatch/draw_sessions_test.go
+  - internal/ingestion/media/annotation_store_test.go
+  - internal/ingestion/media/draw_mode_http_test.go
+  - internal/ingestion/media/handler_test.go
   - cmd/browser-agent/composition_test.go
-  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler_test.go
-  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/sessions_test.go
-  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/wait_test.go
-  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/detail_test.go
-  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/hints_test.go
+  - internal/tools/analyze/handler/annotationanalysis/handler_test.go
+  - internal/tools/analyze/handler/annotationanalysis/sessions_test.go
+  - internal/tools/analyze/handler/annotationanalysis/wait_test.go
+  - internal/tools/analyze/handler/annotationanalysis/detail_test.go
+  - internal/tools/analyze/handler/annotationanalysis/hints_test.go
   - internal/tools/generate/handler/annotations/annotations_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - tests/extension/contracts/entry-point-parity.test.js
@@ -120,8 +120,8 @@ last_verified_date: 2026-08-05
   waiters (used by `configure(what:"clear", buffer:"all")` to prevent stale
   replay).
 - `internal/annotation/draw_sessions_handler.go` — persisted draw history, traversal-safe loading, and annotation-store hydration
-- `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` — detail response enrichment, error correlation, LLM hints, and cross-project scope safety metadata (`projects`, `scope_ambiguous`, `scope_warning`, `filter_applied`)
-- `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` — annotation retrieval, error correlation, and detail response shaping
+- `internal/tools/analyze/handler/annotationanalysis/handler.go` — detail response enrichment, error correlation, LLM hints, and cross-project scope safety metadata (`projects`, `scope_ambiguous`, `scope_warning`, `filter_applied`)
+- `internal/tools/analyze/handler/annotationanalysis/handler.go` — annotation retrieval, error correlation, and detail response shaping
 - `internal/annotation/store_results.go` owns the canonical filtered named-session
   page projection shared by async completion and analysis enrichment.
 - The package is exactly ten files, every file is below 800 lines, and
@@ -145,8 +145,8 @@ last_verified_date: 2026-08-05
 - Annotation store tests synchronize waiters through store notifications and use
   the controlled clock for timestamp ordering and expiration; no test relies on
   `time.Sleep` for correctness.
-- `internal/annotation/store_lifecycle_test.go` and `cmd/browser-agent/internal/toolanalyze/analyzedispatch/draw_sessions_test.go` — safe persisted-session loading and end-to-end store hydration
-- `cmd/browser-agent/internal/toolanalyze/annotationanalysis/` tests — session retrieval, waiting, enrichment fields (`selector_candidates`, `js_framework`, `component`), error correlation, and hints
+- `internal/annotation/store_lifecycle_test.go` and `internal/tools/analyze/handler/analyzedispatch/draw_sessions_test.go` — safe persisted-session loading and end-to-end store hydration
+- `internal/tools/analyze/handler/annotationanalysis/` tests — session retrieval, waiting, enrichment fields (`selector_candidates`, `js_framework`, `component`), error correlation, and hints
 - `internal/tools/schema/invariants_test.go` — ensures annotations expose only the canonical `url` scope filter and never restore `url_pattern`
 - `internal/tools/generate/handler/annotations/annotations_test.go` — generator and handler contracts for JS escaping, locator fallbacks, expired detail recovery, named sessions, Markdown reports, structured issues, and Playwright output
 - `scripts/smoke-tests/media/31-annotation-parity.sh` — deterministic end-to-end ingest/retrieval/generation gate with bounded retries for transient startup/no_data windows

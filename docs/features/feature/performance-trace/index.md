@@ -6,8 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-08
 code_paths:
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/performance_trace.go
+  - internal/tools/analyze/handler/analyzedispatch/dispatcher.go
+  - internal/tools/analyze/handler/analyzedispatch/performance_trace.go
   - internal/tools/cli/parser/observe_analyze.go
   - cmd/browser-agent/server.go
   - internal/observation/perftrace/http.go
@@ -22,7 +22,7 @@ code_paths:
   - src/types/runtime/queries.ts
   - src/types/wire/wire-performance-trace.ts
 test_paths:
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/performance_trace_test.go
+  - internal/tools/analyze/handler/analyzedispatch/performance_trace_test.go
   - cmd/browser-agent/composition_test.go
   - internal/observation/perftrace/http_test.go
   - internal/observation/perftrace/manager_test.go

@@ -11,7 +11,7 @@ import (
 
 	ptydiag "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/pty/diagnostics"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 )
 
 // Write buffer constants.

@@ -6,15 +6,15 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-07
 code_paths:
-  - cmd/browser-agent/internal/toolanalyze/inspect/dom.go
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
+  - internal/tools/analyze/handler/inspect/dom.go
+  - internal/tools/analyze/handler/analyzedispatch/dispatcher.go
   - src/background/pending-queries.ts
   - src/content/message-handlers.ts
   - src/inject.ts
   - src/inject/message-handlers.ts
   - src/lib/analysis/dom-queries.ts
 test_paths:
-  - cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go
+  - internal/tools/analyze/handler/inspect/dom_test.go
   - tests/extension/a11y/a11y-runtime-error.test.js
   - tests/extension/a11y/on-demand-a11y-runtime.test.js
   - tests/extension/a11y/on-demand-fixture.js

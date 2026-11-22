@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/routing"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // Handler executes one configure mode.

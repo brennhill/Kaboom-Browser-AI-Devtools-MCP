@@ -12,7 +12,7 @@ last_reviewed: 2026-08-04
 - `internal/analysis/verification/evidence_test.go` covers redaction, hashing, provenance, authenticity, and freshness.
 - `internal/analysis/verification/store_test.go` covers atomic persistence, permissions, and restart lookup.
 - `internal/platform/state/paths/paths_test.go` covers deterministic state paths.
-- `cmd/browser-agent/internal/toolanalyze/verificationhandler/handler_test.go` covers define/evaluate request handling.
+- `internal/tools/analyze/handler/verificationhandler/handler_test.go` covers define/evaluate request handling.
 
 ## Required Scenarios
 
@@ -27,4 +27,4 @@ last_reviewed: 2026-08-04
 
 ## Release Gate
 
-Run `go test ./internal/analysis/verification ./internal/platform/state/paths ./cmd/browser-agent/internal/toolanalyze/verificationhandler` plus wire-drift and schema contract checks.
+Run `go test ./internal/analysis/verification ./internal/platform/state/paths ./internal/tools/analyze/handler/verificationhandler` plus wire-drift and schema contract checks.

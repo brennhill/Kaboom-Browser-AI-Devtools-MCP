@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 )
 
 // maxRevealRequestBytes caps the /recordings/reveal JSON request body. It mirrors

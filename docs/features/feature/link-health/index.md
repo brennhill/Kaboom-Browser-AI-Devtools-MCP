@@ -7,17 +7,17 @@ owners: []
 last_reviewed: 2026-11-21
 code_paths:
   - internal/tools/asynccommand/handler.go
-  - cmd/browser-agent/internal/toolanalyze/navigation.go
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
-  - cmd/browser-agent/internal/toolanalyze/linkvalidation/handler.go
+  - internal/tools/analyze/handler/navigation.go
+  - internal/tools/analyze/handler/analyzedispatch/dispatcher.go
+  - internal/tools/analyze/handler/linkvalidation/handler.go
   - src/lib/analysis/link-health.ts
   - src/background/pending-queries.ts
   - src/content/message-handlers.ts
   - src/inject/message-handlers.ts
 test_paths:
   - internal/tools/asynccommand/handler_test.go
-  - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
-  - cmd/browser-agent/internal/toolanalyze/linkvalidation/handler_test.go
+  - internal/tools/analyze/handler/handlers_coverage_test.go
+  - internal/tools/analyze/handler/linkvalidation/handler_test.go
   - scripts/tests/browser/cat-19-link-health.sh
   - scripts/smoke-tests/links/link-health-smoke.sh
   - tests/cli/contracts/uat-harness-regressions.test.cjs

@@ -254,7 +254,7 @@ AI ──observe({what:"command_result", correlation_id:"ann_xyz"})──▶ Dae
 
 ### Implementation
 
-Shipped as `Handler.getAnonymousAnnotations(req, wait, waitTimeout, urlFilter)` in `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` (default wait `annotationBlockingWaitDefault` = 15s, caller-overridable timeout, optional URL filter), backed by `Store.WaitForSession` in `internal/annotation/store_sessions.go`. The sketch below is the original design:
+Shipped as `Handler.getAnonymousAnnotations(req, wait, waitTimeout, urlFilter)` in `internal/tools/analyze/handler/annotationanalysis/handler.go` (default wait `annotationBlockingWaitDefault` = 15s, caller-overridable timeout, optional URL filter), backed by `Store.WaitForSession` in `internal/annotation/store_sessions.go`. The sketch below is the original design:
 
 ```go
 func (h *ToolHandler) getAnonymousAnnotations(req JSONRPCRequest, wait bool) JSONRPCResponse {
@@ -399,7 +399,7 @@ Empty inbox returns `{"events": [], "count": 0}`.
 
 ## Response Piggyback
 
-Shipped behavior differs from the original `_pending_push` text-hint design. After every tool call, `toolobserve.AppendPushPiggyback` (`cmd/browser-agent/internal/toolobserve/inbox.go`, invoked from `cmd/browser-agent/internal/toolruntime/tools_core.go`) drains the inbox and appends the events directly to the tool result as content blocks. Non-screenshot events are appended as text; only the most recent screenshot is attached as an image content block (with a count of any older screenshots). There is no `_pending_push` field. `observe({what: "inbox"})` remains available to drain explicitly.
+Shipped behavior differs from the original `_pending_push` text-hint design. After every tool call, `toolobserve.AppendPushPiggyback` (`internal/tools/observe/handler/inbox.go`, invoked from `internal/composition/toolruntime/tools_core.go`) drains the inbox and appends the events directly to the tool result as content blocks. Non-screenshot events are appended as text; only the most recent screenshot is attached as an image content block (with a count of any older screenshots). There is no `_pending_push` field. `observe({what: "inbox"})` remains available to drain explicitly.
 
 ## Extension Changes
 
@@ -477,9 +477,9 @@ export function installPushCommandListener() {
 | HTTP handlers (`/push/screenshot`, `/push/message`, `/push/capabilities`), annotation delivery | `internal/push/adapters/http/handler.go` (`DeliverAnnotations`) |
 | Route registration (incl. `/push/drain`) and router wiring | `cmd/browser-agent/server.go` |
 | Bridge-side push drain relay | `internal/lifecycle/bridge/pushrelay/relay.go` |
-| Draw-mode completion → push | `cmd/browser-agent/internal/mediaapi/draw_mode.go` |
-| `observe({what: "inbox"})` and response piggyback | `cmd/browser-agent/internal/toolobserve/inbox.go`, routed in `cmd/browser-agent/internal/toolobserve/dispatcher.go` |
-| Blocking annotation wait | `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` |
+| Draw-mode completion → push | `internal/ingestion/media/draw_mode.go` |
+| `observe({what: "inbox"})` and response piggyback | `internal/tools/observe/handler/inbox.go`, routed in `internal/tools/observe/handler/dispatcher.go` |
+| Blocking annotation wait | `internal/tools/analyze/handler/annotationanalysis/handler.go` |
 | Extension hotkeys (`push_screenshot`, `push_chat`) | `src/background/push-handler.ts`, installed from `src/background/init.ts`; commands in `extension/manifest.json` |
 
 ## Performance Targets

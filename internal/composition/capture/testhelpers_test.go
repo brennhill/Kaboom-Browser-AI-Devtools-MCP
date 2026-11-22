@@ -14,12 +14,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/serverlog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/ingestion/http"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/resetter"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/paths"
 	recordingmodel "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/server"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/sync/runtime"
 )
 

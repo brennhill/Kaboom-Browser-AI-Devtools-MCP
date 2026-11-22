@@ -12,11 +12,11 @@ last_verified_date: 2026-03-05
 # Analyze Tech Spec
 
 ## Dispatcher and Handler Topology
-- Dispatch entrypoint: `(*analyzedispatch.Dispatcher).Handle` in `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`.
-- Mode routing table: the private analyze mode registry in `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`.
-- Annotation handlers: `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go`.
+- Dispatch entrypoint: `(*analyzedispatch.Dispatcher).Handle` in `internal/tools/analyze/handler/analyzedispatch/dispatcher.go`.
+- Mode routing table: the private analyze mode registry in `internal/tools/analyze/handler/analyzedispatch/dispatcher.go`.
+- Annotation handlers: `internal/tools/analyze/handler/annotationanalysis/handler.go`.
 - API validation runtime and handlers: `internal/analysis/apicontract/runtime_handler.go`.
-- Async command-result polling: `cmd/browser-agent/internal/toolobserve/dispatcher.go`.
+- Async command-result polling: `internal/tools/observe/handler/dispatcher.go`.
 
 ## Query-Type Mapping
 - `dom` -> pending query type `dom`
@@ -59,9 +59,9 @@ last_verified_date: 2026-03-05
   - `annotations`: `flush`
 
 ## Code Anchors
-- `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`
-- `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go`
-- `cmd/browser-agent/internal/toolobserve/dispatcher.go`
+- `internal/tools/analyze/handler/analyzedispatch/dispatcher.go`
+- `internal/tools/analyze/handler/annotationanalysis/handler.go`
+- `internal/tools/observe/handler/dispatcher.go`
 - `internal/tools/asynccommand/handler.go`
 - `internal/annotation/store.go`
 - `internal/annotation/store_results.go`

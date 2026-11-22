@@ -11,7 +11,7 @@ code_paths:
   - internal/tools/observe/logs/logs.go
   - internal/platform/types/wire_log.go
   - internal/tools/schema/analyze.go
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
+  - internal/tools/analyze/handler/analyzedispatch/dispatcher.go
   - src/background/caches/error-groups.ts
   - src/lib/storage/recovery.ts
   - src/lib/storage/validated.ts
@@ -28,7 +28,7 @@ last_verified_date: 2026-07-26
 > **Correction, 2026-07-26.** An earlier revision of this file marked the feature
 > `superseded` and claimed it "was never wired to an MCP surface." That was wrong.
 > `analyze({what: "error_clusters"})` is live — advertised in `internal/tools/schema/analyze.go`
-> and dispatched at `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`.
+> and dispatched at `internal/tools/analyze/handler/analyzedispatch/dispatcher.go`.
 >
 > What was actually deleted was `internal/analysis/clustering`, a *second, unused*
 > implementation: a stateful `ClusterManager` whose `AddError` no ingest path ever called.
@@ -106,6 +106,6 @@ statement of intent — **edit the reference first**, then make the scanner matc
 | `internal/tools/observe/errorcluster/normalize.go` | Message fingerprint normalizer (byte scanner) |
 | `internal/tools/observe/logs/logs.go` | `AnalyzeErrors` entry point |
 | `internal/tools/schema/analyze.go` | Advertises `error_clusters` in the tool schema |
-| `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go` | Routes `error_clusters` to `AnalyzeErrors` |
+| `internal/tools/analyze/handler/analyzedispatch/dispatcher.go` | Routes `error_clusters` to `AnalyzeErrors` |
 | `internal/tools/observe/errorcluster/cluster_test.go` | Grouping, ordering, determinism |
 | `internal/tools/observe/errorcluster/normalize_test.go` | Table cases + differential test vs regex reference |

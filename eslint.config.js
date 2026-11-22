@@ -46,7 +46,7 @@ export default [
       // Vendored terminal assets (xterm.js) — both the legacy path and the
       // refactored internal/terminal location.
       'cmd/browser-agent/terminal_assets/**',
-      'cmd/browser-agent/internal/terminal/assets/terminal_assets/**',
+      'internal/terminal/adapters/assets/terminal_assets/**',
       // Generated smoke fixture bundles
       'internal/composition/http/testpages/pages/frameworks/*.bundle.js'
     ]

@@ -19,8 +19,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/file"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 type videoDiskOperations struct {

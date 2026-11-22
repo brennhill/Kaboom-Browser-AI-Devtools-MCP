@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/bridge/fastpathtelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/bridge/fingerprint"
@@ -26,6 +25,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/clientreg"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/commandhealth"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 

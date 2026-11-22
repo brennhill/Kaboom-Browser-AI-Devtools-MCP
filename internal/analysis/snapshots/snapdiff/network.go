@@ -9,7 +9,7 @@ import (
 	"sort"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 )
 
 // endpointKey uniquely identifies a network endpoint by method and path.

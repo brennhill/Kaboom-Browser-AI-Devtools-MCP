@@ -55,7 +55,7 @@ Main orchestrator, in `internal/lifecycle/bridge/bridge_transport.go`. Returns t
 
 ### `handleConfigureRestart(req) JSONRPCResponse`
 
-Daemon-side handler in `cmd/browser-agent/internal/toolruntime/tools_configure.go` for when the daemon is responsive. Sends self-SIGTERM via `util.SafeGo` after a 100ms delay (`restartSelfSignalDelay`) (so the response is sent first). The bridge detects the daemon died and auto-respawns.
+Daemon-side handler in `internal/composition/toolruntime/tools_configure.go` for when the daemon is responsive. Sends self-SIGTERM via `util.SafeGo` after a 100ms delay (`restartSelfSignalDelay`) (so the response is sent first). The bridge detects the daemon died and auto-respawns.
 
 ## Insertion Point
 

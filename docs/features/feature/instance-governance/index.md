@@ -54,7 +54,7 @@ test_paths:
   - cmd/browser-agent/daemon_governance_test.go
   - internal/lifecycle/retention/sweep/retention_test.go
   - internal/lifecycle/bridge/bridge_governance_test.go
-  - cmd/browser-agent/internal/integrationtest/instance_cap_test.go
+  - internal/composition/testsupport/integration/instance_cap_test.go
 ---
 
 # Instance Governance

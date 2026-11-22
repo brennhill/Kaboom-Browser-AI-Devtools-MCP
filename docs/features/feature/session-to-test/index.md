@@ -17,7 +17,7 @@ code_paths:
   - internal/tools/schema/interact/properties_core.go
   - internal/tools/interact/handler/interact_browser.go
   - internal/tools/cli/parser/interact.go
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
   - src/lib/page/reproduction.ts
   - src/background/dom/cdp/cdp-env-pin.ts
   - src/background/environment-transaction/env-pin.ts

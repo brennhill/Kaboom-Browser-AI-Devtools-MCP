@@ -11,8 +11,8 @@ code_paths:
   - internal/recording/sequence/replay.go
   - internal/recording/sequence/contract.go
   - internal/tools/interact/handler/interactbatch/batch.go
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
   - internal/recording/actionlog/recorder.go
   - internal/tools/interact/workflow.go

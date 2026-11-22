@@ -278,7 +278,7 @@ Not yet built (reviewed 2026-11-21). The originally listed cmd/server/control/*,
 
 ### Existing code to modify (planned):
 - `internal/tools/interact/handler/` and `internal/tools/schema/interact/actions.go` — add a control action to `interact`
-- `cmd/browser-agent/internal/toolobserve/registry.go` and `internal/tools/schema/observe.go` — add a `backend_state` mode
+- `internal/tools/observe/handler/registry.go` and `internal/tools/schema/observe.go` — add a `backend_state` mode
 - `internal/tools/configure/handler/dispatcher.go` and `internal/tools/schema/configure/` — add a snapshot action
 
 ## Performance Requirements

@@ -8,10 +8,10 @@ last_reviewed: 2026-09-05
 code_paths:
   - internal/tools/configure/handler/capabilities.go
   - internal/tools/configure/handler/deps.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
   - internal/tools/catalog/catalog.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_core.go
   - cmd/browser-agent/server.go
   - internal/analysis/apicontract/contract.go
   - internal/analysis/apicontract/runtime/handler.go

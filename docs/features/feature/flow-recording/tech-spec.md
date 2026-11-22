@@ -203,7 +203,7 @@ type ValueDiff struct {
 
 ## MCP API Design
 
-> Shipped surface (verified 2026-11-21). Recording lifecycle, playback and log diff are `configure` modes; queries are `observe` modes. Handlers: `internal/tools/recording/handler.go`, registered in `cmd/browser-agent/internal/toolruntime/tools_configure.go` and `cmd/browser-agent/internal/toolobserve/dispatcher.go`.
+> Shipped surface (verified 2026-11-21). Recording lifecycle, playback and log diff are `configure` modes; queries are `observe` modes. Handlers: `internal/tools/recording/handler.go`, registered in `internal/composition/toolruntime/tools_configure.go` and `internal/tools/observe/handler/dispatcher.go`.
 
 ### Recording Actions
 
@@ -586,8 +586,8 @@ configure({what: 'test_boundary_end', test_id: 'replay-1'})
 | `internal/recording/logdiff/` | Recording comparison and reports |
 | `internal/recording/actionlog/recorder.go` | Server-side recorder for the general actions buffer |
 | `internal/tools/recording/handler.go` | MCP handlers (`EventRecordingStart/Stop`, `Recordings`, `RecordingActions`, `Playback`, `PlaybackResults`, `LogDiff`, `LogDiffReport`) |
-| `cmd/browser-agent/internal/toolruntime/tools_configure.go` | Registers the configure modes |
-| `cmd/browser-agent/internal/toolobserve/dispatcher.go` | Registers the observe modes |
+| `internal/composition/toolruntime/tools_configure.go` | Registers the configure modes |
+| `internal/tools/observe/handler/dispatcher.go` | Registers the observe modes |
 | `src/lib/page/actions.ts` | Page-side action capture (reused) |
 
 ### Tests

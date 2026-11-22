@@ -36,7 +36,7 @@ import (
 	"testing"
 	"time"
 
-	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
+	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/testsupport/integration"
 	corebridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/bridge/framing"
 )
 

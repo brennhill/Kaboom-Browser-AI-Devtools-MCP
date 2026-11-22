@@ -238,6 +238,6 @@ interact what:"execute_js" script:"window.__NEXT_DATA__"
 | `src/background/commands/interact.ts` | Background routing for `highlight` and `execute_js` |
 | `src/inject/state.ts` | Page-context state capture/restore |
 | `internal/tools/schema/interact/actions.go` | `highlight`, `save_state`, `load_state`, `list_states`, `delete_state`, `execute_js` action specs |
-| `cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go` | Interact dispatch table entries for the actions above |
+| `internal/composition/toolruntime/tools_interact_dispatch.go` | Interact dispatch table entries for the actions above |
 | `internal/tools/interact/handler/interactstate/state.go` | `HandleStateSave` / `HandleStateLoad` / `HandleStateList` / `HandleStateDelete` |
 | `internal/tools/guard/guards.go` | Pilot opt-in gate (no separate pilot domain file was created) |

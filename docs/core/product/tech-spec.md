@@ -35,7 +35,7 @@ Primary components:
 
 ### 1. Passive read flow (`observe`)
 1. Client calls `tools/call` with `name:"observe"`.
-2. `toolObserve` dispatches by `what` in `cmd/browser-agent/internal/toolobserve/dispatcher.go`.
+2. `toolObserve` dispatches by `what` in `internal/tools/observe/handler/dispatcher.go`.
 3. Handler returns JSON payload from server buffers and metadata.
 
 ### 2. Active command flow (`analyze`/`interact`)
@@ -79,7 +79,7 @@ Primary components:
 ## Canonical Code Paths
 - MCP route + methods: `cmd/browser-agent/handler.go`
 - Tool dispatch switch: `cmd/browser-agent/tools_core.go`
-- Observe dispatch map: `cmd/browser-agent/internal/toolobserve/dispatcher.go`
+- Observe dispatch map: `internal/tools/observe/handler/dispatcher.go`
 - Analyze dispatch map: `cmd/browser-agent/tools_analyze.go`
 - Configure dispatch map: `cmd/browser-agent/tools_configure.go`
 - Interact dispatch map: `cmd/browser-agent/tools_interact.go`

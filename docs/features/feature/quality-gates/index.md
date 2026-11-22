@@ -41,11 +41,11 @@ code_paths:
   - docs/architecture/diagrams/quality/5-layer-protection.md
   - kaboom-code-standards.md
   - internal/tools/configure/handler/qualitygates/handler.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
-  - cmd/browser-agent/internal/toolruntime/server_state.go
-  - cmd/browser-agent/internal/toolruntime/modes.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
+  - internal/composition/toolruntime/server_state.go
+  - internal/composition/toolruntime/modes.go
   - internal/lifecycle/instance/censuscmd/census.go
   - internal/lifecycle/retention/sweep/retention.go
   - .folder-size-baseline.json
@@ -123,11 +123,11 @@ test_paths:
   - scripts/security/check-secrets.test.sh
   - scripts/contracts/check_go_test_determinism_test.go
   - scripts/contracts/goarchitecture/main_test.go
-  - cmd/browser-agent/internal/responsegate/control_test.go
-  - cmd/browser-agent/internal/responsegate/drift_test.go
-  - cmd/browser-agent/internal/responsegate/harness_test.go
-  - cmd/browser-agent/internal/responsegate/refusal_test.go
-  - cmd/browser-agent/internal/toolruntime/composition_test.go
+  - internal/composition/responsegate/control_test.go
+  - internal/composition/responsegate/drift_test.go
+  - internal/composition/responsegate/harness_test.go
+  - internal/composition/responsegate/refusal_test.go
+  - internal/composition/toolruntime/composition_test.go
   - internal/lifecycle/retention/sweep/retention_test.go
   - scripts/contracts/responsecontract/cat33_test.go
   - scripts/contracts/responsecontract/ratchet_test.go
@@ -206,7 +206,7 @@ layer stayed green. `.mcp-response-contract.json` declares, per mode, the
 response's field paths and JSON types — never its values — plus the async
 lifecycle envelope (`correlation_id` / `lifecycle_status` / `status` / `final`)
 that browser-mediated modes answer with, which was previously folklore. The
-declaration is GENERATED, not written: `cmd/browser-agent/internal/responsegate`
+declaration is GENERATED, not written: `internal/composition/responsegate`
 invokes the shipped dispatcher over a seeded in-memory fixture, with no daemon
 and no browser, and derives each shape from the response that comes back. A mode
 that cannot answer without a live extension is refused rather than recorded, so
@@ -226,7 +226,7 @@ Re-freeze an intended change with `make response-contract-update`.
 The sweep drives all five dispatchers, not just `observe`. It reached only
 `observe` while the composition root lived in package `main`, which no test
 outside `cmd/browser-agent` could import; the runtime now lives in
-`cmd/browser-agent/internal/toolruntime` behind a plain `ServerState` dependency
+`internal/composition/toolruntime` behind a plain `ServerState` dependency
 struct, so the same `HandleToolCall` an MCP client reaches is reachable from a
 test. 66 of 173 shipped modes have a declared shape and `undeclared_baseline` is
 107.

@@ -30,7 +30,7 @@ BARE_GO=$(grep -rn 'go func()' cmd/browser-agent/ internal/ \
   | grep -v '_test.go' \
   | grep -v 'SafeGo' \
   | grep -v 'safego\.go' \
-  | grep -v 'internal/util/response.go' \
+  | grep -v 'internal/platform/util/response.go' \
   | grep -v '// lint:allow-bare-goroutine' \
   || true)
 

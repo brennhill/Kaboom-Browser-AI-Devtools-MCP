@@ -28,8 +28,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/transcript"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/testsupport/integration"
 )
 
 const recordedDOM = `{"elements":[{"tag":"main","selector":"main.content"}],"count":1}`

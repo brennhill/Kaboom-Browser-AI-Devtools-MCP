@@ -17,7 +17,7 @@ code_paths:
   - internal/tools/interact/handler/interactstate/state.go
   - internal/tools/interact/handler/interactupload/upload.go
   - internal/tools/interact/handler/action_runtime.go
-  - cmd/browser-agent/internal/toolruntime/interact_wiring.go
+  - internal/composition/toolruntime/interact_wiring.go
   - internal/page/app/screenshot/screenshot.go
   - internal/tools/interact/handler/interact_dom.go
   - internal/tools/interact/handler/interact_browser.go
@@ -29,10 +29,10 @@ code_paths:
   - internal/tools/interact/handler/elemindex/target.go
   - internal/tools/interact/handler/elemindex/snapshot.go
   - internal/tools/response/result_block.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
   - internal/recording/actionlog/recorder.go
   - internal/tools/interact/workflow.go
   - internal/tools/schema/interact/actions.go
@@ -43,7 +43,7 @@ code_paths:
   - internal/tools/interact/gestures.go
   - internal/tools/interact/targeting.go
   - internal/tools/interact/selector.go
-  - internal/util/media.go
+  - internal/platform/util/media.go
   - internal/tools/cli/parser/interact.go
   - internal/tools/configure/capabilities/modespecs_interact.go
   - scripts/docs/reference/check-reference-schema-sync.mjs

@@ -13,9 +13,9 @@ last_verified_date: 2026-03-28
 
 ## Primary Components
 
-- `cmd/browser-agent/internal/terminal/server.go`
-- `cmd/browser-agent/internal/terminal/handlers.go`
-- `cmd/browser-agent/internal/terminal/assets/terminal_assets/terminal.html`
+- `internal/terminal/adapters/server.go`
+- `internal/terminal/adapters/handlers.go`
+- `internal/terminal/adapters/assets/terminal_assets/terminal.html`
 - `extension/sidepanel.html`
 - `extension/sidepanel.js`
 - `src/background/ui/terminal-workspace.ts`

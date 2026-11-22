@@ -18,7 +18,7 @@ last_verified_date: 2026-03-05
 - Recording comparison and reports: `internal/recording/logdiff/`
 - Manager composition boundary: `internal/composition/capture/capture.go`
 - Recording storage HTTP boundary: `internal/ingestion/http/handlers.go`
-- MCP configure/observe bridges: `cmd/browser-agent/tools_configure.go` and `cmd/browser-agent/internal/toolobserve/dispatcher.go`
+- MCP configure/observe bridges: `cmd/browser-agent/tools_configure.go` and `internal/tools/observe/handler/dispatcher.go`
 - Runtime construction seams: `cmd/browser-agent/tools_core.go`
 - Recording and playback handler implementation: `internal/tools/recording/handler.go`
 

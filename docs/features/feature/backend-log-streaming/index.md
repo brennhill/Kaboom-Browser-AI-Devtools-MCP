@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-11-21
 code_paths:
   - cmd/browser-agent/openapi.json
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
   - internal/tools/configure/handler/netrecord/handlers.go
   - internal/tools/configure/handler/netrecord/state.go
@@ -17,7 +17,7 @@ code_paths:
   - internal/observation/store/bodies/store.go
   - internal/composition/capture/capture.go
   - internal/observation/clientstore/owner.go
-  - internal/capture/settingscache/loader.go
+  - internal/sync/settingscache/loader.go
   - internal/observation/store/telemetry/store.go
   - internal/observation/resetter/resetter.go
   - internal/observation/store/logs/store.go
@@ -28,7 +28,7 @@ code_paths:
   - internal/sync/runtime/runtime.go
   - internal/observation/featureusage/observer.go
   - internal/ingestion/http/handlers.go
-  - internal/util/media.go
+  - internal/platform/util/media.go
   - internal/browsercommand/internal/dispatch/dispatcher_queries.go
   - internal/browsercommand/owner.go
   - internal/browsercommand/result.go
@@ -39,7 +39,7 @@ code_paths:
   - internal/browsercommand/contract/generated.go
   - internal/observation/testsupport/fixture/sync.go
   - internal/ingestion/circuit/breaker.go
-  - internal/debuglog/logger.go
+  - internal/observation/debuglog/logger.go
   - internal/observation/lifecycle/observer.go
   - internal/observation/store/wsconn/doc.go
   - internal/observation/store/wsconn/status.go
@@ -96,7 +96,7 @@ test_paths:
   - internal/observation/store/actions/store_test.go
   - internal/observation/store/wsconn/store_test.go
   - internal/observation/store/bodies/store_test.go
-  - internal/capture/settingscache/loader_test.go
+  - internal/sync/settingscache/loader_test.go
   - internal/observation/store/telemetry/store_test.go
   - internal/observation/store/perf/store_test.go
   - internal/observation/store/ring/store_test.go
@@ -139,7 +139,7 @@ test_paths:
   - internal/observation/healthreader/reader_test.go
   - internal/sync/runtime/integrationtest/sync_handler_owner_test.go
   - internal/ingestion/circuit/breaker_test.go
-  - internal/debuglog/logger_test.go
+  - internal/observation/debuglog/logger_test.go
   - internal/observation/lifecycle/observer_test.go
   - tests/extension/sync/sync-client-commands.test.js
   - tests/extension/sync/sync-client-fixture.js
@@ -187,7 +187,7 @@ Persisted extension settings are read and written only through the canonical
 `internal/platform/state/paths.SettingsFile` location by `ExtensionRuntime`; there is no
 Capture forwarding method or fallback settings reader.
 The former `capture.Store` and `capture.Snapshot` aliases have been removed.
-URL-path normalization consumers import `internal/util.ExtractURLPath`
+URL-path normalization consumers import `internal/platform/util.ExtractURLPath`
 directly; the capture-package pass-through and its duplicate tests are deleted.
 Capture APIs and their callers use the canonical wire contracts from
 `internal/platform/types` directly; `internal/composition/capture` does not re-export wire types.

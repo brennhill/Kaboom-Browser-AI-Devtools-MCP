@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 # Query DOM Tech Spec (TARGET)
 
 ## Server Path
-1. `HandleDOM` in `cmd/browser-agent/internal/toolanalyze/inspect/dom.go` validates arguments and defaults an omitted `selector` to `"*"`.
+1. `HandleDOM` in `internal/tools/analyze/handler/inspect/dom.go` validates arguments and defaults an omitted `selector` to `"*"`.
 2. Server queues pending query type `dom` with correlation ID.
 3. Wait/queue behavior is governed by `maybeWaitForCommand`.
 
@@ -43,8 +43,8 @@ last_verified_date: 2026-03-05
 - Content/inject failure -> structured command error in command result payload.
 
 ## Code Anchors
-- `cmd/browser-agent/internal/toolanalyze/inspect/dom.go`
-- `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`
+- `internal/tools/analyze/handler/inspect/dom.go`
+- `internal/tools/analyze/handler/analyzedispatch/dispatcher.go`
 - `src/background/pending-queries.ts`
 - `src/content/message-handlers.ts`
 - `src/inject/message-handlers.ts`

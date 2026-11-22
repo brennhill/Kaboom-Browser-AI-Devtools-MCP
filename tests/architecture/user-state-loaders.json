@@ -10,7 +10,7 @@
     "internal/tools/interact/handler/interactstate",
     "internal/screenrec",
     "internal/lifecycle/daemon",
-    "cmd/browser-agent/internal/toolruntime/tools_core.go",
+    "internal/composition/toolruntime/tools_core.go",
     "internal/lifecycle/process/lock",
     "internal/lifecycle/instance/registry"
   ],
@@ -95,7 +95,7 @@
       "doctor": "restart_history_state"
     },
     {
-      "path": "cmd/browser-agent/internal/toolruntime/tools_core.go",
+      "path": "internal/composition/toolruntime/tools_core.go",
       "owner": "state-loader composition root",
       "fallback": "delegate to the owning loader with the shared diagnostic collector",
       "doctor": "shared state recovery collector"

@@ -182,4 +182,4 @@ If a baseline exceeds the size limit, the save fails with an error and the file 
 
 ## File Location
 
-Not yet implemented. Planned: a new behavioral-baselines module under the Go server with co-located unit tests. Note that the shipped `analyze` modes `visual_baseline` / `visual_baselines` (in `cmd/browser-agent/internal/toolanalyze/visual/handler.go`) cover screenshot baselines only, not the behavioral fingerprints described here.
+Not yet implemented. Planned: a new behavioral-baselines module under the Go server with co-located unit tests. Note that the shipped `analyze` modes `visual_baseline` / `visual_baselines` (in `internal/tools/analyze/handler/visual/handler.go`) cover screenshot baselines only, not the behavioral fingerprints described here.

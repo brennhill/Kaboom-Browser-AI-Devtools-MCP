@@ -11,7 +11,7 @@ code_paths:
   - internal/hooks/eval/eval.go
   - cmd/hooks/main.go
   - internal/tools/configure/handler/qualitygates/handler.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
 test_paths:
   - internal/tools/configure/handler/dispatcher_test.go

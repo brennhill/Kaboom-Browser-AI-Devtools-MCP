@@ -6,12 +6,12 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
   - internal/tools/schema/interact/actions.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_core.go
   - cmd/browser-agent/server.go
-  - cmd/browser-agent/internal/toolobserve/dispatcher.go
-  - cmd/browser-agent/internal/toolobserve/deps.go
+  - internal/tools/observe/handler/dispatcher.go
+  - internal/tools/observe/handler/deps.go
   - internal/screenrec/deps.go
   - internal/tools/guard/guards.go
   - internal/screenrec/types.go

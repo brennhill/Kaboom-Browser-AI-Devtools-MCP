@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	cap "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 )
 
 // Integration tests for binary format detection in network/websocket

@@ -12,11 +12,11 @@ code_paths:
   - internal/tools/configure/handler/qafixture/startup.go
   - internal/tools/configure/handler/qafixture/transport/command.go
   - internal/tools/configure/handler/qafixture/shutdown/recovery.go
-  - cmd/browser-agent/internal/health/doctor_live_checks.go
+  - internal/tools/commandhealth/doctor_live_checks.go
   - internal/tools/interact/handler/action_owners.go
   - internal/tools/interact/handler/interact_page.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_core.go
   - internal/testgen/qafixture/wire_fixture.go
   - internal/testgen/qafixture/transaction.go
   - internal/testgen/qafixture/registry.go
@@ -44,7 +44,7 @@ test_paths:
   - internal/tools/schema/invariants_test.go
   - internal/tools/mcpserver/protocol/responses_test.go
   - cmd/browser-agent/testdata/mcp-tools-list.golden.json
-  - cmd/browser-agent/internal/doctorsupport/projections_test.go
+  - internal/lifecycle/doctor/support/projections_test.go
   - internal/tools/interact/handler/interact_browser_test.go
   - internal/tools/configure/handler/qafixture/handler_test.go
   - internal/tools/configure/handler/qafixture/startup_test.go

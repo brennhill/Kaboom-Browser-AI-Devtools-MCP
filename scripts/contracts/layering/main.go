@@ -337,7 +337,7 @@ func scanTree(root string) (*treeScan, error) {
 // capture package tree itself, and test-support packages.
 func captureCompositionPkg(pkg string) bool {
 	return pkg == modulePrefix+"cmd/browser-agent" ||
-		pkg == modulePrefix+"cmd/browser-agent/internal/toolruntime" ||
+		pkg == modulePrefix+"internal/composition/toolruntime" ||
 		inCaptureTree(pkg) ||
 		testSupportPkg(pkg)
 }

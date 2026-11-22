@@ -10,7 +10,7 @@ last_verified_date: 2026-03-05
 # Page Structure Detection QA Plan
 
 ## Automated Coverage
-- `cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go` (`HandlePageStructure` dispatch contract)
+- `internal/tools/analyze/handler/handlers_coverage_test.go` (`HandlePageStructure` dispatch contract)
 - `internal/tools/schema/invariants_test.go` (`page_structure` schema mode)
 
 ## Required Scenarios

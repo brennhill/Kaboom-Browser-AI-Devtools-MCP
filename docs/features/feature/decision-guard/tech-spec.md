@@ -142,7 +142,7 @@ func runLockDecision() int {
 ```
 [Decision Guard] 1 locked decision applies to this edit:
 
-  use-shared-http-client: Use the shared HTTP client from internal/util/http.go. Do not create new http.Client instances.
+  use-shared-http-client: Use the shared HTTP client from internal/platform/util/http.go. Do not create new http.Client instances.
 
 Comply with these decisions or update .kaboom/decisions.json if they are outdated.
 ```

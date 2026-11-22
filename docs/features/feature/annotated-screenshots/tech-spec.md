@@ -52,7 +52,7 @@ Returns {image: "data:image/png;base64,...", uidMap: {...}}
 
 ## Implementation Strategy
 
-Not yet built (reviewed 2026-11-21): there is no `generate({what: "annotated_screenshot"})` mode and no automatic element-labelling renderer. What ships under this feature today is user-drawn annotation via Draw Mode (see the feature `index.md`): screenshots saved by `cmd/browser-agent/internal/mediaapi/draw_mode.go` and `cmd/browser-agent/internal/mediaapi/screenshots.go`, annotation reports from `internal/tools/generate/handler/annotations/`.
+Not yet built (reviewed 2026-11-21): there is no `generate({what: "annotated_screenshot"})` mode and no automatic element-labelling renderer. What ships under this feature today is user-drawn annotation via Draw Mode (see the feature `index.md`): screenshots saved by `internal/ingestion/media/draw_mode.go` and `internal/ingestion/media/screenshots.go`, annotation reports from `internal/tools/generate/handler/annotations/`.
 
 Planned changes, mapped onto the current layout:
 

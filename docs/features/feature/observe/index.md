@@ -12,7 +12,7 @@ code_paths:
   - src/background/commands/results/screenshot-delivery.ts
   - src/background/commands/observe.ts
   - src/background/ui/tracked-tab-state.ts
-  - cmd/browser-agent/internal/mediaapi/screenshots.go
+  - internal/ingestion/media/screenshots.go
   - internal/observation/healthreader/reader.go
   - internal/browsercommand/internal/dispatch/dispatcher_queries.go
   - internal/sync/runtime/handler.go
@@ -21,13 +21,13 @@ code_paths:
   - internal/observation/store/wsconn/status.go
   - internal/observation/store/wsconn/store.go
   - internal/observation/store/wsconn/tracker.go
-  - cmd/browser-agent/internal/toolobserve/dispatcher.go
-  - cmd/browser-agent/internal/toolobserve/deps.go
-  - cmd/browser-agent/internal/toolobserve/response.go
-  - cmd/browser-agent/internal/toolobserve/inbox.go
-  - cmd/browser-agent/internal/toolobserve/registry.go
-  - cmd/browser-agent/internal/toolobserve/page_inventory.go
-  - cmd/browser-agent/internal/toolobserve/site_menus.go
+  - internal/tools/observe/handler/dispatcher.go
+  - internal/tools/observe/handler/deps.go
+  - internal/tools/observe/handler/response.go
+  - internal/tools/observe/handler/inbox.go
+  - internal/tools/observe/handler/registry.go
+  - internal/tools/observe/handler/page_inventory.go
+  - internal/tools/observe/handler/site_menus.go
   - internal/tools/response/toolresp.go
   - internal/tools/mcp/response.go
   - internal/tools/asynccommand/handler.go
@@ -49,9 +49,9 @@ code_paths:
   - internal/page/app/storage/sections.go
   - internal/analysis/app/a11yaudit/a11yaudit.go
   - internal/observation/store/waterfall/store.go
-  - cmd/browser-agent/internal/toolruntime/usecase_wiring.go
+  - internal/composition/toolruntime/usecase_wiring.go
   - internal/tools/mcpserver/http/handler.go
-  - cmd/browser-agent/internal/telemetryapi/handler.go
+  - internal/observation/adapters/telemetryapi/handler.go
   - internal/tools/observe/hints/hints.go
   - internal/page/app/storage/execute.go
   - internal/page/app/storage/scripts.go
@@ -79,11 +79,11 @@ code_paths:
   - src/lib/tabs/tab-focus.ts
 test_paths:
   - internal/page/screenshotframe/wire_screenshot_test.go
-  - cmd/browser-agent/internal/mediaapi/screenshot_frame_test.go
+  - internal/ingestion/media/screenshot_frame_test.go
   - tests/extension/capture/screenshot-coordinate-frame.test.js
   - tests/extension/capture/background/background-tab-capture.test.js
   - tests/extension/capture/background/visible-tab-capture-fallback.test.js
-  - cmd/browser-agent/internal/telemetryapi/handler_test.go
+  - internal/observation/adapters/telemetryapi/handler_test.go
   - internal/tools/observe/core/filtering_test.go
   - internal/tools/observe/network/network_test.go
   - internal/tools/observe/timeline/correlation_test.go
@@ -93,9 +93,9 @@ test_paths:
   - tests/extension/dom/command-element-results.test.js
   - tests/extension/dom/page-query-targeting.test.js
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
+  - internal/tools/observe/handler/toolobserve_coverage_test.go
   - internal/tools/observe/page/page_readiness_test.go
-  - cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go
+  - internal/tools/observe/handler/dispatcher_commands_test.go
   - internal/page/app/storage/execute_test.go
   - extension/background/commands/observe.fullpage.test.js
   - internal/analysis/a11ysummary/summary_test.go
@@ -243,7 +243,7 @@ arguments, maps failure kinds to canonical `mcp.Fail` codes
 (`ScreenshotFailure`) and assembles the text + inline image blocks
 (`ScreenshotSuccess`). interact `include_screenshot` and analyze
 `visual_baseline`/`visual_diff` call the same use case (composed in
-`cmd/browser-agent/internal/toolruntime/usecase_wiring.go`). The
+`internal/composition/toolruntime/usecase_wiring.go`). The
 `scripts/contracts/layering` rule `app->transport` forbids `internal/app/**`
 from importing `net/http`, `internal/tools/mcp`, `internal/composition/capture/**` or
 `internal/tools/**`.

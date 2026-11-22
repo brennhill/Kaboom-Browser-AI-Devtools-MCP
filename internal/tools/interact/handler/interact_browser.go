@@ -22,12 +22,12 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/page/screenshotframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/defaults"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/wirecodec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/sync/runtime"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/response"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // browserActionHandler is a browser-action entry point bound to its receiver at call time.

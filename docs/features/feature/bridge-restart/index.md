@@ -19,7 +19,7 @@ code_paths:
   - internal/lifecycle/bridge/stdioisolate/isolation_windows.go
   - internal/lifecycle/bridge/stdioisolate/dup2_linux.go
   - internal/lifecycle/bridge/stdioisolate/dup2_unix_nonlinux.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
   - internal/tools/schema/configure/tool.go
 test_paths:

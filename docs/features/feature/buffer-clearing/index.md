@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-11-21
 code_paths:
   - internal/tools/configure/handler/clear.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
   - internal/observation/store/bodies/store.go
   - internal/observation/store/actions/store.go

@@ -10,8 +10,8 @@ code_paths:
   - internal/analysis/verification/evidence.go
   - internal/analysis/verification/store.go
   - internal/platform/state/paths/paths.go
-  - cmd/browser-agent/internal/toolanalyze/verificationhandler/handler.go
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
+  - internal/tools/analyze/handler/verificationhandler/handler.go
+  - internal/tools/analyze/handler/analyzedispatch/dispatcher.go
   - internal/tools/schema/analyze.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
 test_paths:
@@ -19,7 +19,7 @@ test_paths:
   - internal/analysis/verification/evidence_test.go
   - internal/analysis/verification/store_test.go
   - internal/platform/state/paths/paths_test.go
-  - cmd/browser-agent/internal/toolanalyze/verificationhandler/handler_test.go
+  - internal/tools/analyze/handler/verificationhandler/handler_test.go
 ---
 
 # Verification Contracts

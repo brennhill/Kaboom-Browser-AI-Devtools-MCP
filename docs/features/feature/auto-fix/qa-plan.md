@@ -88,7 +88,7 @@ tags: [testing, qa, audit]
 
 ### 4.1 Unit Tests
 
-Server source: `cmd/browser-agent/internal/toolanalyze/pageissues/handler.go`. Tests: `handler_test.go` and `summary_test.go` in that package.
+Server source: `internal/tools/analyze/handler/pageissues/handler.go`. Tests: `handler_test.go` and `summary_test.go` in that package.
 
 | # | Test Case | Input | Expected Output | Priority |
 |---|-----------|-------|-----------------|----------|

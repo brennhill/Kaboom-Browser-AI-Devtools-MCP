@@ -943,7 +943,7 @@ func (c *RedactionCache) Invalidate() {
 | Planned new file in `internal/platform/redaction/` | Pattern configuration management (not built) |
 | `internal/platform/redaction/redaction_engine_test.go`, `internal/platform/redaction/redaction_test.go` | Existing tests (extend) |
 | Planned new test file in `internal/platform/redaction/` | Configuration tests (not built) |
-| `cmd/browser-agent/internal/toolruntime/tools_configure.go`, `internal/tools/schema/configure/properties_core.go` | Register as a `configure` mode (the 5-tool rule forbids a separate `configure_redaction` tool) |
+| `internal/composition/toolruntime/tools_configure.go`, `internal/tools/schema/configure/properties_core.go` | Register as a `configure` mode (the 5-tool rule forbids a separate `configure_redaction` tool) |
 
 ---
 

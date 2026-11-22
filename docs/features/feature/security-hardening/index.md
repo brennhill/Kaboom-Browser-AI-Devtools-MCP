@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolanalyze/securityaudit/handler.go
+  - internal/tools/analyze/handler/securityaudit/handler.go
   - internal/tools/generate/handler/dispatcher.go
   - internal/tools/generate/handler/deps.go
   - internal/tools/generate/handler/artifacts_security_impl.go
@@ -43,9 +43,9 @@ code_paths:
   - internal/analysis/security/httpsec/url.go
   - internal/analysis/security/httpsec/cookie.go
 test_paths:
-  - cmd/browser-agent/internal/toolanalyze/securityaudit/handler_test.go
-  - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
-  - cmd/browser-agent/internal/toolanalyze/toolanalyze_test.go
+  - internal/tools/analyze/handler/securityaudit/handler_test.go
+  - internal/tools/analyze/handler/handlers_coverage_test.go
+  - internal/tools/analyze/handler/toolanalyze_test.go
   - internal/analysis/security/diff/diff_test.go
   - internal/analysis/security/diff/compare_test.go
   - internal/analysis/security/diff/tool_test.go

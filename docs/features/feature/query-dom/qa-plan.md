@@ -15,8 +15,8 @@ last_verified_date: 2026-03-05
 # Query DOM QA Plan (TARGET)
 
 ## Automated Coverage
-- `cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go`
-- `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher_test.go`
+- `internal/tools/analyze/handler/inspect/dom_test.go`
+- `internal/tools/analyze/handler/analyzedispatch/dispatcher_test.go`
 
 ## Required Scenarios
 1. Request validation

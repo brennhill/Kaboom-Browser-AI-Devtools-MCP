@@ -22,11 +22,11 @@ code_paths:
   - internal/recording/logdiff/report.go
   - internal/composition/capture/capture.go
   - internal/ingestion/http/handlers.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
-  - cmd/browser-agent/internal/toolobserve/dispatcher.go
-  - cmd/browser-agent/internal/toolobserve/deps.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/tools/observe/handler/dispatcher.go
+  - internal/tools/observe/handler/deps.go
+  - internal/composition/toolruntime/tools_core.go
   - internal/tools/recording/handler.go
   - internal/tools/recording/helpers.go
 test_paths:
@@ -116,7 +116,7 @@ last_verified_date: 2026-03-05
 - Capture exposes the canonical manager through `Capture.Recordings()`; there
   is no recording/playback delegation surface on Capture.
 - Recording storage HTTP boundary: `internal/ingestion/http/handlers.go`
-- MCP owners: `cmd/browser-agent/tools_configure.go`, `cmd/browser-agent/internal/toolobserve/dispatcher.go`, and the composition root in `tools_core.go`
+- MCP owners: `cmd/browser-agent/tools_configure.go`, `internal/tools/observe/handler/dispatcher.go`, and the composition root in `tools_core.go`
 - Recording and playback MCP behavior/state: `internal/tools/recording/`
 - Configure playback and log-diff actions route directly to the composed
   `toolrecording.Handler`; no root ToolHandler forwarding surface remains.

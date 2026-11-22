@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_core.go
   - internal/tools/guard/guards.go
   - internal/tools/asynccommand/handler.go
   - internal/sync/runtime/runtime.go

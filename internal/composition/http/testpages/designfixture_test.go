@@ -25,7 +25,7 @@ import (
 	"testing"
 )
 
-const designFixtureCapture = "../../../../cmd/browser-agent/internal/toolanalyze/designdrift/testdata/fixture-probe.json"
+const designFixtureCapture = "../../../../internal/tools/analyze/handler/designdrift/testdata/fixture-probe.json"
 
 // capturedPayload is the part of one selector's capture this test can derive
 // from the page itself. Geometry is deliberately absent: the capture records

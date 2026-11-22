@@ -413,7 +413,7 @@ AI calls configure({what: 'store', data: {...}})
 - **Security:** `internal/analysis/security/{scan,csp,sri,diff,policy,netflag,httpsec}/*.go` (38 files)
 - **Tools:** `cmd/browser-agent/tools_*.go` (8 files)
 - **HTTP Server:** `cmd/browser-agent/{main,handler,server,middleware,routes,health}.go`
-- **Utilities:** `internal/{rate_limit,circuit_breaker,redaction,export}` + `internal/util/`
+- **Utilities:** `internal/{rate_limit,circuit_breaker,redaction,export}` + `internal/platform/util/`
 
 ### Related Diagrams
 - [C2: Containers](c2-containers.md) - Container boundaries

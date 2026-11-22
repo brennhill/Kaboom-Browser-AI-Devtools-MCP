@@ -21,7 +21,7 @@ func toolsLayer(internal string) bool {
 // transport rule even though they now sit in their bounded contexts.
 func captureTree() []string {
 	return []string{
-		"internal/composition/capture", "internal/capture/settingscache", "internal/sync/runtime",
+		"internal/composition/capture", "internal/sync/settingscache", "internal/sync/runtime",
 		"internal/ingestion/http", "internal/observation/store", "internal/observation/pressure",
 		"internal/observation/clientstore", "internal/observation/featureusage",
 		"internal/observation/healthreader", "internal/observation/resetter",

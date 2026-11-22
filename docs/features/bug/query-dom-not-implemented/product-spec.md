@@ -142,7 +142,7 @@ Complete the message forwarding chain so that DOM queries flow from the MCP tool
 ## Notes
 
 - `executeDOMQuery()` lives in `src/lib/analysis/dom-queries.ts` (compiled to `extension/lib/analysis/dom-queries.js`)
-- Server side: `analyze(what:"dom")` is dispatched by `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go` to `HandleDOM` in `cmd/browser-agent/internal/toolanalyze/inspect/dom.go`, which creates the pending query
+- Server side: `analyze(what:"dom")` is dispatched by `internal/tools/analyze/handler/analyzedispatch/dispatcher.go` to `HandleDOM` in `internal/tools/analyze/handler/inspect/dom.go`, which creates the pending query
 - The missing piece at the time was message forwarding in the background script (then returning 'not_implemented'); it is now `src/background/commands/analyze.ts`
 - Fix should follow the same pattern as accessibility queries (which work correctly)
 - Related specs: See `docs/features/feature/query-dom/product-spec.md` for the original feature specification

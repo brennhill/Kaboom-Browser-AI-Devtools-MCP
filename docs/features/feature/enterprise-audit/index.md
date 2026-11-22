@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-09-05
 code_paths:
   - internal/analysis/snapshots/runtime_reader.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_core.go
   - internal/tools/audit/recorder.go
   - internal/analysis/thirdparty/audit.go
   - internal/analysis/thirdparty/entries.go

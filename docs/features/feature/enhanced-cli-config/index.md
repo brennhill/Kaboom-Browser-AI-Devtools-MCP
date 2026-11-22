@@ -21,12 +21,12 @@ code_paths:
   - internal/tools/cli/parser/generate_configure.go
   - internal/tools/cli/parser/interact.go
   - internal/tools/cli/parser/observe_analyze.go
-  - cmd/browser-agent/internal/health/doctor.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/tools/commandhealth/doctor.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_core.go
   - internal/tools/configure/handler/deps.go
-  - cmd/browser-agent/internal/health/doctor_fastpath_telemetry.go
+  - internal/tools/commandhealth/doctor_fastpath_telemetry.go
   - internal/platform/diag/output.go
   - internal/tools/configure/handler/tutorial/handlers.go
   - internal/tools/configure/handler/tutorial/snippets.go
@@ -88,7 +88,7 @@ test_paths:
   - internal/lifecycle/runtimeflags/repeatable_test.go
   - internal/lifecycle/startupconfig/help_test.go
   - internal/tools/cli/parser/commands_test.go
-  - cmd/browser-agent/internal/health/health_coverage_test.go
+  - internal/tools/commandhealth/health_coverage_test.go
   - cmd/browser-agent/integration/runtime/reliability_lifecycle_test.go
   - scripts/smoke-tests/core/23-doctor-preflight.sh
   - internal/lifecycle/runtimeconfig/parallel_test.go

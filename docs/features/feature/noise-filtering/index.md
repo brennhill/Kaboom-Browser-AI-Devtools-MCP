@@ -6,23 +6,23 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/health/doctor_live_checks.go
+  - internal/tools/commandhealth/doctor_live_checks.go
   - internal/tools/configure/handler/noise_actions.go
   - internal/tools/configure/handler/deps.go
   - internal/tools/mcp/response.go
   - internal/observation/noise/autorun/autorun.go
   - internal/tools/configure/handler/auditlog/handler.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_core.go
   - internal/tools/configure/handler/session.go
   - internal/observation/noise/noise.go
   - internal/observation/noise/noise_builtin.go
   - internal/observation/noise/noise_detect.go
   - internal/observation/noise/noise_rules.go
-  - internal/util/media.go
+  - internal/platform/util/media.go
 test_paths:
-  - cmd/browser-agent/internal/doctorsupport/projections_test.go
+  - internal/lifecycle/doctor/support/projections_test.go
   - internal/tools/configure/handler/dispatcher_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - internal/tools/configure/handler/handlers_coverage_test.go
@@ -82,7 +82,7 @@ Automatic detection scheduling, navigation debouncing, first-connect lifecycle
 wiring, and telemetry adaptation are owned together by
 `internal/observation/noise/autorun`. The root handler retains only its
 required `mcp.NoiseFilterer` method and initialization wiring. Automatic URL
-classification imports the canonical `internal/util` path normalizer directly;
+classification imports the canonical `internal/platform/util` path normalizer directly;
 there is no capture-layer pass-through.
 Runner time, dispatch, and delayed execution cross one private runtime boundary.
 Tests drive callbacks and first-connect timers explicitly, while production uses

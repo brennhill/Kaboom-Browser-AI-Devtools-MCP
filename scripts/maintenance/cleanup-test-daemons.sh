@@ -83,7 +83,7 @@ is_test_port() {
   local port="$1"
   (( port == USER_DAEMON_PORT || port == USER_TERMINAL_PORT )) && return 1
   # 7899 is the CLI integration suite; 7900-7998 is the Go integration band
-  # (ReservedPortBase/End in cmd/browser-agent/internal/integrationtest).
+  # (ReservedPortBase/End in internal/composition/testsupport/integration).
   (( (port >= 7899 && port <= 7998) || (port >= 17890 && port <= 17999) ))
 }
 

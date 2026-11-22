@@ -9,7 +9,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/security/policy"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 )
 
 // applyWhitelistOverrides appends session-scoped manual overrides to default-src.

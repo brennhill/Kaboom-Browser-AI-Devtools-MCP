@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 # Observe QA Plan (TARGET)
 
 ## Automated Coverage
-- `cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go`
+- `internal/tools/observe/handler/dispatcher_commands_test.go`
 - `internal/tools/observe/logs/logs_edge_test.go`
 - `internal/tools/observe/network/network_test.go`
 - `internal/tools/observe/page/page_readiness_test.go`

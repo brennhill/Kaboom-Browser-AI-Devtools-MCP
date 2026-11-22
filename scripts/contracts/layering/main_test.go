@@ -373,16 +373,16 @@ func TestOnlyCompositionRootImportsCapture(t *testing.T) {
 		// Breaches: tool, observe and other adapter packages holding the whole Capture.
 		"cmd/browser-agent/internal/toolinteract/a.go": "package toolinteract\n\nimport _ \"" + c + "\"\n",
 		"internal/tools/observe/logs/l.go":             "package logs\n\nimport _ \"" + c + "\"\n",
-		"cmd/browser-agent/internal/health/h.go":       "package health\n\nimport _ \"" + c + "\"\n",
+		"internal/tools/commandhealth/h.go":            "package health\n\nimport _ \"" + c + "\"\n",
 		// Breach: production code importing test support.
-		"cmd/browser-agent/internal/health/t.go": "package health\n\nimport _ \"" + modulePrefix + "internal/browsercommand/commandtest\"\n",
+		"internal/tools/commandhealth/t.go": "package health\n\nimport _ \"" + modulePrefix + "internal/browsercommand/commandtest\"\n",
 		// Clean: composition root, capture tree, test support, owner subpackages, tests.
-		"cmd/browser-agent/main.go":                   "package main\n\nimport _ \"" + c + "\"\n",
-		"cmd/browser-agent/internal/toolruntime/w.go": "package toolruntime\n\nimport _ \"" + c + "\"\n",
-		"internal/observation/healthreader/r.go":      "package healthreader\n\nimport _ \"" + c + "/telemetrystore\"\n",
-		"internal/tools/observe/testsupport/h.go":     "package testsupport\n\nimport _ \"" + c + "\"\n",
-		"internal/tools/observe/core/d.go":            "package core\n\nimport _ \"" + c + "/telemetrystore\"\n",
-		"cmd/browser-agent/internal/health/h_test.go": "package health\n\nimport _ \"" + c + "\"\n",
+		"cmd/browser-agent/main.go":               "package main\n\nimport _ \"" + c + "\"\n",
+		"internal/composition/toolruntime/w.go":   "package toolruntime\n\nimport _ \"" + c + "\"\n",
+		"internal/observation/healthreader/r.go":  "package healthreader\n\nimport _ \"" + c + "/telemetrystore\"\n",
+		"internal/tools/observe/testsupport/h.go": "package testsupport\n\nimport _ \"" + c + "\"\n",
+		"internal/tools/observe/core/d.go":        "package core\n\nimport _ \"" + c + "/telemetrystore\"\n",
+		"internal/tools/commandhealth/h_test.go":  "package health\n\nimport _ \"" + c + "\"\n",
 	})
 	scan, err := scanTree(root)
 	if err != nil {

@@ -6,8 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-05
 code_paths:
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
   - internal/tools/issuereport/handler.go
   - internal/tools/schema/configure/properties_core.go

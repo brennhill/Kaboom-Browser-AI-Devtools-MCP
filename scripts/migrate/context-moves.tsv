@@ -7,7 +7,7 @@ internal/synctranscript	internal/browsercommand/transcript	Browser Command
 internal/app/ports	internal/browsercommand/ports	Browser Command	consumer-neutral result sink; owned by the command owner
 internal/capture/syncruntime	internal/sync/runtime	Connection & Sync	
 internal/extclient	internal/sync/extclient	Connection & Sync	
-internal/capture/settingscache	internal/sync/settingscache	Connection & Sync	REVIEW: settings intake arrives via /sync
+internal/capture/settingscache	internal/sync/settingscache	Connection & Sync	applied as drafted (revisit): settings intake arrives via /sync
 internal/capture/telemetrystore	internal/observation/store/telemetry	Observation Capture	
 internal/capture/logstore	internal/observation/store/logs	Observation Capture	
 internal/capture/perfstore	internal/observation/store/perf	Observation Capture	
@@ -30,15 +30,15 @@ internal/streaming	internal/observation/streaming	Observation Capture
 internal/perftrace	internal/observation/perftrace	Observation Capture	
 internal/performance	internal/observation/performance	Observation Capture	
 internal/export/har	internal/observation/export/har	Observation Capture	
-cmd/browser-agent/internal/telemetryapi	internal/observation/adapters/telemetryapi	Observation Capture	BLOCKED-REVIEW: imports cmd-private logstore; moves after those REVIEW rows are decided
+cmd/browser-agent/internal/telemetryapi	internal/observation/adapters/telemetryapi	Observation Capture	
 cmd/browser-agent/internal/mcptelemetry	internal/observation/adapters/mcptelemetry	Observation Capture	
-internal/debuglog	internal/observation/debuglog	Observation Capture	REVIEW: daemon debug ring, may be Platform
+internal/debuglog	internal/observation/debuglog	Observation Capture	applied as drafted (revisit): daemon debug ring, may be Platform
 internal/capture/pipelinetest	internal/observation/testsupport/pipeline	Observation Capture	
 internal/capture/websockettest	internal/observation/testsupport/websocket	Observation Capture	
 internal/capturefixture	internal/observation/testsupport/fixture	Observation Capture	
 internal/capture/httpingest	internal/ingestion/http	Extension Ingestion	
 internal/circuit	internal/ingestion/circuit	Extension Ingestion	
-cmd/browser-agent/internal/mediaapi	internal/ingestion/media	Extension Ingestion	REVIEW: draw-mode ingest; could live under Annotation
+cmd/browser-agent/internal/mediaapi	internal/ingestion/media	Extension Ingestion	applied as drafted (revisit): draw-mode ingest; could live under Annotation
 internal/recording	internal/recording	Event Recording	
 internal/reproduction	internal/recording/reproduction	Event Recording	
 cmd/browser-agent/internal/replay	internal/recording/replay	Event Recording	
@@ -65,7 +65,7 @@ internal/testgen	internal/testgen	Test Generation
 internal/qafixture	internal/testgen/qafixture	Test Generation	
 internal/annotation	internal/annotation	Annotation	
 internal/pty	internal/terminal/pty	Terminal	
-cmd/browser-agent/internal/terminal	internal/terminal/adapters	Terminal	BLOCKED-REVIEW: imports cmd-private health, logstore, operationalapi; moves after those REVIEW rows are decided
+cmd/browser-agent/internal/terminal	internal/terminal/adapters	Terminal	
 internal/hook	internal/hooks	Agent Hooks	
 internal/tracking	internal/hooks/tokensavings	Agent Hooks	token-savings endpoint fed by hook scripts
 internal/upload	internal/upload	File Upload	
@@ -78,8 +78,8 @@ internal/tools/analyze	internal/tools/analyze	Tool Surface
 internal/tools/configure	internal/tools/configure	Tool Surface	
 internal/tools/generate	internal/tools/generate	Tool Surface	
 internal/tools/interact	internal/tools/interact	Tool Surface	
-cmd/browser-agent/internal/toolobserve	internal/tools/observe/handler	Tool Surface	BLOCKED-REVIEW: imports cmd-private mediaapi; moves after those REVIEW rows are decided
-cmd/browser-agent/internal/toolanalyze	internal/tools/analyze/handler	Tool Surface	BLOCKED-REVIEW: imports cmd-private mediaapi; moves after those REVIEW rows are decided
+cmd/browser-agent/internal/toolobserve	internal/tools/observe/handler	Tool Surface	
+cmd/browser-agent/internal/toolanalyze	internal/tools/analyze/handler	Tool Surface	
 cmd/browser-agent/internal/toolconfigure	internal/tools/configure/handler	Tool Surface	
 cmd/browser-agent/internal/toolgenerate	internal/tools/generate/handler	Tool Surface	
 cmd/browser-agent/internal/toolinteract	internal/tools/interact/handler	Tool Surface	
@@ -104,7 +104,7 @@ cmd/browser-agent/internal/mcphttp	internal/tools/mcpserver/http	Tool Surface
 cmd/browser-agent/internal/mcpprotocol	internal/tools/mcpserver/protocol	Tool Surface	
 cmd/browser-agent/internal/mcpresponse	internal/tools/mcpserver/response	Tool Surface	
 cmd/browser-agent/internal/mcprouter	internal/tools/mcpserver/router	Tool Surface	
-cmd/browser-agent/internal/health	internal/tools/commandhealth	Tool Surface	REVIEW: async-command reliability assessment
+cmd/browser-agent/internal/health	internal/tools/commandhealth	Tool Surface	applied as drafted (revisit): async-command reliability assessment
 internal/audit	internal/tools/audit	Tool Surface	tool-call audit trail
 internal/session/clientreg	internal/tools/clientreg	Tool Surface	
 cmd/browser-agent/internal/clientapi	internal/tools/clientreg/http	Tool Surface	
@@ -138,12 +138,12 @@ internal/retention	internal/lifecycle/retention	Process Lifecycle
 cmd/browser-agent/internal/retentionsweep	internal/lifecycle/retention/sweep	Process Lifecycle	
 internal/statediag	internal/lifecycle/doctor/statediag	Process Lifecycle	
 internal/incident	internal/lifecycle/doctor/incident	Process Lifecycle	
-cmd/browser-agent/internal/doctorsupport	internal/lifecycle/doctor/support	Process Lifecycle	BLOCKED-REVIEW: imports cmd-private health; moves after those REVIEW rows are decided
-internal/activecodebase	internal/lifecycle/activecodebase	Process Lifecycle	REVIEW: workspace state; may belong to Terminal
+cmd/browser-agent/internal/doctorsupport	internal/lifecycle/doctor/support	Process Lifecycle	
+internal/activecodebase	internal/lifecycle/activecodebase	Process Lifecycle	applied as drafted (revisit): workspace state; may belong to Terminal
 cmd/browser-agent/internal/testowner	internal/lifecycle/testsupport/testowner	Process Lifecycle	
 internal/telemetry	internal/telemetry	Product Telemetry	
 internal/types	internal/platform/types	Platform (shared kernel, no domain state)	
-internal/util	internal/platform/util	Platform (shared kernel, no domain state)	REVIEW: split util by caller before moving
+internal/util	internal/platform/util	Platform (shared kernel, no domain state)	applied as drafted (revisit): split util by caller before moving
 internal/redaction	internal/platform/redaction	Platform (shared kernel, no domain state)	
 internal/wirecodec	internal/platform/wirecodec	Platform (shared kernel, no domain state)	
 internal/state	internal/platform/state/paths	Platform (shared kernel, no domain state)	
@@ -159,16 +159,16 @@ internal/testsync	internal/platform/testsync	Platform (shared kernel, no domain 
 cmd/browser-agent/internal/wsframe	internal/platform/wsframe	Platform (shared kernel, no domain state)	
 cmd/browser-agent/internal/httpguard	internal/platform/httpguard	Platform (shared kernel, no domain state)	
 internal/capture	internal/composition/capture	Composition	whole-Capture root; children above move first
-internal/server	internal/composition/serverlog	Composition	REVIEW: server log storage, maybe Observation
-cmd/browser-agent/internal/logstore	internal/composition/logstate	Composition	REVIEW: duplicate of internal/server? merge candidate
-cmd/browser-agent/internal/toolruntime	internal/composition/toolruntime	Composition	BLOCKED-REVIEW: imports cmd-private health, logstore, mediaapi; moves after those REVIEW rows are decided
+internal/server	internal/composition/serverlog	Composition	applied as drafted (revisit): server log storage, maybe Observation
+cmd/browser-agent/internal/logstore	internal/composition/logstate	Composition	applied as drafted (revisit): duplicate of internal/server? merge candidate
+cmd/browser-agent/internal/toolruntime	internal/composition/toolruntime	Composition	
 cmd/browser-agent/internal/appruntime	internal/composition/appruntime	Composition	
 cmd/browser-agent/internal/daemonhttp	internal/composition/http/listener	Composition	
-cmd/browser-agent/internal/operationalapi	internal/composition/http/operational	Composition	BLOCKED-REVIEW: imports cmd-private health, logstore; moves after those REVIEW rows are decided
+cmd/browser-agent/internal/operationalapi	internal/composition/http/operational	Composition	
 cmd/browser-agent/internal/httpapi	internal/composition/http/openapi	Composition	
 cmd/browser-agent/internal/dashboard	internal/composition/http/dashboard	Composition	
 cmd/browser-agent/internal/testpages	internal/composition/http/testpages	Composition	
-cmd/browser-agent/internal/ciapi	internal/composition/http/ci	Composition	BLOCKED-REVIEW: imports cmd-private logstore; moves after those REVIEW rows are decided
+cmd/browser-agent/internal/ciapi	internal/composition/http/ci	Composition	
 cmd/browser-agent/internal/insecureproxy	internal/composition/http/insecureproxy	Composition	
-cmd/browser-agent/internal/responsegate	internal/composition/responsegate	Composition	REVIEW: test-only package (0 non-test files)
-cmd/browser-agent/internal/integrationtest	internal/composition/testsupport/integration	Composition	BLOCKED-REVIEW: imports cmd-private terminal; moves after those REVIEW rows are decided
+cmd/browser-agent/internal/responsegate	internal/composition/responsegate	Composition	applied as drafted (revisit): test-only package (0 non-test files)
+cmd/browser-agent/internal/integrationtest	internal/composition/testsupport/integration	Composition	

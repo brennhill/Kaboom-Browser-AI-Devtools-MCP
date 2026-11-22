@@ -104,7 +104,7 @@ describe('test-port classification excludes the user daemon', () => {
 // a leaked daemon sits in a range nothing sweeps — which is the whole failure
 // this band exists to prevent.
 describe('reserved test-port band agrees across Go, the sweeper and the CLI suite', () => {
-  const harness = readFileSync('cmd/browser-agent/internal/integrationtest/harness.go', 'utf8')
+  const harness = readFileSync('internal/composition/testsupport/integration/harness.go', 'utf8')
   const sweeper = readFileSync('scripts/maintenance/cleanup-test-daemons.sh', 'utf8')
   const health = readFileSync('npm/kaboom-agentic-browser/lib/daemon/health.js', 'utf8')
 

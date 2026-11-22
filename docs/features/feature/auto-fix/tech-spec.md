@@ -8,17 +8,17 @@ links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
-  - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
-  - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
+  - internal/tools/analyze/handler/pageissues/handler.go
+  - internal/tools/analyze/handler/page_issues_summary.go
+  - internal/tools/analyze/handler/analyzedispatch/dispatcher.go
   - internal/tools/mcpserver/response/owner.go
-  - cmd/browser-agent/internal/terminal/intent_store.go
-  - cmd/browser-agent/internal/terminal/intent/handlers.go
+  - internal/terminal/adapters/intent_store.go
+  - internal/terminal/adapters/intent/handlers.go
   - src/lib/tabs/request-audit.ts
   - src/background/message-handlers.ts
 test_paths:
-  - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
-  - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
+  - internal/tools/analyze/handler/pageissues/handler_test.go
+  - internal/tools/analyze/handler/pageissues/summary_test.go
   - internal/tools/mcpserver/response/owner_test.go
   - tests/extension/reliability/request-audit.test.js
   - tests/extension/content/message-handlers.test.js
@@ -47,7 +47,7 @@ The agent then runs the `/kaboom/audit` command or the bundled `audit` skill, wh
 
 ### `pageissues.Handle` — the evidence sweep
 
-Located in `cmd/browser-agent/internal/toolanalyze/pageissues/handler.go`. Flow:
+Located in `internal/tools/analyze/handler/pageissues/handler.go`. Flow:
 
 1. Parse params (`summary`, `categories`, `limit`); default `limit` to the per-section cap (50).
 2. Check tracking via `capture.GetTrackingStatus()`. If no tab is tracked, return `ErrNoData` with a recovery tool call (`configure(what="health")`).
@@ -68,7 +68,7 @@ Located in `cmd/browser-agent/internal/toolanalyze/pageissues/handler.go`. Flow:
 
 ### Summary mode — `BuildPageIssuesSummary`
 
-In `cmd/browser-agent/internal/toolanalyze/page_issues_summary.go`. When `summary: true`, the full result is mapped into the package's `PageIssuesResult` and condensed to the top findings for a large token reduction, serving as the audit baseline.
+In `internal/tools/analyze/handler/page_issues_summary.go`. When `summary: true`, the full result is mapped into the package's `PageIssuesResult` and condensed to the top findings for a large token reduction, serving as the audit baseline.
 
 ### Shared trigger — `requestAudit`
 

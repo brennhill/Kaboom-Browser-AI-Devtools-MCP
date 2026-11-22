@@ -6,15 +6,15 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolanalyze/deps.go
-  - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
-  - cmd/browser-agent/internal/toolanalyze/audit_scoring.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/tools/analyze/handler/deps.go
+  - internal/tools/analyze/handler/combinedaudit/handler.go
+  - internal/tools/analyze/handler/analyzedispatch/dispatcher.go
+  - internal/tools/analyze/handler/audit_scoring.go
 test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler_test.go
-  - cmd/browser-agent/internal/toolanalyze/toolanalyze_test.go
+  - internal/tools/analyze/handler/combinedaudit/handler_test.go
+  - internal/tools/analyze/handler/toolanalyze_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

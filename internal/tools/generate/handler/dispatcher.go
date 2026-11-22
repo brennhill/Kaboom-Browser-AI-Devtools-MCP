@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/reproduction"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/generate/handler/annotations"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/routing"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // TestGenerator owns context-based generation, healing, and classification.

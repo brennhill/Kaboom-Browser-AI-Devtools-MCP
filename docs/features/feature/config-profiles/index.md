@@ -6,8 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-05
 code_paths:
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
   - internal/tools/catalog/catalog.go
   - internal/tools/configure/handler/deps.go
@@ -28,7 +28,7 @@ test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - internal/tools/summarypref/cache_test.go
   - internal/lifecycle/doctor/statediag/collector_test.go
-  - cmd/browser-agent/internal/doctorsupport/projections_test.go
+  - internal/lifecycle/doctor/support/projections_test.go
   - internal/tools/configure/handler/handlers_coverage_test.go
   - internal/tools/configure/handler/session_test.go
   - internal/tools/configure/audit_test.go

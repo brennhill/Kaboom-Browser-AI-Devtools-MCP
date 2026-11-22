@@ -242,9 +242,9 @@ func TestBrowserActionsExposeOnlyCanonicalDispatch(t *testing.T) {
 
 func TestObserveDispatcherDoesNotRequireHostInterfaces(t *testing.T) {
 	for relativePath, forbidden := range map[string]string{
-		"cmd/browser-agent/internal/toolobserve/deps.go":       "type Deps interface {",
-		"cmd/browser-agent/internal/toolobserve/dispatcher.go": "type Host interface {",
-		"internal/tools/observe/core/deps.go":                  "type Deps interface {",
+		"internal/tools/observe/handler/deps.go":       "type Deps interface {",
+		"internal/tools/observe/handler/dispatcher.go": "type Host interface {",
+		"internal/tools/observe/core/deps.go":          "type Deps interface {",
 	} {
 		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
 		if err != nil {
@@ -276,9 +276,9 @@ func TestActionRecordingDoesNotReturnToToolHandler(t *testing.T) {
 		"func (h *ToolHandler) recordDOMPrimitiveAction(",
 	} {
 		for _, relativePath := range []string{
-			"cmd/browser-agent/internal/toolruntime/tools_core.go",
-			"cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go",
-			"cmd/browser-agent/internal/toolruntime/tools_configure.go",
+			"internal/composition/toolruntime/tools_core.go",
+			"internal/composition/toolruntime/tools_interact_dispatch.go",
+			"internal/composition/toolruntime/tools_configure.go",
 		} {
 			source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
 			if err != nil {
@@ -293,9 +293,9 @@ func TestActionRecordingDoesNotReturnToToolHandler(t *testing.T) {
 
 func TestNavigateEnrichmentBelongsToInteractOwner(t *testing.T) {
 	checks := map[string]string{
-		"cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go": "func (h *ToolHandler) enrichNavigateResponse(",
-		"internal/tools/interact/handler/action_owners.go":                  "EnrichNavigateResponse func(",
-		"internal/tools/interact/handler/action_runtime_test.go":            "EnrichNavigateResponse:",
+		"internal/composition/toolruntime/tools_interact_dispatch.go": "func (h *ToolHandler) enrichNavigateResponse(",
+		"internal/tools/interact/handler/action_owners.go":            "EnrichNavigateResponse func(",
+		"internal/tools/interact/handler/action_runtime_test.go":      "EnrichNavigateResponse:",
 	}
 	for relativePath, forbidden := range checks {
 		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
@@ -319,7 +319,7 @@ func TestClientRegistryUsesCanonicalConcreteOwner(t *testing.T) {
 			"sessionClientRegistryAdapter",
 			"newSessionClientRegistryAdapter",
 		},
-		"cmd/browser-agent/internal/terminal/handlers.go": {
+		"internal/terminal/adapters/handlers.go": {
 			"clients.(type)",
 			"json.Marshal(v)",
 		},
@@ -574,9 +574,9 @@ func TestIssueReportDoesNotRequireHostInterface(t *testing.T) {
 
 func TestAnalyzePackagesDoNotRequireCatchAllHost(t *testing.T) {
 	for relativePath, forbidden := range map[string]string{
-		"cmd/browser-agent/internal/toolanalyze/deps.go":                       "type Deps interface {",
-		"cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go": "type Host interface {",
-		"cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go":      "type Deps interface {",
+		"internal/tools/analyze/handler/deps.go":                       "type Deps interface {",
+		"internal/tools/analyze/handler/analyzedispatch/dispatcher.go": "type Host interface {",
+		"internal/tools/analyze/handler/combinedaudit/handler.go":      "type Deps interface {",
 	} {
 		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
 		if err != nil {
@@ -611,10 +611,10 @@ func TestInteractTestsDoNotMirrorRootAccessor(t *testing.T) {
 func TestPackagesDoNotReexportCanonicalLogEntry(t *testing.T) {
 	for _, relativePath := range []string{
 		"internal/tools/mcp/types.go",
-		"internal/server/main_handlers.go",
+		"internal/composition/serverlog/main_handlers.go",
 		"internal/observation/pagination/entries.go",
 		"internal/analysis/security/scan/scan.go",
-		"cmd/browser-agent/internal/logstore/store.go",
+		"internal/composition/logstate/store.go",
 	} {
 		path := filepath.Join(projectRoot(), relativePath)
 		source, err := os.ReadFile(path)
@@ -654,7 +654,7 @@ func TestHardeningLintTracksCanonicalRouteAndGoroutineOwners(t *testing.T) {
 	text := string(source)
 	for _, canonicalOwner := range []string{
 		"internal/tools/clientreg/http/handler.go",
-		"internal/util/response.go",
+		"internal/platform/util/response.go",
 	} {
 		if !strings.Contains(text, canonicalOwner) {
 			t.Errorf("hardening lint does not recognize canonical owner %s", canonicalOwner)

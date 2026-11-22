@@ -12,7 +12,7 @@ code_paths:
   - internal/telemetry/usage_counter.go
   - internal/platform/state/fault/fault.go
   - internal/platform/state/file/statefile.go
-  - cmd/browser-agent/internal/operationalapi/handler.go
+  - internal/composition/http/operational/handler.go
   - internal/tools/usage/key.go
   - internal/lifecycle/doctor/statediag/collector.go
   - internal/lifecycle/doctor/incident/registry.go
@@ -28,7 +28,7 @@ test_paths:
   - internal/telemetry/e2e_usage_summary_test.go
   - internal/telemetry/install_id_test.go
   - internal/telemetry/usage_counter_test.go
-  - cmd/browser-agent/internal/operationalapi/debug_test.go
+  - internal/composition/http/operational/debug_test.go
   - internal/tools/usage/key_test.go
   - cmd/browser-agent/composition_test.go
   - internal/lifecycle/doctor/statediag/collector_test.go

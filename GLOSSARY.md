@@ -28,12 +28,12 @@ public interface listed here. Details are in the architecture guides.
 | **Browser Command** | Command lifecycle: queue, delivery eligibility, progress, results, expiry, lost commands | `internal/browsercommand/`, `internal/browsercommand/query/` | `src/background/commands/`, `src/background/pending-queries.ts`, `src/background/exec/`, `src/background/dom/` (as **Browser Command Execution**) |
 | **Tab Tracking & Pilot** | Tracked-tab selection, tracking continuity, content readiness, Pilot intent | (projection only, in Connection & Sync) | `src/lib/tabs/`, `src/background/runtime-state/tracking-continuity.ts`, `src/background/runtime-state/content-readiness.ts`, `src/background/runtime-state/pilot-state.ts` |
 | **Observation Capture** | Retention and queries for captured browser observations | `internal/observation/store/telemetry/`, `internal/observation/store/logs/`, `internal/observation/store/perf/` and their ring stores | `src/inject/`, `src/content/`, `src/background/sync/batcher-instances.ts` (capture and batching) |
-| **Extension Ingestion** | HTTP endpoints that accept extension uploads and write them to their owners | `internal/ingestion/http/`, `cmd/browser-agent/internal/mediaapi/` | — |
+| **Extension Ingestion** | HTTP endpoints that accept extension uploads and write them to their owners | `internal/ingestion/http/`, `internal/ingestion/media/` | — |
 | **Event Recording** | Recordings of user-flow events, their persistence, playback and diff | `internal/recording/`, `internal/tools/recording/` | — |
 | **Screen Recording** | Live tab video capture and saved video files | `internal/screenrec/` (MCP start/stop, saved-video path) | `src/background/recording/`, `src/offscreen/recording-worker.ts`, `src/popup/recording/` |
 | **Application Use Cases** | Transport-independent workflows behind the tools, each in its owning context's app folder | `internal/page/app/`, `internal/analysis/app/` | — |
-| **Tool Surface** | The five MCP tools: schemas, dispatch, response shaping | `internal/tools/mcp/`, `internal/tools/schema/`, `internal/tools/`, `cmd/browser-agent/internal/toolobserve/`, `internal/tools/interact/handler/`, `internal/tools/asynccommand/` | — |
-| **Composition** | Construction and wiring of every owner | `cmd/browser-agent/server.go`, `cmd/browser-agent/internal/toolruntime/`, `internal/composition/capture/capture.go` | `src/background/init.ts`, `src/background.ts` |
+| **Tool Surface** | The five MCP tools: schemas, dispatch, response shaping | `internal/tools/mcp/`, `internal/tools/schema/`, `internal/tools/`, `internal/tools/observe/handler/`, `internal/tools/interact/handler/`, `internal/tools/asynccommand/` | — |
+| **Composition** | Construction and wiring of every owner | `cmd/browser-agent/server.go`, `internal/composition/toolruntime/`, `internal/composition/capture/capture.go` | `src/background/init.ts`, `src/background.ts` |
 | **Process Lifecycle** | Bridge, daemon spawn/respawn, single-instance governance | `internal/lifecycle/bridge/`, `internal/lifecycle/daemon/`, `internal/lifecycle/instance/gov/` | — |
 | **Product Telemetry** | Anonymous usage beacons. Opt out with `KABOOM_TELEMETRY=off` | `internal/telemetry/` | — |
 | **Install & Release** | Packaging, version sync, publish | `npm/`, `scripts/release/` | `extension/` (built artifacts) |
@@ -46,7 +46,7 @@ A module that translates one transport into an owner's interface without
 owning domain state. Examples are MCP tool handlers, HTTP handlers and Chrome
 event listeners.
 - Context: Tool Surface (MCP adapters), Extension Ingestion (HTTP adapters), Tab Tracking & Pilot (Chrome lifecycle adapters).
-- Code: `cmd/browser-agent/internal/toolobserve/dispatcher.go`, `internal/ingestion/http/handlers.go:Handlers`, `src/background/event-listeners.ts:handleTrackedTabUrlChange`.
+- Code: `internal/tools/observe/handler/dispatcher.go`, `internal/ingestion/http/handlers.go:Handlers`, `src/background/event-listeners.ts:handleTrackedTabUrlChange`.
 - Avoid: "handler" for a module that also owns state. An adapter that holds state is an owner.
 
 ### Bounded context
@@ -118,7 +118,7 @@ through it.
 The place where concrete owners are constructed and injected. Kaboom has two
 on the daemon side and one in the extension.
 - Context: Composition.
-- Code: `cmd/browser-agent/server.go:setupHTTPRoutes`, `cmd/browser-agent/internal/toolruntime/tools_core.go:NewToolHandler`, `src/background/init.ts:initializeExtension`.
+- Code: `cmd/browser-agent/server.go:setupHTTPRoutes`, `internal/composition/toolruntime/tools_core.go:NewToolHandler`, `src/background/init.ts:initializeExtension`.
 - Avoid: building owners anywhere else. The layering check rejects `capture.NewCapture` outside `cmd/browser-agent`.
 
 ### Connection generation

@@ -12,8 +12,8 @@ code_anchors:
   - src/content/ui/tracked-hover-launcher.ts
   - src/background/message-handlers.ts
   - cmd/browser-agent/handler.go
-  - cmd/browser-agent/internal/terminal/intent/handlers.go
-  - cmd/browser-agent/internal/terminal/intent_store.go
+  - internal/terminal/adapters/intent/handlers.go
+  - internal/terminal/adapters/intent_store.go
   - plugin/kaboom-workflows/commands/audit.md
   - npm/kaboom-agentic-browser/skills/audit/SKILL.md
   - npm/kaboom-agentic-browser/skills/qa/SKILL.md
@@ -96,8 +96,8 @@ Related feature docs:
 - `src/content/ui/tracked-hover-launcher.ts`
 - `src/background/message-handlers.ts`
 - `cmd/browser-agent/handler.go`
-- `cmd/browser-agent/internal/terminal/intent/handlers.go`
-- `cmd/browser-agent/internal/terminal/intent_store.go`
+- `internal/terminal/adapters/intent/handlers.go`
+- `internal/terminal/adapters/intent_store.go`
 - `plugin/kaboom-workflows/commands/audit.md`
 - `npm/kaboom-agentic-browser/skills/audit/SKILL.md`
 - `npm/kaboom-agentic-browser/skills/qa/SKILL.md`

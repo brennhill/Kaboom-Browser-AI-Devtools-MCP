@@ -50,7 +50,7 @@ code_paths:
   - scripts/uat/runners/test-all-tools-comprehensive.sh
   - scripts/maintenance/cleanup-test-daemons.sh
   - internal/lifecycle/testsupport/testowner/testowner.go
-  - cmd/browser-agent/internal/integrationtest/harness.go
+  - internal/composition/testsupport/integration/harness.go
   - cmd/browser-agent/server.go
   - internal/composition/http/testpages/http.go
   - internal/composition/http/testpages/websocket.go
@@ -77,15 +77,15 @@ code_paths:
   - scripts/contracts/goarchitecture/main.go
 test_paths:
   - scripts/contracts/uatcoverage/main_test.go
-  - cmd/browser-agent/internal/responsegate/drift_test.go
-  - cmd/browser-agent/internal/responsegate/harness_test.go
+  - internal/composition/responsegate/drift_test.go
+  - internal/composition/responsegate/harness_test.go
   - scripts/contracts/responsecontract/cat33_test.go
   - scripts/contracts/responsecontract/ratchet_test.go
   - scripts/quality/affected/affected-tests.test.mjs
   - tests/cli/uat-assertions/process-census.test.cjs
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/uat/orchestration/uat-result-lib.test.mjs
-  - cmd/browser-agent/internal/integrationtest/harness_test.go
+  - internal/composition/testsupport/integration/harness_test.go
   - internal/tools/asynccommand/handler_test.go
   - tests/cli/contracts/smoke-layout-contract.test.cjs
   - tests/extension/contracts/tooling-contracts.test.js

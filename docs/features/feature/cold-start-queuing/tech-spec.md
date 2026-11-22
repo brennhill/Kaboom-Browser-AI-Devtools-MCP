@@ -10,7 +10,7 @@ last_verified_date: 2026-03-05
 # Cold-Start Queuing Tech Spec
 
 ## Architecture
-- Gate entry: `requireExtension()` in `cmd/browser-agent/internal/toolruntime/tools_core.go`
+- Gate entry: `requireExtension()` in `internal/composition/toolruntime/tools_core.go`
 - Wait primitive: `capture.WaitForExtensionConnected(ctx, timeout)`
 - Poll cadence: 100ms ticker with context cancellation
 

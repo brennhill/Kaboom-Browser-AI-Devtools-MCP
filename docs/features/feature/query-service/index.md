@@ -24,12 +24,12 @@ code_paths:
   - internal/browsercommand/ports/ports.go
   - scripts/contracts/layering/main.go
   - scripts/contracts/layering/command_owner.go
-  - cmd/browser-agent/internal/mediaapi/handler.go
+  - internal/ingestion/media/handler.go
   - internal/screenrec/save.go
-  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
+  - internal/tools/analyze/handler/annotationanalysis/handler.go
   - internal/tools/configure/handler/qafixture/transport/command.go
-  - cmd/browser-agent/internal/toolobserve/dispatcher.go
-  - cmd/browser-agent/internal/toolruntime/interact_wiring.go
+  - internal/tools/observe/handler/dispatcher.go
+  - internal/composition/toolruntime/interact_wiring.go
   - internal/page/app/storage/execute.go
   - internal/composition/capture/capture.go
   - internal/sync/runtime/handler.go

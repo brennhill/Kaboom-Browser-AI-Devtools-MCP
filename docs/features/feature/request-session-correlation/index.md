@@ -24,7 +24,7 @@ code_paths:
   - internal/analysis/snapshots/tool-handler.go
   - internal/tools/schema/configure/properties_runtime.go
   - internal/platform/types/snapshot.go
-  - internal/util/media.go
+  - internal/platform/util/media.go
 test_paths:
   - cmd/browser-agent/testdata/mcp-tools-list.golden.json
   - internal/observation/clientstore/owner_test.go
@@ -78,7 +78,7 @@ last_verified_date: 2026-08-04
 diff modules consume those types directly; they do not re-export package-local
 aliases. Snapshot manager, comparison, and diff tests exercise the same
 canonical contract. Network diffing likewise consumes URL-path normalization
-directly from `internal/util`, without routing through capture.
+directly from `internal/platform/util`, without routing through capture.
 The session package is bounded at ten files. `snapshot-manager.go` owns its
 aggregate state, reader boundary, validation constants, and CRUD helpers;
 runtime projection, comparison, and MCP dispatch retain distinct owners.

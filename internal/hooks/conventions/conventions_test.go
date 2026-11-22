@@ -269,7 +269,7 @@ func TestFormat_HelperSuggestion(t *testing.T) {
 		{
 			Pattern: "http.Client{",
 			Examples: []string{
-				"  internal/server/client.go:9: client := &http.Client{Timeout: 5 * time.Second}",
+				"  internal/composition/serverlog/client.go:9: client := &http.Client{Timeout: 5 * time.Second}",
 				"  main.go:9: client := &http.Client{Timeout: 500 * time.Millisecond}",
 			},
 		},

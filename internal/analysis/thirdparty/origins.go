@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 )
 
 // resolveCustomLists loads custom lists from file if needed.

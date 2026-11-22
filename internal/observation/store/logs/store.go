@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/debuglog"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/debuglog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/pressure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )

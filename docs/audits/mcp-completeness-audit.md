@@ -269,13 +269,13 @@ The integration test (`integration_test.go` lines 151-157) calls the following m
 | vitals | YES | internal/tools/observe/session/session_test.go |
 | page | YES | internal/tools/observe/page/page_readiness_test.go |
 | tabs | YES | internal/tools/observe/session/session_test.go |
-| pilot | YES | cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go |
+| pilot | YES | internal/tools/observe/handler/dispatcher_commands_test.go |
 | timeline | YES | internal/tools/observe/timeline/correlation_test.go |
 | error_bundles | YES | internal/tools/observe/timeline/correlation_test.go |
 | screenshot | YES | internal/tools/observe/page/page_state_test.go |
-| command_result | YES | cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go |
-| pending_commands | YES | cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go |
-| failed_commands | YES | cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go |
+| command_result | YES | internal/tools/observe/handler/dispatcher_commands_test.go |
+| pending_commands | YES | internal/tools/observe/handler/dispatcher_commands_test.go |
+| failed_commands | YES | internal/tools/observe/handler/dispatcher_commands_test.go |
 | saved_videos | YES | internal/screenrec/screenrec_test.go |
 | recordings | YES | internal/tools/recording/handler_test.go |
 | recording_actions | YES | internal/tools/recording/handler_test.go |

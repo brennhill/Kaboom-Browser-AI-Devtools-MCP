@@ -5,7 +5,7 @@
   "input": {
     "tool_name": "Edit",
     "tool_input": {
-      "file_path": "internal/server/main_response.go",
+      "file_path": "internal/composition/serverlog/main_response.go",
       "new_string": "rows, err := db.Query(\"SELECT * FROM sessions WHERE id = ?\", id)"
     }
   },

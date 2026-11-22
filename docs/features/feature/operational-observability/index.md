@@ -8,27 +8,27 @@ last_reviewed: 2026-11-21
 code_paths:
   - internal/observation/pressure/stats.go
   - internal/observation/store/perf/store.go
-  - internal/capture/settingscache/loader.go
+  - internal/sync/settingscache/loader.go
   - internal/lifecycle/doctor/incident/registry.go
   - internal/lifecycle/doctor/incident/store.go
   - internal/lifecycle/doctor/incident/projections.go
   - internal/lifecycle/doctor/incident/support.go
   - internal/lifecycle/doctor/statediag/collector.go
   - internal/telemetry/beacon.go
-  - cmd/browser-agent/internal/doctorsupport/handler.go
-  - cmd/browser-agent/internal/doctorsupport/projections.go
-  - cmd/browser-agent/internal/operationalapi/handler.go
+  - internal/lifecycle/doctor/support/handler.go
+  - internal/lifecycle/doctor/support/projections.go
+  - internal/composition/http/operational/handler.go
   - internal/tools/schema/configure/properties_core.go
 test_paths:
   - internal/observation/store/logs/store_test.go
   - internal/observation/store/perf/store_test.go
-  - internal/capture/settingscache/loader_test.go
+  - internal/sync/settingscache/loader_test.go
   - internal/observation/testsupport/pipeline/accessor_unit_test.go
   - internal/lifecycle/doctor/incident/store_test.go
   - internal/lifecycle/doctor/incident/support_test.go
-  - cmd/browser-agent/internal/doctorsupport/handler_test.go
-  - cmd/browser-agent/internal/doctorsupport/projections_test.go
-  - cmd/browser-agent/internal/operationalapi/coverage_contract_test.go
+  - internal/lifecycle/doctor/support/handler_test.go
+  - internal/lifecycle/doctor/support/projections_test.go
+  - internal/composition/http/operational/coverage_contract_test.go
   - internal/lifecycle/doctor/statediag/collector_test.go
   - internal/telemetry/contract_compliance_test.go
   - internal/telemetry/beacon_test.go

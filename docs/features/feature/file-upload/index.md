@@ -13,7 +13,7 @@ code_paths:
   - cmd/browser-agent/config.go
   - internal/lifecycle/startupconfig/paths.go
   - internal/lifecycle/startupconfig/runtime.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_core.go
   - internal/upload/httpapi/handlers.go
   - internal/upload/handlers.go
   - internal/upload/form_submit.go

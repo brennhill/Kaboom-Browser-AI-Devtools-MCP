@@ -6,11 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
-  - cmd/browser-agent/internal/toolobserve/dispatcher.go
-  - cmd/browser-agent/internal/toolobserve/deps.go
-  - cmd/browser-agent/internal/toolobserve/inbox.go
+  - internal/tools/observe/handler/dispatcher.go
+  - internal/tools/observe/handler/deps.go
+  - internal/tools/observe/handler/inbox.go
   - internal/tools/configure/handler/clear.go
   - internal/tools/configure/handler/runtime_modes.go
   - internal/observation/streaming/stream.go
@@ -29,8 +29,8 @@ test_paths:
   - internal/observation/streaming/stream_test.go
   - internal/observation/streaming/alertbuf/alertbuf_test.go
   - internal/push/inbox_test.go
-  - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
-  - cmd/browser-agent/internal/toolobserve/toolobserve_test.go
+  - internal/tools/observe/handler/toolobserve_coverage_test.go
+  - internal/tools/observe/handler/toolobserve_test.go
   - internal/tools/configure/handler/handlers_coverage_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
 last_verified_version: 0.7.12

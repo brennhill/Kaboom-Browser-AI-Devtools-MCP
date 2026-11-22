@@ -9,7 +9,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 	"os"
 	"syscall"
 	"time"

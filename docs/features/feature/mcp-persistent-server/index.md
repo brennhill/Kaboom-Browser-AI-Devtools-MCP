@@ -30,11 +30,11 @@ code_paths:
   - internal/lifecycle/startupconfig/paths.go
   - internal/lifecycle/startupconfig/runtime.go
   - internal/lifecycle/runtimeconfig/parallel.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
-  - cmd/browser-agent/internal/toolruntime/server_state.go
-  - cmd/browser-agent/internal/toolruntime/modes.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
+  - internal/composition/toolruntime/server_state.go
+  - internal/composition/toolruntime/modes.go
   - internal/tools/usage/key.go
   - internal/tools/postprocess/postprocess.go
   - internal/analysis/snapshots/snapshot-manager.go
@@ -42,9 +42,9 @@ code_paths:
   - internal/tools/catalog/catalog.go
   - cmd/browser-agent/server.go
   - internal/lifecycle/doctor/incident/projections.go
-  - cmd/browser-agent/internal/health/response_builders.go
-  - cmd/browser-agent/internal/health/response_types.go
-  - cmd/browser-agent/internal/health/doctor_live_checks.go
+  - internal/tools/commandhealth/response_builders.go
+  - internal/tools/commandhealth/response_types.go
+  - internal/tools/commandhealth/doctor_live_checks.go
   - internal/tools/playbooks/resources/catalog.go
   - internal/tools/playbooks/resources/resolver.go
   - internal/tools/playbooks/resources/audits.go
@@ -68,25 +68,25 @@ code_paths:
   - internal/platform/state/file/statefile.go
   - internal/lifecycle/daemon/recovery/reclaimer.go
   - internal/composition/http/listener/server.go
-  - cmd/browser-agent/internal/integrationtest/harness.go
+  - internal/composition/testsupport/integration/harness.go
   - internal/lifecycle/procctl/stop.go
   - cmd/browser-agent/main_connection_mcp.go
   - internal/lifecycle/procctl/pidfile.go
   - internal/lifecycle/procctl/port.go
   - internal/lifecycle/procctl/argv0.go
-  - cmd/browser-agent/internal/operationalapi/handler.go
+  - internal/composition/http/operational/handler.go
   - internal/composition/http/dashboard/handler.go
   - internal/composition/http/dashboard/dashboard.html
   - internal/composition/http/dashboard/diagnostics.html
   - internal/composition/http/dashboard/logs.html
   - internal/composition/http/dashboard/setup.html
   - internal/composition/http/dashboard/docs.html
-  - cmd/browser-agent/internal/logstore/store.go
-  - cmd/browser-agent/internal/logstore/async.go
-  - cmd/browser-agent/internal/logstore/accessors.go
-  - cmd/browser-agent/internal/logstore/persistence.go
-  - cmd/browser-agent/internal/logstore/validate.go
-  - cmd/browser-agent/internal/logstore/seed.go
+  - internal/composition/logstate/store.go
+  - internal/composition/logstate/async.go
+  - internal/composition/logstate/accessors.go
+  - internal/composition/logstate/persistence.go
+  - internal/composition/logstate/validate.go
+  - internal/composition/logstate/seed.go
   - internal/lifecycle/exitdiag/recorder.go
   - internal/platform/httpguard/middleware.go
   - internal/composition/http/openapi/response.go
@@ -100,23 +100,23 @@ code_paths:
   - internal/lifecycle/upgrade/versioncheck/checker.go
   - internal/platform/diag/output.go
   - internal/platform/diag/debug_file.go
-  - cmd/browser-agent/internal/mediaapi/screenshots.go
+  - internal/ingestion/media/screenshots.go
   - internal/platform/identity/mcp.go
-  - internal/util/proc_unix.go
-  - internal/util/proc_windows.go
+  - internal/platform/util/proc_unix.go
+  - internal/platform/util/proc_windows.go
 test_paths:
-  - cmd/browser-agent/internal/toolruntime/composition_test.go
-  - cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go
+  - internal/composition/toolruntime/composition_test.go
+  - internal/tools/observe/handler/dispatcher_commands_test.go
   - internal/lifecycle/daemon/recovery/primitives_test.go
   - internal/lifecycle/daemon/recovery/reclaimer_test.go
   - internal/composition/http/listener/server_test.go
-  - cmd/browser-agent/internal/integrationtest/harness_test.go
+  - internal/composition/testsupport/integration/harness_test.go
   - internal/lifecycle/daemon/helpers_test.go
   - internal/lifecycle/listenport/store_test.go
   - internal/platform/warningqueue/queue_test.go
   - internal/composition/http/openapi/openapi_test.go
   - internal/lifecycle/runtimeconfig/parallel_test.go
-  - cmd/browser-agent/internal/doctorsupport/projections_test.go
+  - internal/lifecycle/doctor/support/projections_test.go
   - internal/lifecycle/daemon/startup_throttle_test.go
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/release/install-upgrade-regression.mjs
@@ -138,7 +138,7 @@ test_paths:
   - internal/tools/mcp/errors_test.go
   - internal/tools/postprocess/postprocess_test.go
   - internal/tools/guard/guards_test.go
-  - cmd/browser-agent/internal/health/health_test.go
+  - internal/tools/commandhealth/health_test.go
   - internal/tools/mcpserver/response/owner_test.go
   - internal/tools/mcpserver/endpoint/handler_test.go
   - internal/composition/appruntime/runtime_test.go
@@ -161,7 +161,7 @@ test_paths:
   - internal/lifecycle/bridge/bridge_unit_test.go
   - internal/tools/module/registry_test.go
   - internal/tools/catalog/catalog_test.go
-  - cmd/browser-agent/internal/terminal/status/status_test.go
+  - internal/terminal/adapters/status/status_test.go
   - cmd/browser-agent/integration/bridge/startup_contention_test.go
   - cmd/browser-agent/integration/bridge/faststart_extended_test.go
   - internal/tools/mcpserver/http/handler_test.go
@@ -174,9 +174,9 @@ test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - internal/composition/http/dashboard/branding_test.go
   - scripts/contracts/openapibranding/branding_test.go
-  - cmd/browser-agent/internal/operationalapi/debug_test.go
-  - cmd/browser-agent/internal/operationalapi/health_test.go
-  - cmd/browser-agent/internal/operationalapi/coverage_contract_test.go
+  - internal/composition/http/operational/debug_test.go
+  - internal/composition/http/operational/health_test.go
+  - internal/composition/http/operational/coverage_contract_test.go
   - internal/composition/http/dashboard/handler_test.go
   - internal/lifecycle/exitdiag/recorder_test.go
 
@@ -196,9 +196,9 @@ test_paths:
   - internal/lifecycle/procctl/port_test.go
   - internal/lifecycle/procctl/port_netstat_test.go
   - internal/lifecycle/procctl/argv0_test.go
-  - cmd/browser-agent/internal/logstore/store_test.go
-  - cmd/browser-agent/internal/logstore/async_test.go
-  - cmd/browser-agent/internal/logstore/validate_test.go
+  - internal/composition/logstate/store_test.go
+  - internal/composition/logstate/async_test.go
+  - internal/composition/logstate/validate_test.go
   - tests/regression/08-fast-start/test-fast-start.sh
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-29
@@ -386,7 +386,7 @@ does not maintain parallel lazy registries.
 
 ## Where the tool runtime lives
 
-The five-tool dispatcher is `cmd/browser-agent/internal/toolruntime`, not package
+The five-tool dispatcher is `internal/composition/toolruntime`, not package
 `main`. It receives its dependencies as a `ServerState` value — logs, warnings,
 incidents, push inbox, active codebase, annotation runtime, listen port, upload
 security, terminal status, intent store, and state recovery — which `*Server`

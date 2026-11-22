@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-11-21
 code_paths:
   - internal/tools/guard/guards.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_core.go
   - internal/tools/interact/handler/action_owners.go
   - src/popup.ts
   - src/popup/ai-web-pilot.ts

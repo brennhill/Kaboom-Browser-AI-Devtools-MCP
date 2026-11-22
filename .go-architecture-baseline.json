@@ -105,15 +105,15 @@
       "mutable_globals": 0,
       "exports": 2
     },
-    "cmd/browser-agent/internal/ciapi/handlers.go": {
+    "internal/composition/http/ci/handlers.go": {
       "mutable_globals": 0,
       "exports": 6
     },
-    "cmd/browser-agent/internal/ciapi/snapshot.go": {
+    "internal/composition/http/ci/snapshot.go": {
       "mutable_globals": 0,
       "exports": 2
     },
-    "cmd/browser-agent/internal/ciapi/types.go": {
+    "internal/composition/http/ci/types.go": {
       "mutable_globals": 0,
       "exports": 3
     },
@@ -189,11 +189,11 @@
       "mutable_globals": 5,
       "exports": 9
     },
-    "cmd/browser-agent/internal/doctorsupport/handler.go": {
+    "internal/lifecycle/doctor/support/handler.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/doctorsupport/projections.go": {
+    "internal/lifecycle/doctor/support/projections.go": {
       "mutable_globals": 0,
       "exports": 1
     },
@@ -201,35 +201,35 @@
       "mutable_globals": 0,
       "exports": 5
     },
-    "cmd/browser-agent/internal/health/command_execution_readiness.go": {
+    "internal/tools/commandhealth/command_execution_readiness.go": {
       "mutable_globals": 0,
       "exports": 2
     },
-    "cmd/browser-agent/internal/health/deps.go": {
+    "internal/tools/commandhealth/deps.go": {
       "mutable_globals": 0,
       "exports": 5
     },
-    "cmd/browser-agent/internal/health/doctor.go": {
+    "internal/tools/commandhealth/doctor.go": {
       "mutable_globals": 0,
       "exports": 5
     },
-    "cmd/browser-agent/internal/health/doctor_fastpath_telemetry.go": {
+    "internal/tools/commandhealth/doctor_fastpath_telemetry.go": {
       "mutable_globals": 0,
       "exports": 4
     },
-    "cmd/browser-agent/internal/health/doctor_live_checks.go": {
+    "internal/tools/commandhealth/doctor_live_checks.go": {
       "mutable_globals": 0,
       "exports": 6
     },
-    "cmd/browser-agent/internal/health/metrics.go": {
+    "internal/tools/commandhealth/metrics.go": {
       "mutable_globals": 0,
       "exports": 9
     },
-    "cmd/browser-agent/internal/health/response_builders.go": {
+    "internal/tools/commandhealth/response_builders.go": {
       "mutable_globals": 0,
       "exports": 10
     },
-    "cmd/browser-agent/internal/health/response_types.go": {
+    "internal/tools/commandhealth/response_types.go": {
       "mutable_globals": 0,
       "exports": 12
     },
@@ -253,7 +253,7 @@
       "mutable_globals": 1,
       "exports": 4
     },
-    "cmd/browser-agent/internal/integrationtest/harness.go": {
+    "internal/composition/testsupport/integration/harness.go": {
       "mutable_globals": 1,
       "exports": 8
     },
@@ -269,27 +269,27 @@
       "mutable_globals": 0,
       "exports": 4
     },
-    "cmd/browser-agent/internal/logstore/accessors.go": {
+    "internal/composition/logstate/accessors.go": {
       "mutable_globals": 0,
       "exports": 14
     },
-    "cmd/browser-agent/internal/logstore/async.go": {
+    "internal/composition/logstate/async.go": {
       "mutable_globals": 0,
       "exports": 5
     },
-    "cmd/browser-agent/internal/logstore/persistence.go": {
+    "internal/composition/logstate/persistence.go": {
       "mutable_globals": 0,
       "exports": 4
     },
-    "cmd/browser-agent/internal/logstore/seed.go": {
+    "internal/composition/logstate/seed.go": {
       "mutable_globals": 0,
       "exports": 2
     },
-    "cmd/browser-agent/internal/logstore/store.go": {
+    "internal/composition/logstate/store.go": {
       "mutable_globals": 0,
       "exports": 5
     },
-    "cmd/browser-agent/internal/logstore/validate.go": {
+    "internal/composition/logstate/validate.go": {
       "mutable_globals": 1,
       "exports": 3
     },
@@ -321,15 +321,15 @@
       "mutable_globals": 0,
       "exports": 8
     },
-    "cmd/browser-agent/internal/mediaapi/draw_mode.go": {
+    "internal/ingestion/media/draw_mode.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/mediaapi/handler.go": {
+    "internal/ingestion/media/handler.go": {
       "mutable_globals": 0,
       "exports": 4
     },
-    "cmd/browser-agent/internal/mediaapi/screenshots.go": {
+    "internal/ingestion/media/screenshots.go": {
       "mutable_globals": 0,
       "exports": 2
     },
@@ -341,7 +341,7 @@
       "mutable_globals": 0,
       "exports": 9
     },
-    "cmd/browser-agent/internal/operationalapi/handler.go": {
+    "internal/composition/http/operational/handler.go": {
       "mutable_globals": 0,
       "exports": 12
     },
@@ -465,59 +465,59 @@
       "mutable_globals": 0,
       "exports": 6
     },
-    "cmd/browser-agent/internal/telemetryapi/handler.go": {
+    "internal/observation/adapters/telemetryapi/handler.go": {
       "mutable_globals": 0,
       "exports": 2
     },
-    "cmd/browser-agent/internal/terminal/assets/assets.go": {
+    "internal/terminal/adapters/assets/assets.go": {
       "mutable_globals": 1,
       "exports": 1
     },
-    "cmd/browser-agent/internal/terminal/deps.go": {
+    "internal/terminal/adapters/deps.go": {
       "mutable_globals": 0,
       "exports": 2
     },
-    "cmd/browser-agent/internal/terminal/dimensions/dimensions.go": {
+    "internal/terminal/adapters/dimensions/dimensions.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/terminal/directorybrowser/browser.go": {
+    "internal/terminal/adapters/directorybrowser/browser.go": {
       "mutable_globals": 0,
       "exports": 4
     },
-    "cmd/browser-agent/internal/terminal/handlers.go": {
+    "internal/terminal/adapters/handlers.go": {
       "mutable_globals": 0,
       "exports": 10
     },
-    "cmd/browser-agent/internal/terminal/intent/handlers.go": {
+    "internal/terminal/adapters/intent/handlers.go": {
       "mutable_globals": 0,
       "exports": 5
     },
-    "cmd/browser-agent/internal/terminal/intent/store.go": {
+    "internal/terminal/adapters/intent/store.go": {
       "mutable_globals": 0,
       "exports": 13
     },
-    "cmd/browser-agent/internal/terminal/server.go": {
+    "internal/terminal/adapters/server.go": {
       "mutable_globals": 0,
       "exports": 3
     },
-    "cmd/browser-agent/internal/terminal/sessionrelay/relay.go": {
+    "internal/terminal/adapters/sessionrelay/relay.go": {
       "mutable_globals": 1,
       "exports": 24
     },
-    "cmd/browser-agent/internal/terminal/spawnpolicy/retry.go": {
+    "internal/terminal/adapters/spawnpolicy/retry.go": {
       "mutable_globals": 0,
       "exports": 4
     },
-    "cmd/browser-agent/internal/terminal/status/status.go": {
+    "internal/terminal/adapters/status/status.go": {
       "mutable_globals": 0,
       "exports": 7
     },
-    "cmd/browser-agent/internal/terminal/supervisor/supervisor.go": {
+    "internal/terminal/adapters/supervisor/supervisor.go": {
       "mutable_globals": 0,
       "exports": 5
     },
-    "cmd/browser-agent/internal/terminal/wstransport/ws.go": {
+    "internal/terminal/adapters/wstransport/ws.go": {
       "mutable_globals": 0,
       "exports": 8
     },
@@ -553,83 +553,83 @@
       "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go": {
+    "internal/tools/analyze/handler/analyzedispatch/dispatcher.go": {
       "mutable_globals": 0,
       "exports": 9
     },
-    "cmd/browser-agent/internal/toolanalyze/analyzedispatch/performance_trace.go": {
+    "internal/tools/analyze/handler/analyzedispatch/performance_trace.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/toolanalyze/analyzedispatch/react_profile.go": {
+    "internal/tools/analyze/handler/analyzedispatch/react_profile.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/toolanalyze/annotation_hints.go": {
+    "internal/tools/analyze/handler/annotation_hints.go": {
       "mutable_globals": 0,
       "exports": 2
     },
-    "cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go": {
+    "internal/tools/analyze/handler/annotationanalysis/handler.go": {
       "mutable_globals": 0,
       "exports": 5
     },
-    "cmd/browser-agent/internal/toolanalyze/annotations_projects.go": {
+    "internal/tools/analyze/handler/annotations_projects.go": {
       "mutable_globals": 0,
       "exports": 3
     },
-    "cmd/browser-agent/internal/toolanalyze/audit_scoring.go": {
+    "internal/tools/analyze/handler/audit_scoring.go": {
       "mutable_globals": 0,
       "exports": 3
     },
-    "cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go": {
+    "internal/tools/analyze/handler/combinedaudit/handler.go": {
       "mutable_globals": 1,
       "exports": 3
     },
-    "cmd/browser-agent/internal/toolanalyze/deps.go": {
+    "internal/tools/analyze/handler/deps.go": {
       "mutable_globals": 0,
       "exports": 2
     },
-    "cmd/browser-agent/internal/toolanalyze/designdrift/handler.go": {
+    "internal/tools/analyze/handler/designdrift/handler.go": {
       "mutable_globals": 0,
       "exports": 2
     },
-    "cmd/browser-agent/internal/toolanalyze/designdrift/spacing.go": {
+    "internal/tools/analyze/handler/designdrift/spacing.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/toolanalyze/inspect/dom.go": {
+    "internal/tools/analyze/handler/inspect/dom.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/toolanalyze/inspect/forms.go": {
+    "internal/tools/analyze/handler/inspect/forms.go": {
       "mutable_globals": 0,
       "exports": 8
     },
-    "cmd/browser-agent/internal/toolanalyze/linkvalidation/handler.go": {
+    "internal/tools/analyze/handler/linkvalidation/handler.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/toolanalyze/navigation.go": {
+    "internal/tools/analyze/handler/navigation.go": {
       "mutable_globals": 0,
       "exports": 3
     },
-    "cmd/browser-agent/internal/toolanalyze/page_issues_summary.go": {
+    "internal/tools/analyze/handler/page_issues_summary.go": {
       "mutable_globals": 1,
       "exports": 5
     },
-    "cmd/browser-agent/internal/toolanalyze/pageissues/handler.go": {
+    "internal/tools/analyze/handler/pageissues/handler.go": {
       "mutable_globals": 1,
       "exports": 1
     },
-    "cmd/browser-agent/internal/toolanalyze/securityaudit/handler.go": {
+    "internal/tools/analyze/handler/securityaudit/handler.go": {
       "mutable_globals": 0,
       "exports": 4
     },
-    "cmd/browser-agent/internal/toolanalyze/verificationhandler/handler.go": {
+    "internal/tools/analyze/handler/verificationhandler/handler.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/toolanalyze/visual/handler.go": {
+    "internal/tools/analyze/handler/visual/handler.go": {
       "mutable_globals": 0,
       "exports": 4
     },
@@ -821,31 +821,31 @@
       "mutable_globals": 0,
       "exports": 14
     },
-    "cmd/browser-agent/internal/toolobserve/deps.go": {
+    "internal/tools/observe/handler/deps.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/toolobserve/dispatcher.go": {
+    "internal/tools/observe/handler/dispatcher.go": {
       "mutable_globals": 0,
       "exports": 8
     },
-    "cmd/browser-agent/internal/toolobserve/inbox.go": {
+    "internal/tools/observe/handler/inbox.go": {
       "mutable_globals": 0,
       "exports": 2
     },
-    "cmd/browser-agent/internal/toolobserve/page_inventory.go": {
+    "internal/tools/observe/handler/page_inventory.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/toolobserve/registry.go": {
+    "internal/tools/observe/handler/registry.go": {
       "mutable_globals": 1,
       "exports": 1
     },
-    "cmd/browser-agent/internal/toolobserve/response.go": {
+    "internal/tools/observe/handler/response.go": {
       "mutable_globals": 0,
       "exports": 2
     },
-    "cmd/browser-agent/internal/toolobserve/site_menus.go": {
+    "internal/tools/observe/handler/site_menus.go": {
       "mutable_globals": 0,
       "exports": 1
     },
@@ -881,23 +881,23 @@
       "mutable_globals": 0,
       "exports": 4
     },
-    "cmd/browser-agent/internal/toolruntime/modes.go": {
+    "internal/composition/toolruntime/modes.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "cmd/browser-agent/internal/toolruntime/server_state.go": {
+    "internal/composition/toolruntime/server_state.go": {
       "mutable_globals": 0,
       "exports": 7
     },
-    "cmd/browser-agent/internal/toolruntime/tools_configure.go": {
+    "internal/composition/toolruntime/tools_configure.go": {
       "mutable_globals": 0,
       "exports": 2
     },
-    "cmd/browser-agent/internal/toolruntime/tools_core.go": {
+    "internal/composition/toolruntime/tools_core.go": {
       "mutable_globals": 0,
       "exports": 7
     },
-    "cmd/browser-agent/internal/toolruntime/usecase_wiring.go": {
+    "internal/composition/toolruntime/usecase_wiring.go": {
       "mutable_globals": 0,
       "exports": 2
     },
@@ -929,7 +929,7 @@
       "mutable_globals": 0,
       "exports": 3
     },
-    "internal/activecodebase/store.go": {
+    "internal/lifecycle/activecodebase/store.go": {
       "mutable_globals": 0,
       "exports": 4
     },
@@ -1141,7 +1141,7 @@
       "mutable_globals": 0,
       "exports": 9
     },
-    "internal/capture/settingscache/loader.go": {
+    "internal/sync/settingscache/loader.go": {
       "mutable_globals": 0,
       "exports": 1
     },
@@ -1193,7 +1193,7 @@
       "mutable_globals": 0,
       "exports": 2
     },
-    "internal/debuglog/logger.go": {
+    "internal/observation/debuglog/logger.go": {
       "mutable_globals": 0,
       "exports": 7
     },
@@ -1737,11 +1737,11 @@
       "mutable_globals": 0,
       "exports": 3
     },
-    "internal/server/log_accessor.go": {
+    "internal/composition/serverlog/log_accessor.go": {
       "mutable_globals": 1,
       "exports": 9
     },
-    "internal/server/main_handlers.go": {
+    "internal/composition/serverlog/main_handlers.go": {
       "mutable_globals": 0,
       "exports": 3
     },
@@ -2177,23 +2177,23 @@
       "mutable_globals": 5,
       "exports": 10
     },
-    "internal/util/binary.go": {
+    "internal/platform/util/binary.go": {
       "mutable_globals": 2,
       "exports": 2
     },
-    "internal/util/media.go": {
+    "internal/platform/util/media.go": {
       "mutable_globals": 0,
       "exports": 8
     },
-    "internal/util/proc_unix.go": {
+    "internal/platform/util/proc_unix.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "internal/util/proc_windows.go": {
+    "internal/platform/util/proc_windows.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "internal/util/response.go": {
+    "internal/platform/util/response.go": {
       "mutable_globals": 0,
       "exports": 5
     },

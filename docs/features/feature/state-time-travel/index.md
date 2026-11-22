@@ -7,8 +7,8 @@ owners: []
 last_reviewed: 2026-09-05
 code_paths:
   - internal/tools/interact/handler/interactstate/state.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
   - internal/recording/actionlog/recorder.go
   - internal/tools/schema/interact/actions.go
   - internal/lifecycle/doctor/statediag/collector.go
