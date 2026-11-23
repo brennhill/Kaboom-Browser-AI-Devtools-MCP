@@ -69,6 +69,10 @@ func BuildPaginatedResponseMetadata(conn Connection, newestEntry time.Time, pMet
 	if pMeta.Cursor != "" {
 		meta["cursor"] = pMeta.Cursor
 	}
+	if pMeta.CursorOlder != "" {
+		meta["cursor_older"] = pMeta.CursorOlder
+		meta["cursor_newer"] = pMeta.CursorNewer
+	}
 	if pMeta.OldestTimestamp != "" {
 		meta["oldest_timestamp"] = pMeta.OldestTimestamp
 	}
