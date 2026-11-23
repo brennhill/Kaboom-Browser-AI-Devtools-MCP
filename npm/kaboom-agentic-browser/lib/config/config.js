@@ -11,7 +11,6 @@ const fs = require('fs');
 const { resolveBinary, SERVER_BINARY } = require('../runtime/resolve-binary');
 const path = require('path');
 const os = require('os');
-const { execFileSync } = require('child_process');
 const {
   InvalidJSONError,
   PermissionError,
@@ -257,18 +256,30 @@ function getClientDetectDir(def, platform) {
 }
 
 /**
- * Check if a command exists on PATH
+ * Check if a command exists on PATH. Searches PATH in-process (honouring
+ * PATHEXT on Windows) instead of spawning where/which, which timed out on slow
+ * hosts and reported installed CLIs as missing (kaboom-8tty).
  * @param {string} cmd Command name
+ * @param {Object} [env] Environment to read PATH/PATHEXT from
+ * @param {string} [platform] Platform to resolve for
  * @returns {boolean}
  */
-function commandExistsOnPath(cmd) {
-  try {
-    const checkCmd = process.platform === 'win32' ? 'where' : 'which';
-    execFileSync(checkCmd, [cmd], { stdio: 'pipe', timeout: 3000 });
-    return true;
-  } catch {
-    return false;
-  }
+function commandExistsOnPath(cmd, env = process.env, platform = process.platform) {
+  const isWin = platform === 'win32';
+  const pathKey = Object.keys(env).find((k) => k.toUpperCase() === 'PATH');
+  const dirs = (pathKey ? env[pathKey] : '').split(isWin ? ';' : ':').filter(Boolean);
+  const exts = isWin ? ['', ...(env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean)] : [''];
+  return dirs.some((dir) =>
+    exts.some((ext) => {
+      try {
+        const stat = fs.statSync(path.join(dir, cmd + ext));
+        return stat.isFile() && (isWin || (stat.mode & 0o111) !== 0);
+      } catch {
+        // EXPECTED_ABSENCE: most PATH entries do not contain the command; a missing candidate is the normal negative result.
+        return false;
+      }
+    })
+  );
 }
 
 /**
