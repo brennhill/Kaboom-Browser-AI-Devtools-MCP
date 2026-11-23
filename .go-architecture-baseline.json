@@ -269,27 +269,27 @@
       "mutable_globals": 0,
       "exports": 4
     },
-    "internal/composition/logstate/accessors.go": {
+    "internal/observation/daemonlog/accessors.go": {
       "mutable_globals": 0,
       "exports": 14
     },
-    "internal/composition/logstate/async.go": {
+    "internal/observation/daemonlog/async.go": {
       "mutable_globals": 0,
       "exports": 5
     },
-    "internal/composition/logstate/persistence.go": {
+    "internal/observation/daemonlog/persistence.go": {
       "mutable_globals": 0,
       "exports": 4
     },
-    "internal/composition/logstate/seed.go": {
+    "internal/observation/daemonlog/seed.go": {
       "mutable_globals": 0,
       "exports": 2
     },
-    "internal/composition/logstate/store.go": {
+    "internal/observation/daemonlog/store.go": {
       "mutable_globals": 0,
       "exports": 5
     },
-    "internal/composition/logstate/validate.go": {
+    "internal/observation/daemonlog/validate.go": {
       "mutable_globals": 1,
       "exports": 3
     },
@@ -321,15 +321,15 @@
       "mutable_globals": 0,
       "exports": 8
     },
-    "internal/ingestion/media/draw_mode.go": {
+    "internal/annotation/adapters/http/draw_mode.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "internal/ingestion/media/handler.go": {
+    "internal/annotation/adapters/http/handler.go": {
       "mutable_globals": 0,
       "exports": 4
     },
-    "internal/ingestion/media/screenshots.go": {
+    "internal/annotation/adapters/http/screenshots.go": {
       "mutable_globals": 0,
       "exports": 2
     },
@@ -929,7 +929,7 @@
       "mutable_globals": 0,
       "exports": 3
     },
-    "internal/lifecycle/activecodebase/store.go": {
+    "internal/terminal/activecodebase/store.go": {
       "mutable_globals": 0,
       "exports": 4
     },

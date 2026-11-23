@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/ingestion/media"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation/adapters/http"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/paths"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/generate/handler/annotations"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"

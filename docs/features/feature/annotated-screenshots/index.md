@@ -23,9 +23,9 @@ code_paths:
   - internal/annotation/draw_sessions_handler.go
   - internal/tools/analyze/handler/annotationanalysis/handler.go
   - internal/tools/analyze/handler/analyzedispatch/dispatcher.go
-  - internal/ingestion/media/draw_mode.go
-  - internal/ingestion/media/screenshots.go
-  - internal/ingestion/media/handler.go
+  - internal/annotation/adapters/http/draw_mode.go
+  - internal/annotation/adapters/http/screenshots.go
+  - internal/annotation/adapters/http/handler.go
   - internal/tools/generate/handler/dispatcher.go
   - internal/tools/generate/handler/deps.go
   - internal/tools/generate/handler/annotations/handlers.go
@@ -53,9 +53,9 @@ test_paths:
   - internal/annotation/store_lifecycle_test.go
   - internal/annotation/store_maintenance_test.go
   - internal/tools/analyze/handler/analyzedispatch/draw_sessions_test.go
-  - internal/ingestion/media/annotation_store_test.go
-  - internal/ingestion/media/draw_mode_http_test.go
-  - internal/ingestion/media/handler_test.go
+  - internal/annotation/adapters/http/annotation_store_test.go
+  - internal/annotation/adapters/http/draw_mode_http_test.go
+  - internal/annotation/adapters/http/handler_test.go
   - cmd/browser-agent/composition_test.go
   - internal/tools/analyze/handler/annotationanalysis/handler_test.go
   - internal/tools/analyze/handler/annotationanalysis/sessions_test.go

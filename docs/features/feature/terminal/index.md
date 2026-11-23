@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - internal/lifecycle/activecodebase/store.go
+  - internal/terminal/activecodebase/store.go
   - internal/terminal/adapters/status/status.go
   - internal/terminal/pty/upload/upload.go
   - src/content/ui/hover/screenshot-feedback.ts
@@ -57,7 +57,7 @@ code_paths:
   - scripts/tests/framework/framework.sh
   - scripts/tests/workflows/cat-28-terminal.sh
 test_paths:
-  - internal/lifecycle/activecodebase/store_test.go
+  - internal/terminal/activecodebase/store_test.go
   - internal/terminal/adapters/status/status_test.go
   - tests/extension/terminal-reconnect/terminal-html-liveness.test.js
   - internal/terminal/adapters/sessionrelay/relay_rebind_test.go

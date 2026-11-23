@@ -9,8 +9,8 @@ code_paths:
   - internal/push/
   - internal/push/adapters/http/runtime.go
   - internal/push/adapters/http/handler.go
-  - internal/ingestion/media/screenshots.go
-  - internal/ingestion/media/draw_mode.go
+  - internal/annotation/adapters/http/screenshots.go
+  - internal/annotation/adapters/http/draw_mode.go
   - internal/tools/observe/handler/dispatcher.go
   - internal/tools/observe/handler/deps.go
   - internal/tools/observe/handler/inbox.go

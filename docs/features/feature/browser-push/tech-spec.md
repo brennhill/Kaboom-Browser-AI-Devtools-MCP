@@ -477,7 +477,7 @@ export function installPushCommandListener() {
 | HTTP handlers (`/push/screenshot`, `/push/message`, `/push/capabilities`), annotation delivery | `internal/push/adapters/http/handler.go` (`DeliverAnnotations`) |
 | Route registration (incl. `/push/drain`) and router wiring | `cmd/browser-agent/server.go` |
 | Bridge-side push drain relay | `internal/lifecycle/bridge/pushrelay/relay.go` |
-| Draw-mode completion → push | `internal/ingestion/media/draw_mode.go` |
+| Draw-mode completion → push | `internal/annotation/adapters/http/draw_mode.go` |
 | `observe({what: "inbox"})` and response piggyback | `internal/tools/observe/handler/inbox.go`, routed in `internal/tools/observe/handler/dispatcher.go` |
 | Blocking annotation wait | `internal/tools/analyze/handler/annotationanalysis/handler.go` |
 | Extension hotkeys (`push_screenshot`, `push_chat`) | `src/background/push-handler.ts`, installed from `src/background/init.ts`; commands in `extension/manifest.json` |

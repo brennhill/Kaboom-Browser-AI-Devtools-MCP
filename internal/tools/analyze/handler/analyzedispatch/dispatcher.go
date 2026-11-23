@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/ingestion/media"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation/adapters/http"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze/handler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze/handler/combinedaudit"

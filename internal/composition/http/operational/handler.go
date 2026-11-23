@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/http/openapi"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/logstate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/daemonlog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/bridge/fastpathtelemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/healthreader"

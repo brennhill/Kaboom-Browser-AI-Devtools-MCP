@@ -172,3 +172,9 @@ cmd/browser-agent/internal/ciapi	internal/composition/http/ci	Composition
 cmd/browser-agent/internal/insecureproxy	internal/composition/http/insecureproxy	Composition	
 cmd/browser-agent/internal/responsegate	internal/composition/responsegate	Composition	applied as drafted (revisit): test-only package (0 non-test files)
 cmd/browser-agent/internal/integrationtest	internal/composition/testsupport/integration	Composition	
+internal/tools/commandhealth	internal/browsercommand/health	BrowserCommand	revisit resolved: command reliability belongs to the command owner
+internal/ingestion/media	internal/annotation/adapters/http	Annotation	revisit resolved: persists annotation sessions
+internal/lifecycle/activecodebase	internal/terminal/activecodebase	Terminal	revisit resolved: consumed as terminal working folder
+internal/composition/logstate	internal/observation/daemonlog	Observation	revisit resolved: daemon's own log state
+internal/composition/responsegate	internal/composition/testsupport/responsegate	Composition	revisit resolved: test-only harness
+internal/browsercommand/health	internal/tools/commandhealth	Tools	reverted: imports composition/capture, which browsercommand may not depend on

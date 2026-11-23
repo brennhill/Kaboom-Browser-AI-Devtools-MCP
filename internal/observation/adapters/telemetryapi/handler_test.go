@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/logstate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/daemonlog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )
 

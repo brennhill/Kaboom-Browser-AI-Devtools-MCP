@@ -16,7 +16,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/ingestion/media"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation/adapters/http"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"

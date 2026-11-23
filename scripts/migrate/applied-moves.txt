@@ -157,3 +157,9 @@ internal/debuglog
 internal/security
 internal/server
 internal/util
+internal/composition/logstate
+internal/composition/responsegate
+internal/ingestion/media
+internal/lifecycle/activecodebase
+internal/tools/commandhealth
+internal/browsercommand/health

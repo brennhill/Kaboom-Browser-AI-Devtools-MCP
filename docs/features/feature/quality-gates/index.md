@@ -123,10 +123,10 @@ test_paths:
   - scripts/security/check-secrets.test.sh
   - scripts/contracts/check_go_test_determinism_test.go
   - scripts/contracts/goarchitecture/main_test.go
-  - internal/composition/responsegate/control_test.go
-  - internal/composition/responsegate/drift_test.go
-  - internal/composition/responsegate/harness_test.go
-  - internal/composition/responsegate/refusal_test.go
+  - internal/composition/testsupport/responsegate/control_test.go
+  - internal/composition/testsupport/responsegate/drift_test.go
+  - internal/composition/testsupport/responsegate/harness_test.go
+  - internal/composition/testsupport/responsegate/refusal_test.go
   - internal/composition/toolruntime/composition_test.go
   - internal/lifecycle/retention/sweep/retention_test.go
   - scripts/contracts/responsecontract/cat33_test.go
@@ -206,7 +206,7 @@ layer stayed green. `.mcp-response-contract.json` declares, per mode, the
 response's field paths and JSON types — never its values — plus the async
 lifecycle envelope (`correlation_id` / `lifecycle_status` / `status` / `final`)
 that browser-mediated modes answer with, which was previously folklore. The
-declaration is GENERATED, not written: `internal/composition/responsegate`
+declaration is GENERATED, not written: `internal/composition/testsupport/responsegate`
 invokes the shipped dispatcher over a seeded in-memory fixture, with no daemon
 and no browser, and derives each shape from the response that comes back. A mode
 that cannot answer without a live extension is refused rather than recorded, so

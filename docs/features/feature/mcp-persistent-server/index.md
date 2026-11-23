@@ -81,12 +81,12 @@ code_paths:
   - internal/composition/http/dashboard/logs.html
   - internal/composition/http/dashboard/setup.html
   - internal/composition/http/dashboard/docs.html
-  - internal/composition/logstate/store.go
-  - internal/composition/logstate/async.go
-  - internal/composition/logstate/accessors.go
-  - internal/composition/logstate/persistence.go
-  - internal/composition/logstate/validate.go
-  - internal/composition/logstate/seed.go
+  - internal/observation/daemonlog/store.go
+  - internal/observation/daemonlog/async.go
+  - internal/observation/daemonlog/accessors.go
+  - internal/observation/daemonlog/persistence.go
+  - internal/observation/daemonlog/validate.go
+  - internal/observation/daemonlog/seed.go
   - internal/lifecycle/exitdiag/recorder.go
   - internal/platform/httpguard/middleware.go
   - internal/composition/http/openapi/response.go
@@ -100,7 +100,7 @@ code_paths:
   - internal/lifecycle/upgrade/versioncheck/checker.go
   - internal/platform/diag/output.go
   - internal/platform/diag/debug_file.go
-  - internal/ingestion/media/screenshots.go
+  - internal/annotation/adapters/http/screenshots.go
   - internal/platform/identity/mcp.go
   - internal/platform/util/proc_unix.go
   - internal/platform/util/proc_windows.go
@@ -196,9 +196,9 @@ test_paths:
   - internal/lifecycle/procctl/port_test.go
   - internal/lifecycle/procctl/port_netstat_test.go
   - internal/lifecycle/procctl/argv0_test.go
-  - internal/composition/logstate/store_test.go
-  - internal/composition/logstate/async_test.go
-  - internal/composition/logstate/validate_test.go
+  - internal/observation/daemonlog/store_test.go
+  - internal/observation/daemonlog/async_test.go
+  - internal/observation/daemonlog/validate_test.go
   - tests/regression/08-fast-start/test-fast-start.sh
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-29

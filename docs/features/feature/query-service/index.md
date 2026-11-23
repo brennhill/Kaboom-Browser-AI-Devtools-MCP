@@ -24,7 +24,7 @@ code_paths:
   - internal/browsercommand/ports/ports.go
   - scripts/contracts/layering/main.go
   - scripts/contracts/layering/command_owner.go
-  - internal/ingestion/media/handler.go
+  - internal/annotation/adapters/http/handler.go
   - internal/screenrec/save.go
   - internal/tools/analyze/handler/annotationanalysis/handler.go
   - internal/tools/configure/handler/qafixture/transport/command.go

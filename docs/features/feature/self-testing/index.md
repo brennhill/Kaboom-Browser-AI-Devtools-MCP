@@ -77,8 +77,8 @@ code_paths:
   - scripts/contracts/goarchitecture/main.go
 test_paths:
   - scripts/contracts/uatcoverage/main_test.go
-  - internal/composition/responsegate/drift_test.go
-  - internal/composition/responsegate/harness_test.go
+  - internal/composition/testsupport/responsegate/drift_test.go
+  - internal/composition/testsupport/responsegate/harness_test.go
   - scripts/contracts/responsecontract/cat33_test.go
   - scripts/contracts/responsecontract/ratchet_test.go
   - scripts/quality/affected/affected-tests.test.mjs

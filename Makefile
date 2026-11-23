@@ -284,11 +284,11 @@ check-go-architecture:
 # in-process responses; neither half needs a browser or a daemon.
 check-response-contract:
 	@go test ./scripts/contracts/responsecontract
-	@go test ./internal/composition/responsegate
+	@go test ./internal/composition/testsupport/responsegate
 
 # Re-freeze the MCP response contract after an intended response change.
 response-contract-update:
-	@UPDATE_GOLDEN=1 go test ./internal/composition/responsegate -run TestDeclaredResponseShapesStillShip
+	@UPDATE_GOLDEN=1 go test ./internal/composition/testsupport/responsegate -run TestDeclaredResponseShapesStillShip
 
 # Every decode into a Wire* type must go through internal/platform/wirecodec, so a peer's
 # error envelope cannot decode into a zero value and read as an empty result.

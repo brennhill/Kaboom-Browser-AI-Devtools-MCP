@@ -25,7 +25,7 @@ last_verified_date: 2026-03-05
 ### Test Locations
 
 - **Extension:** `tests/extension/draw-mode/` (`draw-mode.test.js`, `draw-mode-drawing.test.js`, `draw-mode-handler.test.js`, `draw-mode-routing.test.js`, `draw-mode-enrichment.test.js`, `draw-mode-generation.test.js`, `draw-mode-shortcut-hint.test.js`)
-- **Go Server:** `internal/tools/interact/handler/interact_browser_test.go` (draw_mode_start), `internal/tools/analyze/handler/annotationanalysis/handler_test.go` (annotations / annotation_detail), `internal/ingestion/media/draw_mode_http_test.go` and `internal/ingestion/media/annotation_store_test.go` (`POST /draw-mode/complete`), `internal/annotation/store_test.go` (store, TTL)
+- **Go Server:** `internal/tools/interact/handler/interact_browser_test.go` (draw_mode_start), `internal/tools/analyze/handler/annotationanalysis/handler_test.go` (annotations / annotation_detail), `internal/annotation/adapters/http/draw_mode_http_test.go` and `internal/annotation/adapters/http/annotation_store_test.go` (`POST /draw-mode/complete`), `internal/annotation/store_test.go` (store, TTL)
 - **Integration:** no Go integration test file exists; end-to-end coverage is the shell suites `scripts/smoke-tests/media/13-draw-mode.sh` and `scripts/tests/browser/cat-23-draw-mode.sh`
 
 ---
@@ -149,7 +149,7 @@ last_verified_date: 2026-03-05
 
 ## Unit Tests: Go Server
 
-**Location:** `internal/tools/interact/handler/interact_browser_test.go`, `internal/tools/analyze/handler/annotationanalysis/handler_test.go`, `internal/ingestion/media/draw_mode_http_test.go`
+**Location:** `internal/tools/interact/handler/interact_browser_test.go`, `internal/tools/analyze/handler/annotationanalysis/handler_test.go`, `internal/annotation/adapters/http/draw_mode_http_test.go`
 
 ### 1. Interact Handler (draw_mode_start)
 
@@ -197,7 +197,7 @@ last_verified_date: 2026-03-05
 
 ## Unit Tests: Go Server -- Annotation Store
 
-**Location:** `internal/ingestion/media/annotation_store_test.go`
+**Location:** `internal/annotation/adapters/http/annotation_store_test.go`
 
 ### 1. Storage and Retrieval
 

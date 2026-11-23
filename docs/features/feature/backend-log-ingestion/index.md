@@ -6,12 +6,12 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
-  - internal/composition/logstate/async.go
-  - internal/composition/logstate/store.go
+  - internal/observation/daemonlog/async.go
+  - internal/observation/daemonlog/store.go
 test_paths:
-  - internal/composition/logstate/async_test.go
-  - internal/composition/logstate/store_test.go
-  - internal/composition/logstate/ring_window_test.go
+  - internal/observation/daemonlog/async_test.go
+  - internal/observation/daemonlog/store_test.go
+  - internal/observation/daemonlog/ring_window_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -40,7 +40,7 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 The daemon's in-memory log window uses fixed-capacity circular storage in
-`internal/composition/logstate`. HTTP ingestion overwrites the oldest slot in place after
+`internal/observation/daemonlog`. HTTP ingestion overwrites the oldest slot in place after
 capacity is reached, while detached snapshots preserve chronological order for
 readers and persistence compaction.
 

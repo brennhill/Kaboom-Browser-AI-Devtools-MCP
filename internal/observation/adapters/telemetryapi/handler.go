@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/http/openapi"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/logstate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/daemonlog"
 	capturelogs "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/logs"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/perf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/telemetry"

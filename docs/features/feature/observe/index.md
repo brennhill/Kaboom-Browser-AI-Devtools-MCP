@@ -12,7 +12,7 @@ code_paths:
   - src/background/commands/results/screenshot-delivery.ts
   - src/background/commands/observe.ts
   - src/background/ui/tracked-tab-state.ts
-  - internal/ingestion/media/screenshots.go
+  - internal/annotation/adapters/http/screenshots.go
   - internal/observation/healthreader/reader.go
   - internal/browsercommand/internal/dispatch/dispatcher_queries.go
   - internal/sync/runtime/handler.go
@@ -79,7 +79,7 @@ code_paths:
   - src/lib/tabs/tab-focus.ts
 test_paths:
   - internal/page/screenshotframe/wire_screenshot_test.go
-  - internal/ingestion/media/screenshot_frame_test.go
+  - internal/annotation/adapters/http/screenshot_frame_test.go
   - tests/extension/capture/screenshot-coordinate-frame.test.js
   - tests/extension/capture/background/background-tab-capture.test.js
   - tests/extension/capture/background/visible-tab-capture-fallback.test.js
