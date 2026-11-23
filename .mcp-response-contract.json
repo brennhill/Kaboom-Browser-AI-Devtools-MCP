@@ -3694,6 +3694,10 @@
           "type": "object"
         },
         {
+          "path": "metadata.cursor",
+          "type": "string"
+        },
+        {
           "path": "metadata.data_age",
           "type": "string"
         },
@@ -3702,12 +3706,20 @@
           "type": "number"
         },
         {
+          "path": "metadata.has_more",
+          "type": "boolean"
+        },
+        {
           "path": "metadata.is_stale",
           "type": "boolean"
         },
         {
           "path": "metadata.retrieved_at",
           "type": "string"
+        },
+        {
+          "path": "metadata.total",
+          "type": "number"
         }
       ]
     },
@@ -3771,6 +3783,10 @@
           "type": "object"
         },
         {
+          "path": "metadata.cursor",
+          "type": "string"
+        },
+        {
           "path": "metadata.data_age",
           "type": "string"
         },
@@ -3779,12 +3795,28 @@
           "type": "number"
         },
         {
+          "path": "metadata.has_more",
+          "type": "boolean"
+        },
+        {
           "path": "metadata.is_stale",
           "type": "boolean"
         },
         {
+          "path": "metadata.newest_timestamp",
+          "type": "string"
+        },
+        {
+          "path": "metadata.oldest_timestamp",
+          "type": "string"
+        },
+        {
           "path": "metadata.retrieved_at",
           "type": "string"
+        },
+        {
+          "path": "metadata.total",
+          "type": "number"
         }
       ]
     },

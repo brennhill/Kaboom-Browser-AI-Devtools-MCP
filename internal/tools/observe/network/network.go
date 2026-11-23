@@ -9,17 +9,18 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/pagination"
+	waterfallstore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/waterfall"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/buffers"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
 )
 
 type networkBodiesParams struct {
+	core.CursorArgs
 	Limit     int    `json:"limit"`
 	URL       string `json:"url"`
 	Method    string `json:"method"`
@@ -35,8 +36,9 @@ func GetNetworkBodies(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 	mcp.LenientUnmarshal(args, &params)
 	params.Limit = core.ClampLimit(params.Limit, 100)
 
-	allBodies := deps.Telemetry.NetworkBodies().Snapshot().Bodies
-	filtered, bodyFilterErr := filterNetworkBodies(allBodies, params)
+	snapshot := deps.Telemetry.NetworkBodies().Snapshot()
+	allBodies := snapshot.Bodies
+	matching, bodyFilterErr := matchNetworkBodies(pagination.EnrichNetworkBodyEntries(allBodies, snapshot.TotalAdded), params)
 
 	if bodyFilterErr != nil {
 		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
@@ -45,6 +47,15 @@ func GetNetworkBodies(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 			"Use a valid body_path syntax like data.items[0].id",
 			mcp.WithParam("body_path"),
 		)}
+	}
+
+	page, pageMeta, err := core.PageNewestFirst(matching, params.CursorArgs, params.Limit)
+	if err != nil {
+		return mcp.Fail(req, mcp.ErrInvalidParam, err.Error(), "Check cursor format or use restart_on_eviction:true")
+	}
+	filtered := make([]types.NetworkBody, len(page))
+	for i, entry := range page {
+		filtered[i] = entry.Entry
 	}
 
 	// Re-apply body filter to transform matched entries (extract body_path).
@@ -56,7 +67,7 @@ func GetNetworkBodies(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 	}
 
 	waterfallCount := len(deps.Telemetry.NetworkWaterfall().Entries())
-	responseMeta := core.BuildResponseMetadata(deps.Extension, newestTS)
+	responseMeta := core.BuildPaginatedResponseMetadata(deps.Extension, newestTS, pageMeta)
 	hintFilters := hints.NetworkBodiesFilters{
 		URL:       params.URL,
 		Method:    params.Method,
@@ -85,12 +96,20 @@ func GetNetworkBodies(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessa
 	return mcp.Succeed(req, "Network bodies", response)
 }
 
-func filterNetworkBodies(allBodies []types.NetworkBody, params networkBodiesParams) ([]types.NetworkBody, error) {
+// matchNetworkBodies keeps bodies matching the filters, oldest first; a body_path
+// syntax error stops matching and is returned.
+func matchNetworkBodies(all []pagination.NetworkBodyEntryWithSequence, params networkBodiesParams) ([]pagination.NetworkBodyEntryWithSequence, error) {
 	var bodyFilterErr error
-	filtered := buffers.ReverseFilterLimit(allBodies, func(b types.NetworkBody) bool {
-		return networkBodyMatches(b, params, &bodyFilterErr)
-	}, params.Limit)
-	return filtered, bodyFilterErr
+	matching := make([]pagination.NetworkBodyEntryWithSequence, 0, len(all))
+	for _, entry := range all {
+		if networkBodyMatches(entry.Entry, params, &bodyFilterErr) {
+			matching = append(matching, entry)
+		}
+		if bodyFilterErr != nil {
+			return nil, bodyFilterErr
+		}
+	}
+	return matching, nil
 }
 
 func networkBodyMatches(b types.NetworkBody, params networkBodiesParams, bodyFilterErr *error) bool {
@@ -222,6 +241,7 @@ const waterfallRefreshTimeoutDefault = 5 * time.Second
 
 func GetNetworkWaterfall(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
+		core.CursorArgs
 		Limit     int    `json:"limit"`
 		URLFilter string `json:"url"`
 		Summary   bool   `json:"summary"`
@@ -229,27 +249,45 @@ func GetNetworkWaterfall(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMe
 	mcp.LenientUnmarshal(args, &params)
 	params.Limit = core.ClampLimit(params.Limit, 100)
 
-	allEntries := refreshWaterfallIfStale(deps)
+	snapshot := refreshWaterfallIfStale(deps)
+	allEntries := snapshot.Entries
 
 	var newestTS time.Time
 	if len(allEntries) > 0 {
 		newestTS = allEntries[len(allEntries)-1].Timestamp
 	}
 
+	matching := make([]pagination.WaterfallEntryWithSequence, 0, len(allEntries))
+	for _, entry := range pagination.EnrichWaterfallEntries(allEntries, snapshot.TotalAdded) {
+		if waterfallURLMatches(entry.Entry, params.URLFilter) {
+			matching = append(matching, entry)
+		}
+	}
+	page, pageMeta, err := core.PageNewestFirst(matching, params.CursorArgs, params.Limit)
+	if err != nil {
+		return mcp.Fail(req, mcp.ErrInvalidParam, err.Error(), "Check cursor format or use restart_on_eviction:true")
+	}
+	convert := waterfallEntryToMap
 	if params.Summary {
-		entries := filterWaterfallSummaryEntries(allEntries, params.URLFilter, params.Limit)
+		convert = waterfallSummaryEntry
+	}
+	entries := make([]map[string]any, len(page))
+	for i, entry := range page {
+		entries[i] = convert(entry.Entry)
+	}
+	metadata := core.BuildPaginatedResponseMetadata(deps.Extension, newestTS, pageMeta)
+	if params.Summary {
 		return mcp.Succeed(req, "Network waterfall", map[string]any{
 			"entries":  entries,
 			"count":    len(entries),
-			"metadata": core.BuildResponseMetadata(deps.Extension, newestTS),
+			"metadata": metadata,
 		})
 	}
 
-	entries := filterWaterfallEntries(allEntries, params.URLFilter, params.Limit)
 	response := map[string]any{
 		"entries":  entries,
 		"count":    len(entries),
-		"metadata": core.BuildResponseMetadata(deps.Extension, newestTS),
+		"metadata": metadata,
 	}
 	if len(entries) == 0 {
 		response["hint"] = hints.NetworkWaterfall(params.URLFilter)
@@ -257,18 +295,19 @@ func GetNetworkWaterfall(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMe
 	return mcp.Succeed(req, "Network waterfall", response)
 }
 
-func refreshWaterfallIfStale(deps core.Deps) []types.NetworkWaterfallEntry {
+func refreshWaterfallIfStale(deps core.Deps) waterfallstore.Snapshot {
 	refreshTimeout := deps.WaterfallRefreshTimeout
 	if refreshTimeout <= 0 {
 		refreshTimeout = waterfallRefreshTimeoutDefault
 	}
-	allEntries := deps.Telemetry.NetworkWaterfall().Entries()
+	current := deps.Telemetry.NetworkWaterfall().Snapshot()
+	allEntries := current.Entries
 	now := time.Now()
 	if deps.Now != nil {
 		now = deps.Now()
 	}
 	if len(allEntries) > 0 && now.Sub(allEntries[len(allEntries)-1].Timestamp) < time.Second {
-		return allEntries
+		return current
 	}
 
 	queryID, qerr := deps.Commands.Enqueue(
@@ -280,12 +319,12 @@ func refreshWaterfallIfStale(deps core.Deps) []types.NetworkWaterfallEntry {
 		"",
 	)
 	if qerr != nil {
-		return allEntries
+		return current
 	}
 
 	result, err := deps.Commands.WaitQueryResult(context.Background(), queryID, refreshTimeout)
 	if err != nil || result == nil {
-		return allEntries
+		return current
 	}
 
 	var waterfallResult struct {
@@ -294,26 +333,14 @@ func refreshWaterfallIfStale(deps core.Deps) []types.NetworkWaterfallEntry {
 	}
 	if err := json.Unmarshal(result, &waterfallResult); err == nil && len(waterfallResult.Entries) > 0 {
 		deps.Telemetry.NetworkWaterfall().Add(waterfallResult.Entries, waterfallResult.PageURL)
-		return deps.Telemetry.NetworkWaterfall().Entries()
+		return deps.Telemetry.NetworkWaterfall().Snapshot()
 	}
-	return allEntries
+	return current
 }
 
-func filterWaterfallEntries(allEntries []types.NetworkWaterfallEntry, urlFilter string, limit int) []map[string]any {
-	return mapFilteredWaterfallEntries(allEntries, urlFilter, limit, waterfallEntryToMap)
-}
-
-// mapFilteredWaterfallEntries filters entries by URL and maps each match through convert.
-func mapFilteredWaterfallEntries(allEntries []types.NetworkWaterfallEntry, urlFilter string, limit int, convert func(types.NetworkWaterfallEntry) map[string]any) []map[string]any {
-	matched := buffers.ReverseFilterLimit(allEntries, func(entry types.NetworkWaterfallEntry) bool {
-		return urlFilter == "" || (entry.URL != "" && core.ContainsIgnoreCase(entry.URL, urlFilter))
-	}, limit)
-
-	entries := make([]map[string]any, len(matched))
-	for i, entry := range matched {
-		entries[i] = convert(entry)
-	}
-	return entries
+// waterfallURLMatches applies the optional url filter to a resource timing.
+func waterfallURLMatches(entry types.NetworkWaterfallEntry, urlFilter string) bool {
+	return urlFilter == "" || (entry.URL != "" && core.ContainsIgnoreCase(entry.URL, urlFilter))
 }
 
 func waterfallEntryToMap(entry types.NetworkWaterfallEntry) map[string]any {
@@ -381,10 +408,6 @@ func waterfallSummaryEntry(entry types.NetworkWaterfallEntry) map[string]any {
 		url = url[:80] + "..."
 	}
 	return map[string]any{"url": url, "ms": entry.Duration, "type": entry.InitiatorType}
-}
-
-func filterWaterfallSummaryEntries(allEntries []types.NetworkWaterfallEntry, urlFilter string, limit int) []map[string]any {
-	return mapFilteredWaterfallEntries(allEntries, urlFilter, limit, waterfallSummaryEntry)
 }
 
 // GetWSStatus returns the current WebSocket connection status.
@@ -482,7 +505,7 @@ func buildWSStatusSummary(status types.WebSocketStatusResponse, metadata core.Re
 // GetWebVitals returns Core Web Vitals metrics from performance snapshots.
 
 // buildNetworkBodiesSummary returns {total, by_status_group, by_method, top_urls, metadata}.
-func buildNetworkBodiesSummary(bodies []types.NetworkBody, meta core.ResponseMetadata) map[string]any {
+func buildNetworkBodiesSummary(bodies []types.NetworkBody, meta map[string]any) map[string]any {
 	byStatus := make(map[string]int)
 	byMethod := make(map[string]int)
 	seenURLs := make(map[string]bool)
