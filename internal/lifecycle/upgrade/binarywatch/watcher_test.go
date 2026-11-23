@@ -111,15 +111,24 @@ func TestVerifyBinaryVersion_Timeout(t *testing.T) {
 	}
 }
 
-func TestCheckForUpgrade_DetectsNewer(t *testing.T) {
-	t.Parallel()
-	// Create a script that reports a newer version
+// TestVerifyBinaryVersion_ParsesScriptOutput exercises the real exec path. It
+// is deliberately serial: Go runs serial tests before parallel ones resume, so
+// no sibling fork can hold this freshly written script open (Linux ETXTBSY),
+// which made the parallel exec-based comparison tests flaky (kaboom-4fny).
+func TestVerifyBinaryVersion_ParsesScriptOutput(t *testing.T) {
 	tmp := filepath.Join(t.TempDir(), "fake-bin")
 	if err := os.WriteFile(tmp, []byte("#!/bin/sh\necho 'kaboom v0.8.0'\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
+	got, err := verifyBinaryVersionWithTimeout(tmp, testVersionCheckTimeout)
+	if err != nil || got != "0.8.0" {
+		t.Fatalf("verifyBinaryVersionWithTimeout = %q, %v; want 0.8.0, nil", got, err)
+	}
+}
 
-	s := &State{execPath: tmp, versionCheckTimeout: testVersionCheckTimeout}
+func TestCheckForUpgrade_DetectsNewer(t *testing.T) {
+	t.Parallel()
+	s := &State{execPath: "/unused", verifyVersion: func(string, time.Duration) (string, error) { return "0.8.0", nil }}
 	got := s.checkForUpgrade("0.7.5")
 	if !got {
 		t.Fatal("checkForUpgrade should detect newer version")
@@ -132,12 +141,7 @@ func TestCheckForUpgrade_DetectsNewer(t *testing.T) {
 
 func TestCheckForUpgrade_IgnoresOlder(t *testing.T) {
 	t.Parallel()
-	tmp := filepath.Join(t.TempDir(), "fake-bin")
-	if err := os.WriteFile(tmp, []byte("#!/bin/sh\necho 'kaboom v0.7.4'\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	s := &State{execPath: tmp, versionCheckTimeout: testVersionCheckTimeout}
+	s := &State{execPath: "/unused", verifyVersion: func(string, time.Duration) (string, error) { return "0.7.4", nil }}
 	got := s.checkForUpgrade("0.7.5")
 	if got {
 		t.Fatal("checkForUpgrade should not detect older version")
@@ -146,12 +150,7 @@ func TestCheckForUpgrade_IgnoresOlder(t *testing.T) {
 
 func TestCheckForUpgrade_IgnoresSame(t *testing.T) {
 	t.Parallel()
-	tmp := filepath.Join(t.TempDir(), "fake-bin")
-	if err := os.WriteFile(tmp, []byte("#!/bin/sh\necho 'kaboom v0.7.5'\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	s := &State{execPath: tmp, versionCheckTimeout: testVersionCheckTimeout}
+	s := &State{execPath: "/unused", verifyVersion: func(string, time.Duration) (string, error) { return "0.7.5", nil }}
 	got := s.checkForUpgrade("0.7.5")
 	if got {
 		t.Fatal("checkForUpgrade should not detect same version")
