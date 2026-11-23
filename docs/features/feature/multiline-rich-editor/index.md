@@ -1,10 +1,10 @@
 ---
 doc_type: feature_index
 feature_id: feature-multiline-rich-editor
-status: proposed
+status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-11-23
 code_paths:
   - src/background/dom/primitives/dom-primitives-form.ts
   - src/background/dom/dom-dispatch.ts

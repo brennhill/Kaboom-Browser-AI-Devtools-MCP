@@ -1,12 +1,12 @@
 ---
 feature: Reproduction Scripts
-status: proposed
+status: shipped
 tool: generate
 format: reproduction
 version: 0.7.12
 doc_type: product-spec
 feature_id: feature-reproduction-scripts
-last_reviewed: 2026-11-21
+last_reviewed: 2026-11-23
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

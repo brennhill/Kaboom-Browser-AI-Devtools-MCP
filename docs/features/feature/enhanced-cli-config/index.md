@@ -1,10 +1,10 @@
 ---
 doc_type: feature_index
 feature_id: feature-enhanced-cli-config
-status: proposed
+status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-11-21
+last_reviewed: 2026-11-23
 code_paths:
   - internal/lifecycle/runtimeflags/flags.go
   - internal/platform/defaults/defaults.go

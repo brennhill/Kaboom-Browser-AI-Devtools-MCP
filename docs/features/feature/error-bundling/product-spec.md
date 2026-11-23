@@ -1,9 +1,9 @@
 ---
 doc_type: product-spec
 feature_id: feature-error-bundling
-status: proposed
+status: shipped
 owners: []
-last_reviewed: 2026-11-21
+last_reviewed: 2026-11-23
 links:
   product: ./product-spec.md
   tech: ./tech-spec.md

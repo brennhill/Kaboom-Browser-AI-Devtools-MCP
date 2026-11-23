@@ -1,10 +1,10 @@
 ---
 doc_type: feature_index
 feature_id: feature-push-regression
-status: shipped
+status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-11-23
 code_paths:
 test_paths: []
 last_verified_version: 0.7.12

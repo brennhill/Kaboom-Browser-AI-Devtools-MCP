@@ -1,7 +1,7 @@
 ---
 doc_type: feature_index
 feature_id: feature-reproduction-scripts
-status: proposed
+status: shipped
 feature_type: feature
 owners: []
 last_reviewed: 2026-11-23
