@@ -17,4 +17,4 @@ last_verified_date: 2026-03-05
 
 ## Automated Targets
 - Generator check mode (`--check`)
-- `internal/schema/invariants_test.go`
+- `internal/tools/schema/invariants_test.go`

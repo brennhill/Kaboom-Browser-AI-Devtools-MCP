@@ -6,16 +6,16 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolguard/guards.go
-  - cmd/browser-agent/internal/asynccommand/handler.go
-  - internal/capture/syncruntime/runtime.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/tools/guard/guards.go
+  - internal/tools/asynccommand/handler.go
+  - internal/sync/runtime/runtime.go
 test_paths:
-  - cmd/browser-agent/internal/toolguard/guards_test.go
-  - cmd/browser-agent/internal/bridge/bridge_startup_test.go
-  - internal/capture/syncruntime/readiness_gate_test.go
-  - cmd/browser-agent/internal/toolguard/guards_test.go
-  - cmd/browser-agent/internal/asynccommand/handler_test.go
+  - internal/tools/guard/guards_test.go
+  - internal/lifecycle/bridge/bridge_startup_test.go
+  - internal/sync/runtime/readiness_gate_test.go
+  - internal/tools/guard/guards_test.go
+  - internal/tools/asynccommand/handler_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

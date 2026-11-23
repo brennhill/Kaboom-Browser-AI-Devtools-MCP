@@ -1,0 +1,18 @@
+{
+  "description": "Edit introduces lowercase error — should trigger DECISION-002 (structured errors)",
+  "hook": "decision-guard",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "return errors.New(\"something went wrong\")"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["DECISION-002", "structured error format", "DECISION GUARD"],
+    "not_contains": ["DECISION-001"],
+    "max_latency_ms": 200
+  }
+}

@@ -9,11 +9,11 @@ code_paths:
   - src/lib/analysis/react-profiler.ts
   - src/inject/api.ts
   - src/background/commands/analyze.ts
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/react_profile.go
-  - internal/schema/analyze.go
+  - internal/tools/analyze/handler/analyzedispatch/react_profile.go
+  - internal/tools/schema/analyze.go
 test_paths:
   - tests/extension/performance/react-profiler.test.js
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/react_profile_test.go
+  - internal/tools/analyze/handler/analyzedispatch/react_profile_test.go
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-04
 ---

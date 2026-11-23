@@ -1,0 +1,17 @@
+{
+  "description": "ASPIRATIONAL U9 Enforce: helper function called from tests but missing t.Helper() — should flag for better stack traces",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy_test.go",
+      "new_string": "func assertNoError(t *testing.T, err error) {\n\tif err != nil {\n\t\tt.Fatalf(\"unexpected error: %v\", err)\n\t}\n}"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["U9", "t.Helper", "stack trace"],
+    "max_latency_ms": 5000
+  }
+}

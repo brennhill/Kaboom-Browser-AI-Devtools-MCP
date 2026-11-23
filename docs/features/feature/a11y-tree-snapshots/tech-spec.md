@@ -93,9 +93,9 @@ Not yet built (reviewed 2026-11-21: no `a11y_tree` observe mode, handler, or ext
 - Declare the new runtime message types in `src/types/runtime-messages.ts` first
 
 **Server code (planned)**:
-- A `toolObserveA11yTree()` handler in the observe tool package (`cmd/browser-agent/internal/toolobserve/`) that creates a pending query and waits for the result
+- A `toolObserveA11yTree()` handler in the observe tool package (`internal/tools/observe/handler/`) that creates a pending query and waits for the result
 - An `A11yTreeResult` wire type (with its TypeScript counterpart, per the wire-type rule)
-- Register the `a11y_tree` mode in the observe dispatcher/registry (`cmd/browser-agent/internal/toolobserve/registry.go`) and the observe schema
+- Register the `a11y_tree` mode in the observe dispatcher/registry (`internal/tools/observe/handler/registry.go`) and the observe schema
 
 **Trade-offs**:
 - Text format vs JSON: Text is 3-5x more token-efficient but harder to parse programmatically. Chosen because token efficiency is core value proposition.

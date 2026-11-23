@@ -1,0 +1,16 @@
+{
+  "description": "ASPIRATIONAL: Test files should be exempt from decision-003 — fmt.Println is fine in tests",
+  "hook": "decision-guard",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy_test.go",
+      "new_string": "func TestDebug(t *testing.T) {\n\tfmt.Println(\"debug output\")\n}"
+    }
+  },
+  "expect": {
+    "has_output": false,
+    "max_latency_ms": 200
+  }
+}

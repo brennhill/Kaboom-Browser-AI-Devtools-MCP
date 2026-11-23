@@ -1,8 +1,8 @@
-// main.go — Requires every decode into a Wire* type to go through internal/wirecodec.
+// main.go — Requires every decode into a Wire* type to go through internal/platform/wirecodec.
 //
 // PURPOSE: encoding/json ignores unknown fields, so a peer payload that shares
 // no keys with its wire type decodes without error into a zero value. Callers
-// then read that zero value as a legitimate empty result. internal/wirecodec
+// then read that zero value as a legitimate empty result. internal/platform/wirecodec
 // makes that case an error; this contract makes using it non-optional.
 //
 // The scan is AST-only — no go/types, no external loader — so it stays within
@@ -393,7 +393,7 @@ func evaluate(sites []site, exemptions []exemption) []string {
 		entry, isExcused := excused[id]
 		if !isExcused {
 			violations = append(violations, fmt.Sprintf(
-				"%s:%d decodes %s directly; route it through internal/wirecodec so an error envelope cannot become a zero value",
+				"%s:%d decodes %s directly; route it through internal/platform/wirecodec so an error envelope cannot become a zero value",
 				found.File, found.Line, found.Type))
 			continue
 		}
@@ -456,5 +456,5 @@ func main() {
 		}
 		os.Exit(1)
 	}
-	fmt.Printf("OK: %d wire decode site(s), all routed through internal/wirecodec or explicitly exempt\n", len(sites))
+	fmt.Printf("OK: %d wire decode site(s), all routed through internal/platform/wirecodec or explicitly exempt\n", len(sites))
 }

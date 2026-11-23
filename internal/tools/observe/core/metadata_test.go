@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capturefixture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/pagination"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/testsupport/fixture"
 )
 
 func TestCorePackageFileBoundary(t *testing.T) {

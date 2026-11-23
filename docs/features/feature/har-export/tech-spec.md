@@ -207,6 +207,6 @@ Entries reference their page via `pageref`. This allows HAR viewers to display p
 
 ## File Locations
 
-Server implementation: `cmd/browser-agent/internal/toolgenerate/artifacts_har_impl.go` (MCP `generate(har)` handler) and `internal/export/har/export.go`, `internal/export/har/conversion.go`, `internal/export/har/filters.go` (HAR assembly, timing conversion, filtering).
+Server implementation: `internal/tools/generate/handler/artifacts_har_impl.go` (MCP `generate(har)` handler) and `internal/observation/export/har/export.go`, `internal/observation/export/har/conversion.go`, `internal/observation/export/har/filters.go` (HAR assembly, timing conversion, filtering).
 
-Tests: `internal/export/har/export_test.go`, `internal/export/har/coverage_test.go`, `cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go`.
+Tests: `internal/observation/export/har/export_test.go`, `internal/observation/export/har/coverage_test.go`, `internal/tools/generate/handler/handlers_coverage_test.go`.

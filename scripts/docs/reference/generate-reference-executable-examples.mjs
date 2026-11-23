@@ -257,11 +257,11 @@ Fix: ${fix}
 }
 
 async function readModes() {
-  const observeSource = await fs.readFile(path.join(repoRoot, 'internal/schema/observe.go'), 'utf8')
-  const analyzeSource = await fs.readFile(path.join(repoRoot, 'internal/schema/analyze.go'), 'utf8')
-  const generateSource = await fs.readFile(path.join(repoRoot, 'internal/schema/generate.go'), 'utf8')
-  const configureSource = await fs.readFile(path.join(repoRoot, 'internal/schema/configure/properties_core.go'), 'utf8')
-  const interactSource = await fs.readFile(path.join(repoRoot, 'internal/schema/interact/actions.go'), 'utf8')
+  const observeSource = await fs.readFile(path.join(repoRoot, 'internal/tools/schema/observe.go'), 'utf8')
+  const analyzeSource = await fs.readFile(path.join(repoRoot, 'internal/tools/schema/analyze.go'), 'utf8')
+  const generateSource = await fs.readFile(path.join(repoRoot, 'internal/tools/schema/generate.go'), 'utf8')
+  const configureSource = await fs.readFile(path.join(repoRoot, 'internal/tools/schema/configure/properties_core.go'), 'utf8')
+  const interactSource = await fs.readFile(path.join(repoRoot, 'internal/tools/schema/interact/actions.go'), 'utf8')
 
   return {
     observe: extractWhatEnum(observeSource),

@@ -6,15 +6,15 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
-  - internal/performance/types.go
-  - internal/performance/diff.go
-  - internal/performance/wire_performance.go
+  - internal/observation/performance/types.go
+  - internal/observation/performance/diff.go
+  - internal/observation/performance/wire_performance.go
 test_paths:
-  - internal/performance/no_facade_test.go
-  - internal/performance/diff_test.go
-  - internal/performance/diff_resource_test.go
-  - internal/performance/diff_summary_test.go
-  - internal/performance/wire_performance_test.go
+  - internal/observation/performance/no_facade_test.go
+  - internal/observation/performance/diff_test.go
+  - internal/observation/performance/diff_resource_test.go
+  - internal/observation/performance/diff_summary_test.go
+  - internal/observation/performance/wire_performance_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

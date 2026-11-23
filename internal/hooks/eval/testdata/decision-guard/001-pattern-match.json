@@ -1,0 +1,17 @@
+{
+  "description": "Edit introduces 'require (' — should trigger DECISION-001 (no deps)",
+  "hook": "decision-guard",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "require (\n\t\"github.com/some/dep\" v1.0.0\n)"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["ARCHITECTURAL DECISIONS", "DECISION-001", "zero production dependencies", "DECISION GUARD"],
+    "max_latency_ms": 200
+  }
+}

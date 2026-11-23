@@ -6,15 +6,15 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
-  - internal/buffers/ring_buffer.go
-  - internal/buffers/ring_buffer_filter.go
-  - internal/buffers/filter.go
+  - internal/observation/buffers/ring_buffer.go
+  - internal/observation/buffers/ring_buffer_filter.go
+  - internal/observation/buffers/filter.go
 test_paths:
-  - internal/buffers/ring_buffer_test.go
-  - internal/buffers/ring_buffer_stress_test.go
-  - internal/buffers/ring_buffer_property_test.go
-  - internal/buffers/ring_buffer_slo_test.go
-  - internal/buffers/filter_test.go
+  - internal/observation/buffers/ring_buffer_test.go
+  - internal/observation/buffers/ring_buffer_stress_test.go
+  - internal/observation/buffers/ring_buffer_property_test.go
+  - internal/observation/buffers/ring_buffer_slo_test.go
+  - internal/observation/buffers/filter_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -42,7 +42,7 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-- `internal/buffers/ring_buffer.go` owns fixed-capacity storage, monotonic
+- `internal/observation/buffers/ring_buffer.go` owns fixed-capacity storage, monotonic
   cursors, timestamp lookup, wraparound, and clear semantics.
 - The buffer owns a private clock boundary. Production uses `time.Now`; package
   tests provide a fixed clock so timestamp lookup has exact before/after

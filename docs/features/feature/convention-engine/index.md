@@ -6,18 +6,18 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-05
 code_paths:
-  - internal/hook/conventions/conventions.go
-  - internal/hook/projectscan/projectscan.go
-  - internal/hook/hookdiag/hookdiag.go
-  - internal/state/paths.go
-  - internal/hook/hook_policy.go
+  - internal/hooks/conventions/conventions.go
+  - internal/hooks/projectscan/projectscan.go
+  - internal/hooks/hookdiag/hookdiag.go
+  - internal/platform/state/paths/paths.go
+  - internal/hooks/hook_policy.go
 test_paths:
-  - internal/hook/conventions/conventions_test.go
-  - internal/hook/conventions/discovery_test.go
-  - internal/hook/projectscan/projectscan_test.go
-  - internal/hook/hookdiag/hookdiag_test.go
-  - internal/hook/hook_policy_test.go
-  - internal/hook/eval/testdata/quality-gate/
+  - internal/hooks/conventions/conventions_test.go
+  - internal/hooks/conventions/discovery_test.go
+  - internal/hooks/projectscan/projectscan_test.go
+  - internal/hooks/hookdiag/hookdiag_test.go
+  - internal/hooks/hook_policy_test.go
+  - internal/hooks/eval/testdata/quality-gate/
 ---
 
 # Convention Engine
@@ -41,9 +41,9 @@ Three plugin tiers: universal (10 principles, always active, free), language bas
 ## Current State (Phase 1)
 
 - Call-site discovery engine and edited-file detection share the canonical
-  `internal/hook/conventions` package (`Detect`, `Discover`, `Summary`,
+  `internal/hooks/conventions` package (`Detect`, `Discover`, `Summary`,
   `Format`, `Probes`). Repository-walk pruning lives in
-  `internal/hook/projectscan` so the convention scanner and the blast-radius
+  `internal/hooks/projectscan` so the convention scanner and the blast-radius
   scanner cannot disagree about which files the project contains.
 - The injected summary never splits a tie: when the 10th and 11th patterns
   appear in the same number of files the cut extends over the whole tie group,

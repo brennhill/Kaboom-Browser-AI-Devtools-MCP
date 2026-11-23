@@ -6,27 +6,27 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
-  - internal/capture/logstore/store.go
-  - internal/mcp/types.go
-  - internal/redaction/redaction.go
-  - internal/redaction/redaction_engine.go
-  - internal/redaction/redaction_map.go
-  - internal/security/scan/credentials.go
+  - internal/observation/store/logs/store.go
+  - internal/tools/mcp/types.go
+  - internal/platform/redaction/redaction.go
+  - internal/platform/redaction/redaction_engine.go
+  - internal/platform/redaction/redaction_map.go
+  - internal/analysis/security/scan/credentials.go
   - src/background/runtime-state/log-queue.ts
   - Makefile
 test_paths:
-  - internal/capture/logstore/diagnostic_test.go
-  - internal/capture/logstore/store_test.go
-  - internal/redaction/redaction_test.go
-  - internal/redaction/redaction_engine_test.go
-  - internal/redaction/redaction_fuzz_test.go
-  - internal/redaction/redaction_property_test.go
-  - internal/redaction/redaction_unit_test.go
-  - internal/redaction/race_disabled_test.go
-  - internal/redaction/race_enabled_test.go
-  - internal/incident/store_test.go
-  - internal/security/scan/unit_test.go
-  - internal/security/scan/coverage_part2_test.go
+  - internal/observation/store/logs/diagnostic_test.go
+  - internal/observation/store/logs/store_test.go
+  - internal/platform/redaction/redaction_test.go
+  - internal/platform/redaction/redaction_engine_test.go
+  - internal/platform/redaction/redaction_fuzz_test.go
+  - internal/platform/redaction/redaction_property_test.go
+  - internal/platform/redaction/redaction_unit_test.go
+  - internal/platform/redaction/race_disabled_test.go
+  - internal/platform/redaction/race_enabled_test.go
+  - internal/lifecycle/doctor/incident/store_test.go
+  - internal/analysis/security/scan/unit_test.go
+  - internal/analysis/security/scan/coverage_part2_test.go
   - tests/extension/reliability/diagnostic-log-queue.test.js
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-04
@@ -55,7 +55,7 @@ last_verified_date: 2026-08-04
 
 ## Code and Tests
 
-The redaction package consumes the canonical `internal/mcp` result and content
+The redaction package consumes the canonical `internal/tools/mcp` result and content
 block wire types directly. It owns only `RedactionEngine`, `RedactionConfig`,
 and `RedactionPattern`; duplicate or alias compatibility types are prohibited
 and guarded by a package regression test.
@@ -74,12 +74,12 @@ Normal, race, and coverage lanes retain deterministic correctness coverage
 without evaluating latency while competing with unrelated packages.
 
 Security-audit credential and PII patterns are separately owned together in
-`internal/security/scan/credentials.go`; they share the audit scanner's bounded
+`internal/analysis/security/scan/credentials.go`; they share the audit scanner's bounded
 input and evidence-redaction policy rather than the MCP response-redaction
 engine.
 
 Capture diagnostics apply the canonical redaction engine at the focused
-`internal/capture/logstore` ingestion boundary. The owner recursively redacts
+`internal/observation/store/logs` ingestion boundary. The owner recursively redacts
 structured extension data and daemon HTTP fields before retention, returns
 detached snapshots, and exposes no legacy root-package store aliases.
 

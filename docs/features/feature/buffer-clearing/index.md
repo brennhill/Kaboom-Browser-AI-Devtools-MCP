@@ -6,19 +6,19 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolconfigure/clear.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - internal/capture/bodystore/store.go
-  - internal/capture/actionstore/store.go
-  - internal/capture/wsconn/store.go
+  - internal/tools/configure/handler/clear.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/tools/configure/handler/dispatcher.go
+  - internal/observation/store/bodies/store.go
+  - internal/observation/store/actions/store.go
+  - internal/observation/store/wsconn/store.go
 test_paths:
-  - internal/capture/resetter/resetter_test.go
-  - internal/capture/bodystore/store_test.go
-  - internal/capture/actionstore/store_test.go
-  - internal/capture/wsconn/store_test.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
+  - internal/observation/resetter/resetter_test.go
+  - internal/observation/store/bodies/store_test.go
+  - internal/observation/store/actions/store_test.go
+  - internal/observation/store/wsconn/store_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
+  - internal/tools/configure/handler/handlers_coverage_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -46,7 +46,7 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-`internal/toolconfigure/clear.go` owns request parsing and the clearing policy
+`internal/tools/configure/handler/clear.go` owns request parsing and the clearing policy
 for capture, log, push inbox, and annotation stores. The root configure registry
 supplies those stores explicitly through `ClearTargets`, including the
 canonical `resetter.Resetter` for coordinated full-state resets. `Capture`

@@ -317,7 +317,7 @@ Surfaced through the existing perf snapshot POST to the daemon. No new endpoints
 
 ### Navigation perf diff
 
-Computed in the daemon: `internal/performance/diff.go` (`ComputePerfDiff`, `SnapshotToPageLoadMetrics`) with summary text in `internal/performance/diff_summary.go`. The async command handler attaches it as `perf_diff` (`attachPerfDiffIfAvailable` in `cmd/browser-agent/internal/asynccommand/handler.go`). The TypeScript sketch below shows the shape; the shipped implementation is Go.
+Computed in the daemon: `internal/observation/performance/diff.go` (`ComputePerfDiff`, `SnapshotToPageLoadMetrics`) with summary text in `internal/observation/performance/diff_summary.go`. The async command handler attaches it as `perf_diff` (`attachPerfDiffIfAvailable` in `internal/tools/asynccommand/handler.go`). The TypeScript sketch below shows the shape; the shipped implementation is Go.
 
 ```typescript
 function computePerfDiff(before: PageLoadMetrics, after: PageLoadMetrics): PerfDiff {
@@ -405,19 +405,19 @@ Rules:
 
 ### Go (daemon)
 
-#### 5. `internal/schema/interact/actions.go`
+#### 5. `internal/tools/schema/interact/actions.go`
 
 - `analyze` is an optional param on navigate, refresh, click and other DOM actions
 
-#### 6. `internal/performance/diff.go`, `internal/performance/diff_summary.go`
+#### 6. `internal/observation/performance/diff.go`, `internal/observation/performance/diff_summary.go`
 
 - `ComputePerfDiff` — metric + resource diff between before/after page loads, verdict and summary
 
-#### 7. `cmd/browser-agent/internal/asynccommand/handler.go`
+#### 7. `internal/tools/asynccommand/handler.go`
 
 - `attachPerfDiffIfAvailable` adds `perf_diff` to refresh/navigate command results
 
-#### 8. `internal/performance/types.go`, `internal/performance/wire_performance.go`
+#### 8. `internal/observation/performance/types.go`, `internal/observation/performance/wire_performance.go`
 
 - `user_timing` carried in the performance snapshot response
 

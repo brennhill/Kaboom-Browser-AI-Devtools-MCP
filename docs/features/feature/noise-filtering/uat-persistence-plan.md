@@ -378,7 +378,7 @@ rm -rf "$TMPDIR" "$PROJECT_ROOT/.kaboom"
 
 3. **Run Persistence Tests Only:**
    ```bash
-   go test ./internal/noise -run TestNoiseConfigWithStore -v
+   go test ./internal/observation/noise -run TestNoiseConfigWithStore -v
    ```
 
 4. **Manual UAT:**

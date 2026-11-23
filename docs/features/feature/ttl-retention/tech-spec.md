@@ -18,7 +18,7 @@ last_verified_date: 2026-03-05
 
 # Technical Spec: TTL-Based Retention (Feature 16)
 
-> **Status: superseded / removed (reviewed 2026-11-21).** The TTL implementation (`ttl.go` and its tests in the former `cmd/dev-console` tree) was deleted in v5.4.0. The current daemon has no `--ttl` flag, no `configure` TTL action, no TTL section in health output, and no read-time TTL filtering. In-memory capture buffers are bounded by capacity, and on-disk captured artifacts are bounded by the hourly retention sweep (`cmd/browser-agent/internal/retentionsweep/retention.go`, applying file-count/byte/age budgets via `internal/retention/retention.go`). The rest of this document is kept as the historical design.
+> **Status: superseded / removed (reviewed 2026-11-21).** The TTL implementation (`ttl.go` and its tests in the former `cmd/dev-console` tree) was deleted in v5.4.0. The current daemon has no `--ttl` flag, no `configure` TTL action, no TTL section in health output, and no read-time TTL filtering. In-memory capture buffers are bounded by capacity, and on-disk captured artifacts are bounded by the hourly retention sweep (`internal/lifecycle/retention/sweep/retention.go`, applying file-count/byte/age budgets via `internal/lifecycle/retention/retention.go`). The rest of this document is kept as the historical design.
 
 ## Overview
 
@@ -609,9 +609,9 @@ The original TTL files (`ttl.go`, `ttl_test.go`, plus TTL wiring in the old type
 
 | File | Purpose |
 |------|---------|
-| `cmd/browser-agent/internal/retentionsweep/retention.go` | Hourly sweep applying disk budgets to captured-artifact directories |
-| `internal/retention/retention.go` | `Budget` type and `Enforce` (file-count, byte and age limits) |
-| `internal/retention/retention_test.go` | Retention budget tests |
+| `internal/lifecycle/retention/sweep/retention.go` | Hourly sweep applying disk budgets to captured-artifact directories |
+| `internal/lifecycle/retention/retention.go` | `Budget` type and `Enforce` (file-count, byte and age limits) |
+| `internal/lifecycle/retention/retention_test.go` | Retention budget tests |
 
 ---
 

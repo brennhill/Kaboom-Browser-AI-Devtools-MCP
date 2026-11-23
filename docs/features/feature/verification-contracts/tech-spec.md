@@ -8,12 +8,12 @@ last_reviewed: 2026-08-04
 
 ## Boundaries
 
-- `internal/verification/contract.go` owns schema validation and verdict evaluation.
-- `internal/verification/evidence.go` owns evidence normalization, redaction, hashing, authenticity, and freshness checks.
-- `internal/verification/store.go` owns atomic local persistence and lookup.
-- `internal/state/paths.go` owns the state location.
-- `cmd/browser-agent/internal/toolanalyze/verificationhandler` implements the action boundary.
-- `internal/schema/analyze.go` and the analyze mode specification expose the public contract.
+- `internal/analysis/verification/contract.go` owns schema validation and verdict evaluation.
+- `internal/analysis/verification/evidence.go` owns evidence normalization, redaction, hashing, authenticity, and freshness checks.
+- `internal/analysis/verification/store.go` owns atomic local persistence and lookup.
+- `internal/platform/state/paths/paths.go` owns the state location.
+- `internal/tools/analyze/handler/verificationhandler` implements the action boundary.
+- `internal/tools/schema/analyze.go` and the analyze mode specification expose the public contract.
 
 ## Invariants
 

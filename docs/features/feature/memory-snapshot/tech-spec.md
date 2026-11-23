@@ -17,7 +17,7 @@ last_verified_date: 2026-06-29
 Memory Snapshot adds a new analyze mode, `analyze({what: "memory_snapshot"})`, that captures a
 JavaScript heap snapshot through the Chrome DevTools Protocol (CDP) `HeapProfiler` domain and
 returns structured analysis. The mode registers in the analyze dispatch registry
-(the private analyze mode registry in `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`), and its hint plus optional
+(the private analyze mode registry in `internal/tools/analyze/handler/analyzedispatch/dispatcher.go`), and its hint plus optional
 parameters register in `internal/tools/configure/capabilities/modespecs_analyze.go`.
 
 The central architectural decision is that analysis runs in the Go daemon, not in the agent.
@@ -59,7 +59,7 @@ over the cached graph:
   Identifier (URI).
 
 **Asynchronous command plumbing**: Capture is long-running, so it follows the asynchronous
-command pattern (`cmd/browser-agent/internal/toolinteract/interact_dom.go`) with a
+command pattern (`internal/tools/interact/handler/interact_dom.go`) with a
 sixty-second timeout and result polling through `observe({what: "command_result"})`. Analysis
 queries against an already-cached snapshot are synchronous.
 
@@ -97,7 +97,7 @@ Comparison: analyze({..., detail: "leak_suspects", compare_to: <other snapshot_i
 
 **New server files**:
 - A `memory_snapshot` handler wired into the private analyze mode registry in
-  `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`.
+  `internal/tools/analyze/handler/analyzedispatch/dispatcher.go`.
 - A heap-snapshot parser that builds the node/edge/strings graph.
 - A two-snapshot cache with `snapshot_id` keying and oldest-eviction.
 - The detail-mode analyzers listed above.
@@ -170,10 +170,10 @@ Comparison: analyze({..., detail: "leak_suspects", compare_to: <other snapshot_i
 ## Dependencies
 
 ### Depends on:
-- The analyze dispatch registry (`cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`).
+- The analyze dispatch registry (`internal/tools/analyze/handler/analyzedispatch/dispatcher.go`).
 - The CDP attach/detach lifecycle and `HeapProfiler` domain (`src/background/dom/cdp/cdp-dispatch.ts`).
 - The asynchronous command pattern and command-result polling
-  (`cmd/browser-agent/internal/toolinteract/interact_dom.go`,
+  (`internal/tools/interact/handler/interact_dom.go`,
   `observe({what: "command_result"})`).
 - WebSocket chunked transfer for large payloads.
 

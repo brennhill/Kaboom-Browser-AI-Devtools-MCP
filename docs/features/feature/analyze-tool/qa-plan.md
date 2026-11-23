@@ -11,10 +11,10 @@ last_verified_date: 2026-03-05
 # Analyze QA Plan (TARGET)
 
 ## Automated Coverage
-- `cmd/browser-agent/internal/toolanalyze/linkvalidation/handler_test.go`
+- `internal/tools/analyze/handler/linkvalidation/handler_test.go`
 - `cmd/browser-agent/tools_analyze_route_test.go`
-- `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher_test.go`
-- `cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go`
+- `internal/tools/analyze/handler/analyzedispatch/dispatcher_test.go`
+- `internal/tools/analyze/handler/inspect/dom_test.go`
 - `internal/analysis/apicontract/runtime/handler_test.go`
 - `internal/tools/observe/session/session_test.go`
 - `cmd/browser-agent/tools_analyze_page_summary_test.go`

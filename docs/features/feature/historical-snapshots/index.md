@@ -6,22 +6,22 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
-  - internal/types/snapshot.go
-  - internal/session/snapshot-manager.go
-  - internal/session/runtime_reader.go
-  - internal/session/comparison.go
-  - internal/session/snapdiff/types.go
-  - internal/session/snapdiff/errors.go
-  - internal/session/snapdiff/network.go
-  - internal/session/snapdiff/performance.go
+  - internal/platform/types/snapshot.go
+  - internal/analysis/snapshots/snapshot-manager.go
+  - internal/analysis/snapshots/runtime_reader.go
+  - internal/analysis/snapshots/comparison.go
+  - internal/analysis/snapshots/snapdiff/types.go
+  - internal/analysis/snapshots/snapdiff/errors.go
+  - internal/analysis/snapshots/snapdiff/network.go
+  - internal/analysis/snapshots/snapdiff/performance.go
 test_paths:
-  - internal/session/snapshot_manager_test.go
-  - internal/session/sessions_test.go
-  - internal/session/sessions_compare_regression_test.go
-  - internal/session/comparison_test.go
-  - internal/session/snapdiff/errors_test.go
-  - internal/session/snapdiff/network_test.go
-  - internal/session/snapdiff/performance_test.go
+  - internal/analysis/snapshots/snapshot_manager_test.go
+  - internal/analysis/snapshots/sessions_test.go
+  - internal/analysis/snapshots/sessions_compare_regression_test.go
+  - internal/analysis/snapshots/comparison_test.go
+  - internal/analysis/snapshots/snapdiff/errors_test.go
+  - internal/analysis/snapshots/snapdiff/network_test.go
+  - internal/analysis/snapshots/snapdiff/performance_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -50,14 +50,14 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 - Snapshot contract types:
-  - `internal/types/snapshot.go`
-  - `internal/session/snapshot-manager.go`
+  - `internal/platform/types/snapshot.go`
+  - `internal/analysis/snapshots/snapshot-manager.go`
 - `snapshot-manager.go` owns the bounded snapshot aggregate, its capture-reader
   boundary, name invariants, list representation, and CRUD helpers. Handler and
   comparison behavior remain separate, while duplicate handler and reader
   test suites have been folded into their canonical owners.
 - Snapshot diff engine:
-  - `internal/session/snapdiff/`
+  - `internal/analysis/snapshots/snapdiff/`
 - Tests:
-  - `internal/session/snapshot_manager_test.go`
-  - `internal/session/snapdiff/`
+  - `internal/analysis/snapshots/snapshot_manager_test.go`
+  - `internal/analysis/snapshots/snapdiff/`

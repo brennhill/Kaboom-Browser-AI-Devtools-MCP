@@ -23,6 +23,9 @@ type boundedContext struct {
 	name string
 	// packages are repo-relative package roots (the package and its subpackages).
 	packages []string
+	// excluded are repo-relative package roots inside packages that are transport
+	// adapters (MCP handlers) rather than the context's domain code.
+	excluded []string
 	// forbidden are import roots (repo-relative internal packages or stdlib
 	// roots); the import and its subpackages are rejected.
 	forbidden []string
@@ -37,46 +40,47 @@ func boundedContexts() []boundedContext {
 		{
 			name: "Observation Capture",
 			packages: []string{
-				"internal/capture/telemetrystore", "internal/capture/logstore", "internal/capture/perfstore",
-				"internal/capture/actionstore", "internal/capture/bodystore", "internal/capture/waterfallstore",
-				"internal/capture/ringstore", "internal/capture/wsconn", "internal/capture/pressure",
+				"internal/observation/store/telemetry", "internal/observation/store/logs", "internal/observation/store/perf",
+				"internal/observation/store/actions", "internal/observation/store/bodies", "internal/observation/store/waterfall",
+				"internal/observation/store/ring", "internal/observation/store/wsconn", "internal/observation/pressure",
 			},
 			forbidden: []string{
-				"net/http", "internal/mcp", "internal/tools", "internal/app",
-				"internal/browsercommand", "internal/queries",
-				"internal/capture/syncruntime", "internal/capture/httpingest", "internal/recording",
+				"net/http", "internal/tools/mcp", "internal/tools", "internal/page/app", "internal/analysis/app",
+				"internal/browsercommand", "internal/browsercommand/query",
+				"internal/sync/runtime", "internal/ingestion/http", "internal/recording",
 			},
-			forbiddenExact: []string{"internal/capture"},
+			forbiddenExact: []string{"internal/composition/capture"},
 			why:            "capture stores retain observations; ingestion and readers depend on them, never the reverse",
 		},
 		{
 			name:     "Event Recording",
 			packages: []string{"internal/recording"},
+			excluded: []string{"internal/recording/replay", "internal/recording/sequence"},
 			forbidden: []string{
-				"net/http", "internal/mcp", "internal/app",
-				"internal/browsercommand", "internal/queries",
-				"internal/capture/syncruntime", "internal/capture/httpingest",
+				"net/http", "internal/tools/mcp", "internal/page/app", "internal/analysis/app",
+				"internal/browsercommand", "internal/browsercommand/query",
+				"internal/sync/runtime", "internal/ingestion/http",
 			},
-			forbiddenExact: []string{"internal/capture"},
+			forbiddenExact: []string{"internal/composition/capture"},
 			why:            "event recording is a daemon-local lifecycle; MCP and HTTP adapters drive it",
 		},
 		{
 			name:     "Connection & Sync",
-			packages: []string{"internal/capture/syncruntime"},
+			packages: []string{"internal/sync/runtime"},
 			forbidden: []string{
-				"internal/mcp", "internal/tools", "internal/app", "internal/recording",
-				"internal/capture/httpingest",
+				"internal/tools/mcp", "internal/tools", "internal/page/app", "internal/analysis/app", "internal/recording",
+				"internal/ingestion/http",
 			},
-			forbiddenExact: []string{"internal/capture"},
+			forbiddenExact: []string{"internal/composition/capture"},
 			why:            "sync owns connection identity and hands command work to browsercommand.Owner only",
 		},
 		{
 			name:     "Extension Ingestion",
-			packages: []string{"internal/capture/httpingest"},
+			packages: []string{"internal/ingestion/http"},
 			forbidden: []string{
-				"internal/mcp", "internal/tools", "internal/app", "internal/capture/syncruntime",
+				"internal/tools/mcp", "internal/tools", "internal/page/app", "internal/analysis/app", "internal/sync/runtime",
 			},
-			forbiddenExact: []string{"internal/capture"},
+			forbiddenExact: []string{"internal/composition/capture"},
 			why:            "HTTP ingestion writes to its owners' ports; it is not a tool or sync adapter",
 		},
 	}
@@ -89,6 +93,9 @@ func contextOf(pkg string) (boundedContext, bool) {
 		return boundedContext{}, false
 	}
 	for _, c := range boundedContexts() {
+		if c.excludes(rel) {
+			continue
+		}
 		for _, root := range c.packages {
 			if isPkgOrSub(rel, root) {
 				return c, true
@@ -96,6 +103,16 @@ func contextOf(pkg string) (boundedContext, bool) {
 		}
 	}
 	return boundedContext{}, false
+}
+
+// excludes reports whether rel is an adapter package carved out of the context.
+func (c boundedContext) excludes(rel string) bool {
+	for _, root := range c.excluded {
+		if isPkgOrSub(rel, root) {
+			return true
+		}
+	}
+	return false
 }
 
 // forbids reports whether the context rejects the import path imp.

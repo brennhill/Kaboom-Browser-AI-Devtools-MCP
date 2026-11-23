@@ -25,7 +25,7 @@ tags: [testing, qa, hooks, eval]
 
 | # | Data Leak Risk | What to Check | Severity |
 |---|---------------|---------------|----------|
-| DL-1 | Eval code linked into shipped binaries | A lint invariant (check 16 in `scripts/quality/verification/lint-hardening.sh`) forbids `internal/hook/eval` from being imported by production binaries. Verify the invariant exists and fails the build if violated. | critical |
+| DL-1 | Eval code linked into shipped binaries | A lint invariant (check 16 in `scripts/quality/verification/lint-hardening.sh`) forbids `internal/hooks/eval` from being imported by production binaries. Verify the invariant exists and fails the build if violated. | critical |
 | DL-2 | Network access during eval | Tier 1 unit evals run fully offline against fixtures and the local repo. Verify no fixture triggers a network call. | high |
 | DL-3 | Temp session dirs leaking | `RunFixture` creates `os.MkdirTemp` session dirs and defers `os.RemoveAll`. Verify no temp dir is left behind after a run. | medium |
 | DL-4 | Fixture content exposing secrets | Fixtures contain synthetic code snippets. Verify none embed real credentials or private paths. | medium |
@@ -33,8 +33,8 @@ tags: [testing, qa, hooks, eval]
 
 ### Negative Tests (must NOT leak)
 
-- [ ] Building any production binary fails if it imports `internal/hook/eval`.
-- [ ] A full `go test ./internal/hook/eval/` run makes no outbound network connections.
+- [ ] Building any production binary fails if it imports `internal/hooks/eval`.
+- [ ] A full `go test ./internal/hooks/eval/` run makes no outbound network connections.
 - [ ] Temp session directories are removed after each fixture (no `/tmp/eval-session-*` residue).
 
 ---
@@ -67,7 +67,7 @@ tags: [testing, qa, hooks, eval]
 
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
-| Run all unit evals | 1 step: `go test ./internal/hook/eval/` | No |
+| Run all unit evals | 1 step: `go test ./internal/hooks/eval/` | No |
 | Add a fixture | 1 step: drop a JSON file in the hook's `testdata/<hook>/` dir | No — auto-discovered by `LoadFixtures` |
 | Pre-seed session state | 1 step: add `session_state.touches[]` to the fixture | No |
 | Generate a report | 1 step: `go test -run TestEval_Report -v` | No |
@@ -84,7 +84,7 @@ tags: [testing, qa, hooks, eval]
 
 ### 4.1 Unit Tests (runner correctness)
 
-Source under test: `internal/hook/eval/eval.go`. Driver: `internal/hook/eval/eval_test.go`.
+Source under test: `internal/hooks/eval/eval.go`. Driver: `internal/hooks/eval/eval_test.go`.
 
 | # | Test Case | Input | Expected Output | Priority |
 |---|-----------|-------|-----------------|----------|
@@ -103,7 +103,7 @@ Source under test: `internal/hook/eval/eval.go`. Driver: `internal/hook/eval/eva
 
 ### 4.2 Fixture Coverage (regression suite)
 
-Fixtures live under `internal/hook/eval/testdata/`. Two families:
+Fixtures live under `internal/hooks/eval/testdata/`. Two families:
 
 - **Hook infrastructure** — `quality-gate` (13), `compress-output` (10), `session-track` (9), `blast-radius` (9), `decision-guard` (10).
 - **Universal principles** — `u01`..`u10` (≈49 fixtures) exercising the discover → suggest → enforce → migrate cycle.
@@ -148,12 +148,12 @@ Fixtures live under `internal/hook/eval/testdata/`. Two families:
 
 | # | Step | Expected Result | Pass |
 |---|------|-----------------|------|
-| UAT-1 | `go test ./internal/hook/eval/ -run TestEval_AllFixtures -count=1` | All regression fixtures pass; aspirational ones report as skipped | [ ] |
-| UAT-2 | `go test ./internal/hook/eval/ -run TestEval_Report -v -count=1` | Per-hook summary and pass/fail totals print | [ ] |
+| UAT-1 | `go test ./internal/hooks/eval/ -run TestEval_AllFixtures -count=1` | All regression fixtures pass; aspirational ones report as skipped | [ ] |
+| UAT-2 | `go test ./internal/hooks/eval/ -run TestEval_Report -v -count=1` | Per-hook summary and pass/fail totals print | [ ] |
 | UAT-3 | Add a passing fixture to a hook's `testdata/` dir, rerun | New fixture is auto-discovered and passes | [ ] |
 | UAT-4 | Introduce a deliberate regression in a hook, rerun | The corresponding fixture fails with a specific message | [ ] |
-| UAT-5 | `go test -race ./internal/hook/eval/` | Suite passes; latency budgets are not enforced under race | [ ] |
-| UAT-6 | Attempt to import `internal/hook/eval` from a production package and build | Build/lint fails per the hardening invariant | [ ] |
+| UAT-5 | `go test -race ./internal/hooks/eval/` | Suite passes; latency budgets are not enforced under race | [ ] |
+| UAT-6 | Attempt to import `internal/hooks/eval` from a production package and build | Build/lint fails per the hardening invariant | [ ] |
 
 ### Regression Checks
 

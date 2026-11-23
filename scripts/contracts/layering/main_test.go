@@ -24,26 +24,26 @@ func TestDependencyMatrixRules(t *testing.T) {
 	root := t.TempDir()
 	writeTree(t, root, map[string]string{
 		// pagination is NOT a leaf (imports mcp), so types importing it violates the leaf rule.
-		"internal/pagination/pagination.go": "package pagination\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp\"\n",
+		"internal/observation/pagination/pagination.go": "package pagination\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp\"\n",
 		// Clean: internal tool importing another internal package, and tools
 		// importing schema is the INTENDED direction (schema sits below tools).
-		"internal/tools/observe/handler.go":     "package observe\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination\"\n",
-		"internal/tools/observe/uses_schema.go": "package observe\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema/interact\"\n",
+		"internal/tools/observe/handler.go":     "package observe\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/pagination\"\n",
+		"internal/tools/observe/uses_schema.go": "package observe\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/schema/interact\"\n",
 		// D1: internal importing cmd.
-		"internal/bridge/bridge.go": "package bridge\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge\"\n",
+		"internal/lifecycle/bridge/framing/bridge.go": "package bridge\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge\"\n",
 		// D2: types must stay a leaf.
-		"internal/types/types.go": "package types\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination\"\n",
+		"internal/platform/types/types.go": "package types\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/pagination\"\n",
 		// D3: protocol package must not know the domain or the capture port.
-		"internal/mcp/protocol.go":  "package mcp\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe\"\n",
-		"internal/mcp/protocol2.go": "package mcp\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n",
+		"internal/tools/mcp/protocol.go":  "package mcp\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe\"\n",
+		"internal/tools/mcp/protocol2.go": "package mcp\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture\"\n",
 		// D4: schema sits below tools; only schema importing tools is a breach.
-		"internal/schema/configure/s.go": "package configure\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe\"\n",
+		"internal/tools/schema/configure/s.go": "package configure\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe\"\n",
 		// D5: NewCapture outside the composition root.
-		"internal/tools/interact/setup.go": "package interact\n\nimport \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n\nfunc boot() { _ = capture.NewCapture() }\n",
+		"internal/tools/interact/setup.go": "package interact\n\nimport \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture\"\n\nfunc boot() { _ = capture.NewCapture() }\n",
 		// Clean: composition root constructing the capture port.
-		"cmd/browser-agent/main.go": "package main\n\nimport \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture\"\n\nfunc main() { _ = capture.NewCapture() }\n",
+		"cmd/browser-agent/main.go": "package main\n\nimport \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture\"\n\nfunc main() { _ = capture.NewCapture() }\n",
 		// Test files are exempt from every matrix rule.
-		"internal/bridge/bridge_test.go": "package bridge\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge\"\n",
+		"internal/lifecycle/bridge/framing/bridge_test.go": "package bridge\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge\"\n",
 	})
 
 	scan, err := scanTree(root)
@@ -76,13 +76,13 @@ func contains(haystack, needle string) bool {
 func TestMatrixFiresUnderDefaultRoots(t *testing.T) {
 	root := t.TempDir()
 	writeTree(t, root, map[string]string{
-		"go.mod":                                 "module example.invalid/probe\n",
-		"internal/bridge/bridge.go":              "package bridge\n\nimport _ \"" + modulePrefix + "cmd/browser-agent/internal/bridge\"\n",
-		"internal/types/types.go":                "package types\n\nimport _ \"" + modulePrefix + "internal/pagination\"\n",
-		"internal/pagination/p.go":               "package pagination\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp\"\n",
-		"internal/mcp/m.go":                      "package mcp\n",
-		"cmd/browser-agent/internal/bridge/b.go": "package bridge\n",
-		"cmd/browser-agent/main.go":              "package main\n",
+		"go.mod": "module example.invalid/probe\n",
+		"internal/lifecycle/bridge/framing/bridge.go": "package bridge\n\nimport _ \"" + modulePrefix + "cmd/browser-agent/internal/bridge\"\n",
+		"internal/platform/types/types.go":            "package types\n\nimport _ \"" + modulePrefix + "internal/observation/pagination\"\n",
+		"internal/observation/pagination/p.go":        "package pagination\n\nimport _ \"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp\"\n",
+		"internal/tools/mcp/m.go":                     "package mcp\n",
+		"cmd/browser-agent/internal/bridge/b.go":      "package bridge\n",
+		"cmd/browser-agent/main.go":                   "package main\n",
 	})
 
 	merged, err := scanAll([]string{filepath.Join(root, "cmd"), filepath.Join(root, "internal")})
@@ -108,11 +108,11 @@ func TestMatrixFiresUnderDefaultRoots(t *testing.T) {
 func TestNewCaptureDetectionResolvesAliasesAndPackageVars(t *testing.T) {
 	root := t.TempDir()
 	writeTree(t, root, map[string]string{
-		"internal/evil/alias.go": "package evil\n\nimport cap \"" + modulePrefix + "internal/capture\"\n\nfunc Boot() { _ = cap.NewCapture() }\n",
-		"internal/evil/var.go":   "package evil\n\nimport \"" + modulePrefix + "internal/capture\"\n\nvar nc = capture.NewCapture\n",
-		"internal/evil/init.go":  "package evil\n\nimport \"" + modulePrefix + "internal/capture\"\n\nvar sink = capture.NewCapture()\n",
+		"internal/evil/alias.go": "package evil\n\nimport cap \"" + modulePrefix + "internal/composition/capture\"\n\nfunc Boot() { _ = cap.NewCapture() }\n",
+		"internal/evil/var.go":   "package evil\n\nimport \"" + modulePrefix + "internal/composition/capture\"\n\nvar nc = capture.NewCapture\n",
+		"internal/evil/init.go":  "package evil\n\nimport \"" + modulePrefix + "internal/composition/capture\"\n\nvar sink = capture.NewCapture()\n",
 		// Clean: aliased use inside the composition root.
-		"cmd/browser-agent/main.go": "package main\n\nimport cap \"" + modulePrefix + "internal/capture\"\n\nfunc main() { _ = cap.NewCapture() }\n",
+		"cmd/browser-agent/main.go": "package main\n\nimport cap \"" + modulePrefix + "internal/composition/capture\"\n\nfunc main() { _ = cap.NewCapture() }\n",
 	})
 
 	scan, err := scanTree(root)
@@ -281,16 +281,16 @@ func TestInterfaceKeyIsStableAcrossImplMoves(t *testing.T) {
 func TestApplicationUseCasesHaveNoTransportDependencies(t *testing.T) {
 	root := t.TempDir()
 	writeTree(t, root, map[string]string{
-		"internal/app/screenshot/http.go":    "package screenshot\n\nimport _ \"net/http\"\n",
-		"internal/app/screenshot/mcp.go":     "package screenshot\n\nimport _ \"" + modulePrefix + "internal/mcp\"\n",
-		"internal/app/screenshot/capture.go": "package screenshot\n\nimport _ \"" + modulePrefix + "internal/capture\"\n",
-		"internal/app/other/adapter.go":      "package other\n\nimport _ \"" + modulePrefix + "internal/tools/observe/page\"\n",
+		"internal/page/app/screenshot/http.go":    "package screenshot\n\nimport _ \"net/http\"\n",
+		"internal/page/app/screenshot/mcp.go":     "package screenshot\n\nimport _ \"" + modulePrefix + "internal/tools/mcp\"\n",
+		"internal/page/app/screenshot/capture.go": "package screenshot\n\nimport _ \"" + modulePrefix + "internal/composition/capture\"\n",
+		"internal/page/app/other/adapter.go":      "package other\n\nimport _ \"" + modulePrefix + "internal/tools/observe/page\"\n",
 		// Clean: use cases may depend on the command module and leaf utilities.
-		"internal/app/screenshot/service.go": "package screenshot\n\nimport (\n\t_ \"context\"\n\t_ \"" + modulePrefix + "internal/queries\"\n)\n",
+		"internal/page/app/screenshot/service.go": "package screenshot\n\nimport (\n\t_ \"context\"\n\t_ \"" + modulePrefix + "internal/browsercommand/query\"\n)\n",
 		// Clean: adapters depending on the use case.
-		"internal/tools/observe/page/p.go": "package page\n\nimport (\n\t_ \"" + modulePrefix + "internal/mcp\"\n\t_ \"" + modulePrefix + "internal/app/screenshot\"\n)\n",
+		"internal/tools/observe/page/p.go": "package page\n\nimport (\n\t_ \"" + modulePrefix + "internal/tools/mcp\"\n\t_ \"" + modulePrefix + "internal/page/app/screenshot\"\n)\n",
 		// Test files are exempt.
-		"internal/app/screenshot/x_test.go": "package screenshot\n\nimport _ \"" + modulePrefix + "internal/capture\"\n",
+		"internal/page/app/screenshot/x_test.go": "package screenshot\n\nimport _ \"" + modulePrefix + "internal/composition/capture\"\n",
 	})
 	scan, err := scanTree(root)
 	if err != nil {
@@ -310,14 +310,14 @@ func TestApplicationUseCasesHaveNoTransportDependencies(t *testing.T) {
 func TestCommandModuleHasNoTransportDependencies(t *testing.T) {
 	root := t.TempDir()
 	writeTree(t, root, map[string]string{
-		"internal/browsercommand/http.go": "package browsercommand\n\nimport _ \"net/http\"\n",
-		"internal/browsercommand/mcp.go":  "package browsercommand\n\nimport _ \"" + modulePrefix + "internal/mcp\"\n",
-		"internal/queries/sync.go":        "package queries\n\nimport _ \"" + modulePrefix + "internal/capture/syncruntime\"\n",
-		"internal/queries/httptest.go":    "package queries\n\nimport _ \"net/http/httptest\"\n",
+		"internal/browsercommand/http.go":           "package browsercommand\n\nimport _ \"net/http\"\n",
+		"internal/browsercommand/mcp.go":            "package browsercommand\n\nimport _ \"" + modulePrefix + "internal/tools/mcp\"\n",
+		"internal/browsercommand/query/sync.go":     "package queries\n\nimport _ \"" + modulePrefix + "internal/sync/runtime\"\n",
+		"internal/browsercommand/query/httptest.go": "package queries\n\nimport _ \"net/http/httptest\"\n",
 		// Clean: the command module may use its own store and plain stdlib.
-		"internal/browsercommand/owner.go": "package browsercommand\n\nimport (\n\t_ \"time\"\n\t_ \"" + modulePrefix + "internal/queries\"\n)\n",
+		"internal/browsercommand/owner.go": "package browsercommand\n\nimport (\n\t_ \"time\"\n\t_ \"" + modulePrefix + "internal/browsercommand/query\"\n)\n",
 		// Clean: transport adapters depending on the command module.
-		"internal/capture/httpingest/h.go": "package httpingest\n\nimport (\n\t_ \"net/http\"\n\t_ \"" + modulePrefix + "internal/browsercommand\"\n)\n",
+		"internal/ingestion/http/h.go": "package httpingest\n\nimport (\n\t_ \"net/http\"\n\t_ \"" + modulePrefix + "internal/browsercommand\"\n)\n",
 		// Test files are exempt.
 		"internal/browsercommand/x_test.go": "package browsercommand\n\nimport _ \"net/http\"\n",
 	})
@@ -343,12 +343,12 @@ func TestCommandOwnerIsTheOnlyDispatcherPath(t *testing.T) {
 		// Breach: production code calling a dispatcher accessor.
 		"cmd/browser-agent/internal/toolx/x.go": "package toolx\n\nfunc f(c interface{ Queries() any }) { _ = c.Queries() }\n",
 		// Breach: the capture composition file no longer gets an exception.
-		"internal/capture/capture.go": "package capture\n\nimport _ \"" + d + "\"\n",
+		"internal/composition/capture/capture.go": "package capture\n\nimport _ \"" + d + "\"\n",
 		// Breach: aliased import elsewhere.
 		"internal/tools/observe/page/p.go": "package page\n\nimport qq \"" + d + "\"\n\nvar _ = qq.X\n",
 		// Clean: the owner itself and test fixtures.
 		"internal/browsercommand/owner.go":           "package browsercommand\n\nimport _ \"" + d + "\"\n",
-		"internal/app/screenshot/s.go":               "package screenshot\n\nimport \"" + modulePrefix + "internal/queries\"\n\nvar _ queries.QueryRunner\n",
+		"internal/page/app/screenshot/s.go":          "package screenshot\n\nimport \"" + modulePrefix + "internal/browsercommand/query\"\n\nvar _ queries.QueryRunner\n",
 		"cmd/browser-agent/internal/toolx/x_test.go": "package toolx\n\nfunc g(c interface{ Queries() any }) { _ = c.Queries() }\n",
 	})
 	scan, err := scanTree(root)
@@ -368,21 +368,21 @@ func TestCommandOwnerIsTheOnlyDispatcherPath(t *testing.T) {
 
 func TestOnlyCompositionRootImportsCapture(t *testing.T) {
 	root := t.TempDir()
-	c := modulePrefix + "internal/capture"
+	c := modulePrefix + "internal/composition/capture"
 	writeTree(t, root, map[string]string{
 		// Breaches: tool, observe and other adapter packages holding the whole Capture.
 		"cmd/browser-agent/internal/toolinteract/a.go": "package toolinteract\n\nimport _ \"" + c + "\"\n",
 		"internal/tools/observe/logs/l.go":             "package logs\n\nimport _ \"" + c + "\"\n",
-		"cmd/browser-agent/internal/health/h.go":       "package health\n\nimport _ \"" + c + "\"\n",
+		"internal/tools/commandhealth/h.go":            "package health\n\nimport _ \"" + c + "\"\n",
 		// Breach: production code importing test support.
-		"cmd/browser-agent/internal/health/t.go": "package health\n\nimport _ \"" + modulePrefix + "internal/browsercommand/commandtest\"\n",
+		"internal/tools/commandhealth/t.go": "package health\n\nimport _ \"" + modulePrefix + "internal/browsercommand/commandtest\"\n",
 		// Clean: composition root, capture tree, test support, owner subpackages, tests.
-		"cmd/browser-agent/main.go":                   "package main\n\nimport _ \"" + c + "\"\n",
-		"cmd/browser-agent/internal/toolruntime/w.go": "package toolruntime\n\nimport _ \"" + c + "\"\n",
-		"internal/capture/healthreader/r.go":          "package healthreader\n\nimport _ \"" + c + "/telemetrystore\"\n",
-		"internal/tools/observe/testsupport/h.go":     "package testsupport\n\nimport _ \"" + c + "\"\n",
-		"internal/tools/observe/core/d.go":            "package core\n\nimport _ \"" + c + "/telemetrystore\"\n",
-		"cmd/browser-agent/internal/health/h_test.go": "package health\n\nimport _ \"" + c + "\"\n",
+		"cmd/browser-agent/main.go":               "package main\n\nimport _ \"" + c + "\"\n",
+		"internal/composition/toolruntime/w.go":   "package toolruntime\n\nimport _ \"" + c + "\"\n",
+		"internal/observation/healthreader/r.go":  "package healthreader\n\nimport _ \"" + c + "/telemetrystore\"\n",
+		"internal/tools/observe/testsupport/h.go": "package testsupport\n\nimport _ \"" + c + "\"\n",
+		"internal/tools/observe/core/d.go":        "package core\n\nimport _ \"" + c + "/telemetrystore\"\n",
+		"internal/tools/commandhealth/h_test.go":  "package health\n\nimport _ \"" + c + "\"\n",
 	})
 	scan, err := scanTree(root)
 	if err != nil {

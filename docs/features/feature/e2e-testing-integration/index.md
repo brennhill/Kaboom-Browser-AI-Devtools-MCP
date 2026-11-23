@@ -6,9 +6,9 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
-  - internal/capture/bodystore/store.go
+  - internal/observation/store/bodies/store.go
 test_paths:
-  - internal/capture/bodystore/store_test.go
+  - internal/observation/store/bodies/store_test.go
   - tests/e2e/capture/
   - tests/e2e/runtime/
   - tests/e2e/ui/

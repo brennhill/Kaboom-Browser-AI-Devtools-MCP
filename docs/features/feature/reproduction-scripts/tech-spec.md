@@ -15,7 +15,7 @@ last_verified_date: 2026-03-05
 
 `generate({format: "reproduction"})` produces reproduction scripts from captured `EnhancedAction` data. Two output formats: Playwright (test code) and Kaboom (natural language, `output_format: "kaboom-agentic-browser"`, the default).
 
-The generate boundary is `Dispatcher.getReproductionScript()` in [dispatcher.go](../../../../cmd/browser-agent/internal/toolgenerate/dispatcher.go). It is a thin adapter: parsing, filtering, script generation and result assembly live in the `internal/reproduction` package (`internal/reproduction/reproduction.go`, `reproduction_kaboom.go`, `reproduction_playwright.go`, `reproduction_selectors.go`, `reproduction_locators.go`, `reproduction_utils.go`).
+The generate boundary is `Dispatcher.getReproductionScript()` in [dispatcher.go](../../../../internal/tools/generate/handler/dispatcher.go). It is a thin adapter: parsing, filtering, script generation and result assembly live in the `internal/recording/reproduction` package (`internal/recording/reproduction/reproduction.go`, `reproduction_kaboom.go`, `reproduction_playwright.go`, `reproduction_selectors.go`, `reproduction_locators.go`, `reproduction_utils.go`).
 
 ---
 
@@ -28,7 +28,7 @@ sequenceDiagram
     participant Browser as Browser (Extension)
     participant Capture as Capture Buffer
     participant Generate as generate() Tool
-    participant Script as internal/reproduction
+    participant Script as internal/recording/reproduction
 
     Browser->>Capture: EnhancedAction (click, input, navigate...)
     Note over Capture: Ring buffer, 1000 max<br/>Multi-strategy selectors per action
@@ -69,9 +69,9 @@ The generation code reads from this map to produce the best possible description
 
 ## Implementation
 
-### Generate Boundary: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
+### Generate Boundary: `internal/tools/generate/handler/dispatcher.go`
 
-`Dispatcher.getReproductionScript()` validates `output_format` (rejecting anything other than `kaboom-agentic-browser` or `playwright` with `invalid_param`), reads `Capture.Telemetry().Actions().Snapshot().Actions`, and delegates to `package reproduction` in `internal/reproduction/`.
+`Dispatcher.getReproductionScript()` validates `output_format` (rejecting anything other than `kaboom-agentic-browser` or `playwright` with `invalid_param`), reads `Capture.Telemetry().Actions().Snapshot().Actions`, and delegates to `package reproduction` in `internal/recording/reproduction/`.
 
 ### Core Functions
 
@@ -276,13 +276,13 @@ func selectorRole(selectors map[string]any) (role, name string) {
 
 | File | Role |
 |------|------|
-| `cmd/browser-agent/internal/toolgenerate/dispatcher.go` | Generate adapter (`getReproductionScript`) |
-| `internal/reproduction/reproduction.go` | Params, result, validation, dispatch, metadata |
-| `internal/reproduction/reproduction_kaboom.go` | Kaboom natural-language generator |
-| `internal/reproduction/reproduction_playwright.go` | Playwright generator |
-| `internal/reproduction/reproduction_selectors.go` | `DescribeElement`, `PlaywrightLocator`, selector helpers |
-| `internal/reproduction/reproduction_locators.go` | Fallback locators (selector, AX, coordinate) and environment pin |
-| `internal/reproduction/reproduction_utils.go` | Escaping, URL rewriting, truncation helpers |
+| `internal/tools/generate/handler/dispatcher.go` | Generate adapter (`getReproductionScript`) |
+| `internal/recording/reproduction/reproduction.go` | Params, result, validation, dispatch, metadata |
+| `internal/recording/reproduction/reproduction_kaboom.go` | Kaboom natural-language generator |
+| `internal/recording/reproduction/reproduction_playwright.go` | Playwright generator |
+| `internal/recording/reproduction/reproduction_selectors.go` | `DescribeElement`, `PlaywrightLocator`, selector helpers |
+| `internal/recording/reproduction/reproduction_locators.go` | Fallback locators (selector, AX, coordinate) and environment pin |
+| `internal/recording/reproduction/reproduction_utils.go` | Escaping, URL rewriting, truncation helpers |
 
 ---
 
@@ -290,18 +290,18 @@ func selectorRole(selectors map[string]any) (role, name string) {
 
 ### Unit Tests
 
-`internal/reproduction/reproduction_test.go` covers the format behaviours, including:
+`internal/recording/reproduction/reproduction_test.go` covers the format behaviours, including:
 
 1. **TestReproduction_Kaboom_BasicFlow** / **AllActionTypes** / **ElementDescriptionPriority** / **TimingPauses** / **RedactedValues** / **AIActions** / **ErrorMessage**
 2. **TestReproduction_Playwright_BasicFlow** / **LocatorPriority** / **URLRewriting** / **SpecialCharacters** / **TimingPauses**
 3. **TestReproduction_EmptyActions**, **TestReproduction_LastN**, **TestReproduction_DefaultFormat**
 4. Per-step `TestPlaywrightStep_*` cases
 
-`internal/reproduction/reproduction_locators_test.go` covers fallback locators and environment pinning; `internal/reproduction/golden_test.go` compares Playwright output against golden files. `internal/tools/interact/reproduction_test.go` covers selector parsing for reproduction.
+`internal/recording/reproduction/reproduction_locators_test.go` covers fallback locators and environment pinning; `internal/recording/reproduction/golden_test.go` compares Playwright output against golden files. `internal/tools/interact/reproduction_test.go` covers selector parsing for reproduction.
 
 ### Integration Test
 
-`cmd/browser-agent/internal/toolgenerate/toolgenerate_test.go` exercises the generate dispatch so the `reproduction` format reaches `package reproduction`.
+`internal/tools/generate/handler/toolgenerate_test.go` exercises the generate dispatch so the `reproduction` format reaches `package reproduction`.
 
 ---
 

@@ -1,0 +1,17 @@
+{
+  "description": "ASPIRATIONAL U7 Enforce: reflect package usage in Go — should flag as implicit behavior that's hard to trace",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "import \"reflect\"\n\nfunc setField(obj interface{}, name string, value interface{}) {\n\treflect.ValueOf(obj).Elem().FieldByName(name).Set(reflect.ValueOf(value))\n}"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["U7", "reflect", "explicit"],
+    "max_latency_ms": 5000
+  }
+}

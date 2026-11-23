@@ -8,7 +8,7 @@ last_reviewed: 2026-08-04
 
 ## Ownership
 
-`internal/flakerepro/runner.go` owns plan validation, bounded execution, correlation, classification, and summary calculation. `internal/workflowverify/runner.go` supplies workflow failures that can be reproduced without coupling the generic reproduction package to browser actions.
+`internal/analysis/flakerepro/runner.go` owns plan validation, bounded execution, correlation, classification, and summary calculation. `internal/analysis/workflowverify/runner.go` supplies workflow failures that can be reproduced without coupling the generic reproduction package to browser actions.
 
 ## Model
 

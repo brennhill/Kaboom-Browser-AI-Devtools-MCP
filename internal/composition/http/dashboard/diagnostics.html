@@ -1,0 +1,304 @@
+<!doctype html>
+<!-- Embedded by internal/composition/http/dashboard. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnostics - Kaboom MCP Server</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4Ij4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZmxhbWUiIHgxPSIwJSIgeTE9IjEwMCUiIHgyPSIwJSIgeTI9IjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2Y5NzMxNiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3R5bGU9InN0b3AtY29sb3I6I2ZiOTIzYyIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNmYmJmMjQiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImlubmVyRmxhbWUiIHgxPSIwJSIgeTE9IjEwMCUiIHgyPSIwJSIgeTI9IjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2ZiYmYyNCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNmZWYzYzciLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjY0IiBjeT0iNjQiIHI9IjYwIiBmaWxsPSIjMWExYTFhIi8+CiAgPHBhdGggZD0iTTY0IDE2IEM0MCA0MCwgMjggNjAsIDI4IDgwIEMyOCAxMDAsIDQ0IDExNiwgNjQgMTE2IEM4NCAxMTYsIDEwMCAxMDAsIDEwMCA4MCBDMTAwIDYwLCA4OCA0MCwgNjQgMTYgWiIgZmlsbD0idXJsKCNmbGFtZSkiLz4KICA8cGF0aCBkPSJNNjQgNDggQzUyIDYwLCA0NCA3MiwgNDQgODQgQzQ0IDk2LCA1MiAxMDQsIDY0IDEwNCBDNzYgMTA0LCA4NCA5NiwgODQgODQgQzg0IDcyLCA3NiA2MCwgNjQgNDggWiIgZmlsbD0idXJsKCNpbm5lckZsYW1lKSIvPgo8L3N2Zz4K">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #111;
+  color: #e0e0e0;
+  padding: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+a { color: #7ab3ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #333;
+}
+header .logo { width: 28px; height: 28px; flex-shrink: 0; }
+header h1 { font-size: 22px; font-weight: 600; color: #fff; }
+header .sub { color: #888; font-size: 14px; }
+header .nav { margin-left: auto; font-size: 13px; }
+header .nav a { margin-left: 16px; }
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+.card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 16px;
+}
+.card h2 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  margin-bottom: 12px;
+}
+.card.wide { grid-column: 1 / -1; }
+.row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+.row .k { color: #aaa; }
+.row .v { color: #fff; font-weight: 500; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
+.dot {
+  display: inline-block;
+  width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle;
+}
+.dot.green { background: #22c55e; box-shadow: 0 0 6px #22c55e66; }
+.dot.red { background: #ef4444; box-shadow: 0 0 6px #ef444466; }
+.dot.gray { background: #666; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th {
+  text-align: left; color: #666; font-weight: 500;
+  padding: 4px 8px 8px; border-bottom: 1px solid #2a2a2a;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;
+}
+td { padding: 6px 8px; border-bottom: 1px solid #1f1f1f; color: #ccc; }
+tr:last-child td { border-bottom: none; }
+.mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
+.status-ok { color: #22c55e; }
+.status-err { color: #ef4444; }
+.empty { color: #555; font-style: italic; padding: 12px 8px; }
+.json-link {
+  display: inline-block; padding: 4px 10px; background: #1f1f1f;
+  border: 1px solid #333; border-radius: 4px; font-size: 12px; color: #888;
+}
+.json-link:hover { border-color: #555; color: #ccc; text-decoration: none; }
+.refresh-note {
+  text-align: center; color: #444; font-size: 11px; margin-top: 24px;
+}
+</style>
+</head>
+<body>
+<header>
+  <svg class="logo" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="flame" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" style="stop-color:#f97316"/><stop offset="50%" style="stop-color:#fb923c"/><stop offset="100%" style="stop-color:#fbbf24"/>
+      </linearGradient>
+      <linearGradient id="innerFlame" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" style="stop-color:#fbbf24"/><stop offset="100%" style="stop-color:#fef3c7"/>
+      </linearGradient>
+    </defs>
+    <circle cx="64" cy="64" r="60" fill="#1a1a1a"/>
+    <path d="M64 16 C40 40, 28 60, 28 80 C28 100, 44 116, 64 116 C84 116, 100 100, 100 80 C100 60, 88 40, 64 16 Z" fill="url(#flame)"/>
+    <path d="M64 48 C52 60, 44 72, 44 84 C44 96, 52 104, 64 104 C76 104, 84 96, 84 84 C84 72, 76 60, 64 48 Z" fill="url(#innerFlame)"/>
+  </svg>
+  <h1>Diagnostics</h1>
+  <span class="sub" id="generated-at"></span>
+  <nav class="nav">
+    <a href="/">Dashboard</a>
+  </nav>
+</header>
+
+<div class="grid">
+  <div class="card">
+    <h2>Server</h2>
+    <div id="server-info"></div>
+  </div>
+
+  <div class="card">
+    <h2>System</h2>
+    <div id="system-info"></div>
+  </div>
+
+  <div class="card">
+    <h2>Extension</h2>
+    <div id="extension-info"></div>
+  </div>
+
+  <div class="card">
+    <h2>Circuit Breaker</h2>
+    <div id="circuit-info"></div>
+  </div>
+
+  <div class="card">
+    <h2>Buffers</h2>
+    <div id="buffers-info"></div>
+  </div>
+
+  <div class="card">
+    <h2>Config</h2>
+    <div id="config-info"></div>
+  </div>
+
+  <div class="card wide">
+    <h2>WebSocket Connections</h2>
+    <div id="ws-connections"></div>
+  </div>
+
+  <div class="card wide">
+    <h2>Last Console Event</h2>
+    <div id="last-event"></div>
+  </div>
+
+  <div class="card wide">
+    <h2>HTTP Debug Log</h2>
+    <div id="http-log"></div>
+  </div>
+</div>
+
+<div class="refresh-note">Auto-refreshes every 5s</div>
+
+<script>
+function ago(ts) {
+  if (!ts) return 'never';
+  const ms = Date.now() - new Date(ts).getTime();
+  if (ms < 0) return 'just now';
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return s + 's ago';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + 'm ' + (s % 60) + 's ago';
+  const h = Math.floor(m / 60);
+  return h + 'h ' + (m % 60) + 'm ago';
+}
+
+function fmtUptime(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
+  if (m > 0) return m + 'm ' + s + 's';
+  return s + 's';
+}
+
+function row(k, v) { return '<div class="row"><span class="k">' + k + '</span><span class="v">' + esc(String(v != null ? v : '-')) + '</span></div>'; }
+
+function dotSpan(on, label) {
+  const cls = on ? 'green' : (label === 'disconnected' ? 'red' : 'gray');
+  return '<span class="dot ' + cls + '"></span>' + esc(label || (on ? 'yes' : 'no'));
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function render(d) {
+  document.getElementById('generated-at').textContent = d.generated_at ? new Date(d.generated_at).toLocaleString() : '';
+
+  // Server
+  document.getElementById('server-info').innerHTML =
+    row('Version', d.version) +
+    row('Uptime', fmtUptime(d.uptime_seconds || 0)) +
+    row('Log file', d.logs && d.logs.log_file) +
+    row('Log entries', (d.logs && d.logs.entries) + ' / ' + (d.logs && d.logs.max_entries));
+
+  // System
+  const sys = d.system || {};
+  document.getElementById('system-info').innerHTML =
+    row('OS', sys.os) +
+    row('Arch', sys.arch) +
+    row('Go version', sys.go_version) +
+    row('Goroutines', sys.goroutines);
+
+  // Extension
+  const ext = d.extension || {};
+  document.getElementById('extension-info').innerHTML =
+    '<div class="row"><span class="k">Polling</span><span class="v">' + dotSpan(ext.polling, ext.polling ? 'active' : 'inactive') + '</span></div>' +
+    row('Last poll', ext.last_poll_at ? ago(ext.last_poll_at) : 'never') +
+    row('Session', ext.session || '-') +
+    '<div class="row"><span class="k">Pilot</span><span class="v">' + dotSpan(ext.pilot_enabled, ext.pilot_enabled ? 'enabled' : 'disabled') + '</span></div>';
+
+  // Circuit
+  const cir = d.circuit || {};
+  document.getElementById('circuit-info').innerHTML =
+    '<div class="row"><span class="k">State</span><span class="v">' + dotSpan(!cir.open, cir.open ? 'OPEN' : 'closed') + '</span></div>' +
+    row('Current rate', cir.current_rate) +
+    row('Reason', cir.reason || '-');
+
+  // Buffers
+  const buf = d.buffers || {};
+  document.getElementById('buffers-info').innerHTML =
+    row('WebSocket events', buf.websocket_events) +
+    row('Network bodies', buf.network_bodies) +
+    row('Actions', buf.actions) +
+    row('Pending queries', buf.pending_queries) +
+    row('Query results', buf.query_results);
+
+  // Config
+  const cfg = d.config || {};
+  document.getElementById('config-info').innerHTML =
+    row('Query timeout', cfg.query_timeout);
+
+  // WebSocket connections
+  const conns = d.websocket_connections || [];
+  if (conns.length === 0) {
+    document.getElementById('ws-connections').innerHTML = '<div class="empty">No active WebSocket connections</div>';
+  } else {
+    let html = '<table><tr><th>ID</th><th>URL</th></tr>';
+    for (const c of conns) {
+      html += '<tr><td class="mono">' + esc(c.id) + '</td><td class="mono">' + esc(c.url) + '</td></tr>';
+    }
+    html += '</table>';
+    document.getElementById('ws-connections').innerHTML = html;
+  }
+
+  // Last console event
+  const last = d.last_events && d.last_events.console;
+  if (!last) {
+    document.getElementById('last-event').innerHTML = '<div class="empty">No console events</div>';
+  } else {
+    document.getElementById('last-event').innerHTML =
+      row('Level', last.level) +
+      row('Message', typeof last.message === 'string' ? last.message : JSON.stringify(last.message)) +
+      row('Time', last.ts ? ago(last.ts) : '-');
+  }
+
+  // HTTP debug log
+  const log = d.http_debug_log || {};
+  const entries = (log.entries || []).filter(function(e) { return e.timestamp && e.timestamp !== '0001-01-01T00:00:00Z'; });
+  entries.sort(function(a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
+  if (entries.length === 0) {
+    document.getElementById('http-log').innerHTML = '<div class="empty">No HTTP debug entries</div>';
+  } else {
+    let html = '<table><tr><th>Time</th><th>Method</th><th>Endpoint</th><th>Status</th><th>Duration</th><th>Client</th></tr>';
+    for (const e of entries.slice(0, 30)) {
+      const cls = e.response_status < 400 ? 'status-ok' : 'status-err';
+      html += '<tr>' +
+        '<td>' + ago(e.timestamp) + '</td>' +
+        '<td class="mono">' + esc(e.method) + '</td>' +
+        '<td class="mono">' + esc(e.endpoint) + '</td>' +
+        '<td class="' + cls + '">' + (e.response_status || '-') + '</td>' +
+        '<td class="mono">' + (e.duration_ms || 0) + 'ms</td>' +
+        '<td class="mono">' + esc(e.client_id || '-') + '</td></tr>';
+    }
+    html += '</table>';
+    document.getElementById('http-log').innerHTML = html;
+  }
+}
+
+async function refresh() {
+  try {
+    const r = await fetch('/diagnostics');
+    if (r.ok) render(await r.json());
+  } catch (e) { /* silent */ }
+}
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

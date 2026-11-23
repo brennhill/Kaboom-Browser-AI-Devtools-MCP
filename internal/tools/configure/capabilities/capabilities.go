@@ -12,7 +12,7 @@ package capabilities
 import (
 	"sort"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 // BuildCapabilitiesSummary returns a compact summary: tool name → { description, dispatch_param, modes }.

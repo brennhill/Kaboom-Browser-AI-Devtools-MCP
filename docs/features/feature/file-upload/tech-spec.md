@@ -10,8 +10,8 @@ last_verified_date: 2026-03-05
 # File Upload Tech Spec
 
 ## Architecture
-- Interact action registration: `upload` owner in `cmd/browser-agent/internal/toolinteract/action_owners.go`
-- Upload action handler: `cmd/browser-agent/internal/toolinteract/interactupload/upload.go` (`Handler.HandleUpload` validates params and the file path, then `queueUpload` queues the request for the extension's 4-stage escalation: extension inject, form submit, direct API, OS automation)
+- Interact action registration: `upload` owner in `internal/tools/interact/handler/action_owners.go`
+- Upload action handler: `internal/tools/interact/handler/interactupload/upload.go` (`Handler.HandleUpload` validates params and the file path, then `queueUpload` queues the request for the extension's 4-stage escalation: extension inject, form submit, direct API, OS automation)
 - Validation/security layer: `internal/upload/uploadsec/` (`input.go`, `path.go`, `denylist.go`, `ssrf.go`, hardlink checks)
 - Upload HTTP endpoints: `internal/upload/handlers.go`, `internal/upload/httpapi/handlers.go`
 - OS automation: `internal/upload/osauto/` (`dialog.go`, `inject.go`, platform-specific `exec_*_impl.go`)

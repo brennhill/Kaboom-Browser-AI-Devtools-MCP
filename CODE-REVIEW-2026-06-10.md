@@ -63,7 +63,7 @@ dev server on those 22 ports dies. `server/scripts/install.js:94-107` does the s
 
 ### Go server
 - **G-H1. Circuit breaker can never close — permanent WS-ingest lockout.**
-  `internal/circuit/breaker.go:131-199` + `internal/capture/helpers.go:36-48`: the only path that
+  `internal/ingestion/circuit/breaker.go:131-199` + `internal/composition/capture/helpers.go:36-48`: the only path that
   re-evaluates the circuit runs inside `RecordEvents`, but once open, `CheckRateLimit` 429s before
   `RecordEvents` is ever called → OPEN→CLOSED is unreachable until daemon restart. Doc drift too:
   `capture-struct.go:32` claims a "memory < 30MB" close condition that isn't implemented.
@@ -73,7 +73,7 @@ dev server on those 22 ports dies. `server/scripts/install.js:94-107` does the s
   triggers a synchronous full rewrite on the request goroutine, racing the async appender (lost
   appends, duplicate entries, interleaved tmp writes). Violates "append-only I/O on hot paths".
 - **G-H3. `after_cursor` + `limit` pagination returns overlapping pages / never advances.**
-  `internal/pagination/pagination.go:104-127, 157`: continuation cursor is always built from the
+  `internal/observation/pagination/pagination.go:104-127, 157`: continuation cursor is always built from the
   newest entry of the page; for after-walks it must come from the oldest. With 100 entries/limit 25:
   page 2 duplicates 24 items. Silent data loss for LLM consumers. (`buildMetadata`'s `afterCursor`
   param is declared and unused — the intended logic was lost.) Also `serverInstructions`
@@ -129,7 +129,7 @@ dev server on those 22 ports dies. `server/scripts/install.js:94-107` does the s
 ## MEDIUM (rolled up)
 
 - **Go:** `RingBuffer.positionToIndex` wrong after `Clear()` — latent panic in unused cursor API
-  (`internal/buffers/ring_buffer.go:222-241`; fix or delete). `internal/server` is a drifted copy of
+  (`internal/observation/buffers/ring_buffer.go:222-241`; fix or delete). `internal/composition/serverlog` is a drifted copy of
   the live LogStore incl. a `0o644` world-readable log regression (`main_storage_io.go:79`) — dedupe.
   VS Code MCP config likely needs key `"servers"` not `"mcpServers"` in `mcp.json`
   (`native_install.go:117-147`; verify against VS Code docs).

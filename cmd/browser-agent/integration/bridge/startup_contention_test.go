@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/testsupport/integration"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 type contentionClient struct {

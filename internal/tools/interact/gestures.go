@@ -7,7 +7,7 @@
 
 package interact
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 
 // isPointerGesture reports the hardware-level pointer gestures. The extension dispatches each
 // through CDP when it can and falls back to synthetic DOM events when it cannot; either way the

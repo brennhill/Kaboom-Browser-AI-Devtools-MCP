@@ -269,18 +269,18 @@ The integration test (`integration_test.go` lines 151-157) calls the following m
 | vitals | YES | internal/tools/observe/session/session_test.go |
 | page | YES | internal/tools/observe/page/page_readiness_test.go |
 | tabs | YES | internal/tools/observe/session/session_test.go |
-| pilot | YES | cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go |
+| pilot | YES | internal/tools/observe/handler/dispatcher_commands_test.go |
 | timeline | YES | internal/tools/observe/timeline/correlation_test.go |
 | error_bundles | YES | internal/tools/observe/timeline/correlation_test.go |
 | screenshot | YES | internal/tools/observe/page/page_state_test.go |
-| command_result | YES | cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go |
-| pending_commands | YES | cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go |
-| failed_commands | YES | cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go |
-| saved_videos | YES | cmd/browser-agent/internal/screenrec/screenrec_test.go |
-| recordings | YES | cmd/browser-agent/internal/toolrecording/handler_test.go |
-| recording_actions | YES | cmd/browser-agent/internal/toolrecording/handler_test.go |
-| playback_results | YES | cmd/browser-agent/internal/toolrecording/handler_test.go |
-| log_diff_report | YES | cmd/browser-agent/internal/toolrecording/handler_test.go |
+| command_result | YES | internal/tools/observe/handler/dispatcher_commands_test.go |
+| pending_commands | YES | internal/tools/observe/handler/dispatcher_commands_test.go |
+| failed_commands | YES | internal/tools/observe/handler/dispatcher_commands_test.go |
+| saved_videos | YES | internal/screenrec/screenrec_test.go |
+| recordings | YES | internal/tools/recording/handler_test.go |
+| recording_actions | YES | internal/tools/recording/handler_test.go |
+| playback_results | YES | internal/tools/recording/handler_test.go |
+| log_diff_report | YES | internal/tools/recording/handler_test.go |
 
 **Verdict:** All 23 observe modes have test coverage.
 
@@ -350,35 +350,35 @@ The integration test (`integration_test.go` lines 151-157) calls the following m
 
 | Action | Has Dedicated Test? | Coverage Source |
 |--------|---------------------|-----------------|
-| highlight | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
-| subtitle | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
-| save_state | YES | cmd/browser-agent/internal/toolinteract/interactstate/state_test.go |
-| load_state | YES | cmd/browser-agent/internal/toolinteract/interactstate/state_test.go |
-| list_states | YES | cmd/browser-agent/internal/toolinteract/interactstate/state_test.go, integration_test.go |
-| delete_state | YES | cmd/browser-agent/internal/toolinteract/interactstate/state_test.go |
-| execute_js | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
+| highlight | YES | internal/tools/interact/handler/interact_browser_test.go |
+| subtitle | YES | internal/tools/interact/handler/interact_browser_test.go |
+| save_state | YES | internal/tools/interact/handler/interactstate/state_test.go |
+| load_state | YES | internal/tools/interact/handler/interactstate/state_test.go |
+| list_states | YES | internal/tools/interact/handler/interactstate/state_test.go, integration_test.go |
+| delete_state | YES | internal/tools/interact/handler/interactstate/state_test.go |
+| execute_js | YES | internal/tools/interact/handler/interact_browser_test.go |
 | navigate | YES | interact_browser_test.go, handler_consistency_test.go |
 | refresh | YES | interact_browser_test.go, handler_consistency_test.go |
 | back | YES | interact_browser_test.go, handler_consistency_test.go |
 | forward | YES | interact_browser_test.go, handler_consistency_test.go |
 | new_tab | YES | interact_browser_test.go, handler_consistency_test.go |
-| click | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go, handler_consistency_test.go |
-| type | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go, handler_consistency_test.go |
-| select | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
-| check | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
-| get_text | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go, handler_consistency_test.go |
-| get_value | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
-| get_attribute | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
-| set_attribute | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
-| focus | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go, handler_consistency_test.go |
-| scroll_to | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go, handler_consistency_test.go |
-| wait_for | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
-| key_press | YES | cmd/browser-agent/internal/toolinteract/interact_dom_test.go |
-| list_interactive | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
+| click | YES | internal/tools/interact/handler/interact_dom_test.go, handler_consistency_test.go |
+| type | YES | internal/tools/interact/handler/interact_dom_test.go, handler_consistency_test.go |
+| select | YES | internal/tools/interact/handler/interact_dom_test.go |
+| check | YES | internal/tools/interact/handler/interact_dom_test.go |
+| get_text | YES | internal/tools/interact/handler/interact_dom_test.go, handler_consistency_test.go |
+| get_value | YES | internal/tools/interact/handler/interact_dom_test.go |
+| get_attribute | YES | internal/tools/interact/handler/interact_dom_test.go |
+| set_attribute | YES | internal/tools/interact/handler/interact_dom_test.go |
+| focus | YES | internal/tools/interact/handler/interact_dom_test.go, handler_consistency_test.go |
+| scroll_to | YES | internal/tools/interact/handler/interact_dom_test.go, handler_consistency_test.go |
+| wait_for | YES | internal/tools/interact/handler/interact_dom_test.go |
+| key_press | YES | internal/tools/interact/handler/interact_dom_test.go |
+| list_interactive | YES | internal/tools/interact/handler/interact_browser_test.go |
 | record_start | YES | tools_recording_video_test.go |
 | record_stop | YES | tools_recording_video_test.go |
 | upload | YES | tools_interact_upload_test.go, upload_integration_test.go |
-| draw_mode_start | YES | cmd/browser-agent/internal/toolinteract/interact_browser_test.go |
+| draw_mode_start | YES | internal/tools/interact/handler/interact_browser_test.go |
 
 **Verdict:** All 29 interact actions have test coverage.
 

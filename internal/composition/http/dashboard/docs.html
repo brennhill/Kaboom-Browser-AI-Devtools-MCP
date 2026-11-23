@@ -1,0 +1,327 @@
+<!doctype html>
+<!-- Embedded by internal/composition/http/dashboard. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Docs - Kaboom MCP Server</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4Ij4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZmxhbWUiIHgxPSIwJSIgeTE9IjEwMCUiIHgyPSIwJSIgeTI9IjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2Y5NzMxNiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3R5bGU9InN0b3AtY29sb3I6I2ZiOTIzYyIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNmYmJmMjQiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImlubmVyRmxhbWUiIHgxPSIwJSIgeTE9IjEwMCUiIHgyPSIwJSIgeTI9IjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2ZiYmYyNCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNmZWYzYzciLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjY0IiBjeT0iNjQiIHI9IjYwIiBmaWxsPSIjMWExYTFhIi8+CiAgPHBhdGggZD0iTTY0IDE2IEM0MCA0MCwgMjggNjAsIDI4IDgwIEMyOCAxMDAsIDQ0IDExNiwgNjQgMTE2IEM4NCAxMTYsIDEwMCAxMDAsIDEwMCA4MCBDMTAwIDYwLCA4OCA0MCwgNjQgMTYgWiIgZmlsbD0idXJsKCNmbGFtZSkiLz4KICA8cGF0aCBkPSJNNjQgNDggQzUyIDYwLCA0NCA3MiwgNDQgODQgQzQ0IDk2LCA1MiAxMDQsIDY0IDEwNCBDNzYgMTA0LCA4NCA5NiwgODQgODQgQzg0IDcyLCA3NiA2MCwgNjQgNDggWiIgZmlsbD0idXJsKCNpbm5lckZsYW1lKSIvPgo8L3N2Zz4K">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #111;
+  color: #e0e0e0;
+  padding: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+a { color: #7ab3ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #333;
+}
+header .logo { width: 28px; height: 28px; flex-shrink: 0; }
+header h1 { font-size: 22px; font-weight: 600; color: #fff; }
+header .sub { color: #888; font-size: 14px; }
+header .nav { margin-left: auto; font-size: 13px; }
+header .nav a { margin-left: 16px; }
+.json-link {
+  display: inline-block; padding: 4px 10px; background: #1f1f1f;
+  border: 1px solid #333; border-radius: 4px; font-size: 12px; color: #888;
+}
+.json-link:hover { border-color: #555; color: #ccc; text-decoration: none; }
+.info { color: #888; font-size: 13px; margin-bottom: 24px; }
+.endpoint {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.endpoint-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+.endpoint-header:hover { background: #1f1f1f; }
+.method {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.method.get { background: #22c55e22; color: #22c55e; }
+.method.post { background: #3b82f622; color: #3b82f6; }
+.method.put { background: #eab30822; color: #eab308; }
+.method.delete { background: #ef444422; color: #ef4444; }
+.method.patch { background: #a855f722; color: #a855f7; }
+.endpoint-path {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  color: #fff;
+}
+.endpoint-summary { color: #888; font-size: 13px; margin-left: auto; }
+.endpoint-arrow { color: #555; font-size: 12px; transition: transform 0.15s; }
+.endpoint.open .endpoint-arrow { transform: rotate(90deg); }
+.endpoint-body {
+  display: none;
+  padding: 0 16px 16px;
+  font-size: 13px;
+}
+.endpoint.open .endpoint-body { display: block; }
+.endpoint-desc { color: #aaa; margin-bottom: 12px; }
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+  margin: 12px 0 6px;
+}
+.param-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+.param-table th {
+  text-align: left;
+  color: #555;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-bottom: 1px solid #2a2a2a;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.param-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid #1f1f1f;
+  font-size: 12px;
+}
+.param-table .name { font-family: 'SF Mono','Fira Code',monospace; color: #fff; }
+.param-table .type { color: #888; font-family: 'SF Mono','Fira Code',monospace; }
+.param-table .req { color: #ef4444; font-size: 10px; }
+.param-table .desc { color: #aaa; }
+.response-code {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: 'SF Mono','Fira Code',monospace;
+  font-weight: 600;
+  margin-right: 8px;
+}
+.response-code.c2xx { background: #22c55e22; color: #22c55e; }
+.response-code.c4xx { background: #ef444422; color: #ef4444; }
+.response-code.c5xx { background: #ef444422; color: #ef4444; }
+.response-row { margin-bottom: 4px; }
+.response-desc { color: #aaa; font-size: 12px; }
+.schema-block {
+  background: #0d0d0d;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-family: 'SF Mono','Fira Code',monospace;
+  font-size: 11px;
+  color: #888;
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 6px;
+}
+.tag-group { margin-bottom: 24px; }
+.tag-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2a2a2a;
+}
+.empty { color: #555; font-style: italic; padding: 40px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <svg class="logo" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="flame" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" style="stop-color:#f97316"/><stop offset="50%" style="stop-color:#fb923c"/><stop offset="100%" style="stop-color:#fbbf24"/>
+      </linearGradient>
+      <linearGradient id="innerFlame" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" style="stop-color:#fbbf24"/><stop offset="100%" style="stop-color:#fef3c7"/>
+      </linearGradient>
+    </defs>
+    <circle cx="64" cy="64" r="60" fill="#1a1a1a"/>
+    <path d="M64 16 C40 40, 28 60, 28 80 C28 100, 44 116, 64 116 C84 116, 100 100, 100 80 C100 60, 88 40, 64 16 Z" fill="url(#flame)"/>
+    <path d="M64 48 C52 60, 44 72, 44 84 C44 96, 52 104, 64 104 C76 104, 84 96, 84 84 C84 72, 76 60, 64 48 Z" fill="url(#innerFlame)"/>
+  </svg>
+  <h1>API Documentation</h1>
+  <span class="sub" id="version"></span>
+  <nav class="nav">
+    <a href="/">Dashboard</a>
+    <a href="/openapi.json" class="json-link">OpenAPI JSON</a>
+  </nav>
+</header>
+
+<p class="info" id="spec-info"></p>
+<div id="content"><div class="empty">Loading spec...</div></div>
+
+<script>
+function esc(s) {
+  var d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function schemaStr(schema, defs, depth) {
+  if (!schema) return 'any';
+  depth = depth || 0;
+  if (depth > 3) return '...';
+  if (schema.$ref) {
+    var name = schema.$ref.split('/').pop();
+    if (defs && defs[name]) return schemaStr(defs[name], defs, depth + 1);
+    return name;
+  }
+  if (schema.type === 'array') return '[' + schemaStr(schema.items, defs, depth + 1) + ']';
+  if (schema.type === 'object' && schema.properties) {
+    var lines = ['{'];
+    var keys = Object.keys(schema.properties);
+    keys.forEach(function(k, i) {
+      var p = schema.properties[k];
+      var t = schemaStr(p, defs, depth + 1);
+      lines.push('  "' + k + '": ' + t + (i < keys.length - 1 ? ',' : ''));
+    });
+    lines.push('}');
+    return lines.join('\n');
+  }
+  if (schema.enum) return schema.type + ' enum: ' + schema.enum.join(' | ');
+  return schema.type || 'any';
+}
+
+function renderParams(params) {
+  if (!params || params.length === 0) return '';
+  var html = '<div class="section-title">Parameters</div><table class="param-table"><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr>';
+  params.forEach(function(p) {
+    html += '<tr><td class="name">' + esc(p.name) + (p.required ? ' <span class="req">*</span>' : '') + '</td>' +
+      '<td class="type">' + esc(p.in) + '</td>' +
+      '<td class="type">' + esc(p.schema ? p.schema.type : '-') + '</td>' +
+      '<td class="desc">' + esc(p.description || '') + '</td></tr>';
+  });
+  return html + '</table>';
+}
+
+function renderResponses(responses, defs) {
+  if (!responses) return '';
+  var html = '<div class="section-title">Responses</div>';
+  Object.keys(responses).forEach(function(code) {
+    var r = responses[code];
+    var cls = code.startsWith('2') ? 'c2xx' : (code.startsWith('4') ? 'c4xx' : 'c5xx');
+    html += '<div class="response-row"><span class="response-code ' + cls + '">' + code + '</span><span class="response-desc">' + esc(r.description || '') + '</span></div>';
+    if (r.content) {
+      var ct = r.content['application/json'];
+      if (ct && ct.schema) {
+        html += '<div class="schema-block">' + esc(schemaStr(ct.schema, defs, 0)) + '</div>';
+      }
+    }
+  });
+  return html;
+}
+
+function renderRequestBody(body, defs) {
+  if (!body) return '';
+  var html = '<div class="section-title">Request Body</div>';
+  if (body.description) html += '<p class="response-desc">' + esc(body.description) + '</p>';
+  if (body.content) {
+    var ct = body.content['application/json'];
+    if (ct && ct.schema) {
+      html += '<div class="schema-block">' + esc(schemaStr(ct.schema, defs, 0)) + '</div>';
+    }
+  }
+  return html;
+}
+
+async function load() {
+  try {
+    var r = await fetch('/openapi.json');
+    if (!r.ok) { document.getElementById('content').innerHTML = '<div class="empty">Failed to load spec</div>'; return; }
+    var spec = await r.json();
+
+    document.getElementById('version').textContent = spec.info ? spec.info.version : '';
+    document.getElementById('spec-info').textContent = spec.info ? spec.info.description || '' : '';
+
+    var defs = (spec.components && spec.components.schemas) || {};
+    var paths = spec.paths || {};
+    var tagGroups = {};
+    var noTag = [];
+
+    // Group by tags
+    Object.keys(paths).sort().forEach(function(path) {
+      var methods = paths[path];
+      Object.keys(methods).forEach(function(method) {
+        if (method === 'parameters') return;
+        var op = methods[method];
+        var tags = op.tags || [];
+        var entry = {path: path, method: method, op: op};
+        if (tags.length === 0) {
+          noTag.push(entry);
+        } else {
+          tags.forEach(function(tag) {
+            if (!tagGroups[tag]) tagGroups[tag] = [];
+            tagGroups[tag].push(entry);
+          });
+        }
+      });
+    });
+
+    var html = '';
+
+    function renderGroup(title, entries) {
+      if (entries.length === 0) return '';
+      var g = '<div class="tag-group"><div class="tag-title">' + esc(title) + '</div>';
+      entries.forEach(function(e) {
+        var op = e.op;
+        g += '<div class="endpoint">' +
+          '<div class="endpoint-header" onclick="this.parentElement.classList.toggle(\'open\')">' +
+          '<span class="method ' + e.method + '">' + e.method + '</span>' +
+          '<span class="endpoint-path">' + esc(e.path) + '</span>' +
+          '<span class="endpoint-summary">' + esc(op.summary || '') + '</span>' +
+          '<span class="endpoint-arrow">\u25B6</span></div>' +
+          '<div class="endpoint-body">' +
+          (op.description ? '<p class="endpoint-desc">' + esc(op.description) + '</p>' : '') +
+          renderParams(op.parameters) +
+          renderRequestBody(op.requestBody, defs) +
+          renderResponses(op.responses, defs) +
+          '</div></div>';
+      });
+      return g + '</div>';
+    }
+
+    Object.keys(tagGroups).sort().forEach(function(tag) {
+      html += renderGroup(tag, tagGroups[tag]);
+    });
+    if (noTag.length > 0) html += renderGroup('Other', noTag);
+
+    document.getElementById('content').innerHTML = html || '<div class="empty">No endpoints found</div>';
+  } catch (e) {
+    document.getElementById('content').innerHTML = '<div class="empty">Error loading spec: ' + esc(e.message) + '</div>';
+  }
+}
+
+load();
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Wire types — matches internal/styleprobe/wire_style_probe.go
+ * @fileoverview Wire types — matches internal/page/styleprobe/wire_style_probe.go
  *
  * Canonical TypeScript definitions for the wire payloads.
  * Changes here MUST be mirrored in the Go counterpart. Run `make check-wire-drift`.

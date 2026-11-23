@@ -6,16 +6,16 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-05
 code_paths:
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - cmd/browser-agent/internal/toolcatalog/catalog.go
-  - cmd/browser-agent/internal/toolconfigure/deps.go
-  - cmd/browser-agent/internal/toolconfigure/session.go
-  - cmd/browser-agent/internal/toolconfigure/runtime_modes.go
-  - cmd/browser-agent/internal/summarypref/cache.go
-  - internal/statediag/collector.go
-  - internal/session/snapshot-manager.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/tools/configure/handler/dispatcher.go
+  - internal/tools/catalog/catalog.go
+  - internal/tools/configure/handler/deps.go
+  - internal/tools/configure/handler/session.go
+  - internal/tools/configure/handler/runtime_modes.go
+  - internal/tools/summarypref/cache.go
+  - internal/lifecycle/doctor/statediag/collector.go
+  - internal/analysis/snapshots/snapshot-manager.go
   - internal/tools/configure/audit.go
   - internal/tools/configure/boundaries.go
   - internal/tools/configure/rewrite.go
@@ -23,14 +23,14 @@ code_paths:
   - internal/tools/configure/capabilities/schema.go
   - internal/tools/configure/capabilities/modespecs.go
 test_paths:
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/internal/toolcatalog/catalog_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
+  - internal/tools/catalog/catalog_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/internal/summarypref/cache_test.go
-  - internal/statediag/collector_test.go
-  - cmd/browser-agent/internal/doctorsupport/projections_test.go
-  - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
-  - cmd/browser-agent/internal/toolconfigure/session_test.go
+  - internal/tools/summarypref/cache_test.go
+  - internal/lifecycle/doctor/statediag/collector_test.go
+  - internal/lifecycle/doctor/support/projections_test.go
+  - internal/tools/configure/handler/handlers_coverage_test.go
+  - internal/tools/configure/handler/session_test.go
   - internal/tools/configure/audit_test.go
   - internal/tools/configure/boundaries_test.go
   - internal/tools/configure/rewrite_test.go
@@ -43,10 +43,10 @@ last_verified_date: 2026-03-05
 # Config Profiles
 
 Configure mode registration and unknown-mode handling are owned by the
-immutable `internal/toolconfigure.Dispatcher`. The composition boundary supplies
+immutable `internal/tools/configure/handler.Dispatcher`. The composition boundary supplies
 final handlers with explicit dependencies; `ToolHandler` exposes no configure
 forwarding methods.
-Capability examples resolve through the same `internal/toolcatalog.Catalog`
+Capability examples resolve through the same `internal/tools/catalog.Catalog`
 that owns executable modules and input schemas.
 Capability package documentation is colocated with its public response
 assembly in `capabilities.go`; the five fixed tool-spec files remain explicit
@@ -82,9 +82,9 @@ negative attempts or occurrence counts.
 - Configure dispatch and action registry:
   - `cmd/browser-agent/tools_configure.go`
 - Session/store sub-handler and implementations:
-  - `cmd/browser-agent/internal/toolconfigure/session.go`
+  - `internal/tools/configure/handler/session.go`
 - Session summary-response preference caching and invalidation:
-  - `cmd/browser-agent/internal/summarypref/cache.go`
+  - `internal/tools/summarypref/cache.go`
   - composition passes `Cache.Invalidate` directly; no ToolHandler preference
     forwarding layer remains
 - Shared configure argument normalization/parsing:
@@ -104,8 +104,8 @@ negative attempts or occurrence counts.
   `configure.BoundaryHandler`. The root `ToolHandler` router calls that owner
   directly and retains no boundary mutex, map, or forwarding methods.
 - Tests:
-  - `cmd/browser-agent/internal/toolconfigure/dispatcher_test.go`
-  - `cmd/browser-agent/internal/toolconfigure/session_test.go`
-  - `cmd/browser-agent/internal/toolconfigure/session_test.go`
+  - `internal/tools/configure/handler/dispatcher_test.go`
+  - `internal/tools/configure/handler/session_test.go`
+  - `internal/tools/configure/handler/session_test.go`
   - `internal/tools/configure/boundaries_test.go`
   - `internal/tools/configure/rewrite_test.go`

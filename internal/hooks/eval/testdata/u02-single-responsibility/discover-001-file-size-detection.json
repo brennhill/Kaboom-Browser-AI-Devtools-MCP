@@ -1,0 +1,14 @@
+{
+  "description": "U2 Discovery: quality gate detects file size and project threshold (800 LOC limit in .kaboom.json)",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "internal/hooks/hook_policy.go", "new_string": "func small() {}" }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["PROJECT CODE STANDARDS", "800 lines"],
+    "max_latency_ms": 5000
+  }
+}

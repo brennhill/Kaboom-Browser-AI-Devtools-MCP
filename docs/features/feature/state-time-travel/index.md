@@ -6,20 +6,20 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-05
 code_paths:
-  - cmd/browser-agent/internal/toolinteract/interactstate/state.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
+  - internal/tools/interact/handler/interactstate/state.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
   - internal/recording/actionlog/recorder.go
-  - internal/schema/interact/actions.go
-  - internal/statediag/collector.go
+  - internal/tools/schema/interact/actions.go
+  - internal/lifecycle/doctor/statediag/collector.go
   - src/inject/message-handlers.ts
   - src/inject/settings.ts
   - src/inject/state.ts
 test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
+  - internal/tools/interact/handler/interactstate/state_test.go
   - internal/recording/actionlog/recorder_test.go
-  - internal/schema/interact/schema_test.go
+  - internal/tools/schema/interact/schema_test.go
   - tests/extension/pilot/pilot-state.test.js
   - tests/extension/injection/inject-settings.test.js
   - tests/extension/contracts/no-compatibility-facades.test.js
@@ -52,7 +52,7 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 - State capture, persistence, restore, listing, and deletion:
-  - `cmd/browser-agent/internal/toolinteract/interactstate/state.go`
+  - `internal/tools/interact/handler/interactstate/state.go`
   - `src/inject/message-handlers.ts`
   - `src/inject/settings.ts`
   - `src/inject/state.ts`
@@ -80,11 +80,11 @@ last_verified_date: 2026-03-05
   Form, storage, redaction, legacy-shape, and execution-failure scenarios are
   covered beside the state owner without polling, goroutines, or wall clocks.
 - Canonical public action schemas:
-  - `internal/schema/interact/actions.go`
+  - `internal/tools/schema/interact/actions.go`
 - Tests:
   - `scripts/contracts/goarchitecturetests/contracts_test.go`
-  - `cmd/browser-agent/internal/toolinteract/interactstate/state_test.go`
-  - `internal/schema/interact/schema_test.go`
+  - `internal/tools/interact/handler/interactstate/state_test.go`
+  - `internal/tools/schema/interact/schema_test.go`
   - `tests/extension/pilot/pilot-state.test.js`
   - `tests/extension/injection/inject-settings.test.js`
   - `tests/extension/contracts/no-compatibility-facades.test.js`

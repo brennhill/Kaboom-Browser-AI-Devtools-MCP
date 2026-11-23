@@ -121,7 +121,7 @@ echo "━━━ LEVEL 4: Performance Benchmarks ━━━"
 echo ""
 
 echo "→ Running all benchmarks (quick check)..."
-if go test -bench=. -benchtime=100ms ./internal/buffers ./internal/capture ./internal/pagination > /tmp/bench-output.txt 2>&1; then
+if go test -bench=. -benchtime=100ms ./internal/buffers ./internal/composition/capture ./internal/observation/pagination > /tmp/bench-output.txt 2>&1; then
     echo "✅ All benchmarks ran successfully"
     echo ""
     echo "Key performance metrics:"
@@ -144,9 +144,9 @@ echo ""
 
 echo "→ Checking critical architecture files exist..."
 CRITICAL_FILES=(
-    "internal/queries/dispatcher_queries.go"
-    "internal/capture/query_dispatcher.go"
-    "internal/capture/httpingest/handlers.go"
+    "internal/browsercommand/query/dispatcher_queries.go"
+    "internal/composition/capture/query_dispatcher.go"
+    "internal/ingestion/http/handlers.go"
     "$CMD_DIR/tools_core.go"
     "$CMD_DIR/tools_interact.go"
     "$CMD_DIR/tools_observe.go"
@@ -178,8 +178,8 @@ QUEUE_METHODS=(
 )
 
 for method in "${QUEUE_METHODS[@]}"; do
-    if grep -q "func.*$method" internal/capture/query_dispatcher.go || \
-       grep -q "func.*$method" internal/queries/dispatcher_queries.go; then
+    if grep -q "func.*$method" internal/composition/capture/query_dispatcher.go || \
+       grep -q "func.*$method" internal/browsercommand/query/dispatcher_queries.go; then
         echo "  ✓ $method exists"
     else
         echo "  ❌ $method missing"

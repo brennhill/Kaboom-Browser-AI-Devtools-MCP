@@ -52,7 +52,7 @@ A pid-only liveness check (`kill(pid, 0)`) cannot tell "does some process hold t
 
 ## What it replaced
 
-Singleton admission previously lived in `cmd/browser-agent/internal/daemonlife` as a per-state-directory lock file with pid-based liveness, a startup grace window, and its own takeover policy. That package now owns only crash-loop restart throttling; the lock file, the startup grace window, and the pid-only liveness check it used are gone. The version-upgrade takeover and the equal-version install-epoch tiebreaker moved into `instancegov.shouldRequestHandoff`, so an upgrade still supersedes an incumbent — by asking it to stand down and then taking the freed lock, never by racing it.
+Singleton admission previously lived in `internal/lifecycle/daemon` as a per-state-directory lock file with pid-based liveness, a startup grace window, and its own takeover policy. That package now owns only crash-loop restart throttling; the lock file, the startup grace window, and the pid-only liveness check it used are gone. The version-upgrade takeover and the equal-version install-epoch tiebreaker moved into `instancegov.shouldRequestHandoff`, so an upgrade still supersedes an incumbent — by asking it to stand down and then taking the freed lock, never by racing it.
 
 ## See also
 

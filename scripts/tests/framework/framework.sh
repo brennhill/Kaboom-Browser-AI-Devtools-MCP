@@ -434,7 +434,7 @@ json_string() {
 # ── Fixture Routing ────────────────────────────────────────
 #
 # The daemon embeds a corpus of deterministic pages at /tests/ (see
-# cmd/browser-agent/internal/testpages/pages). Until now every connected test
+# internal/composition/http/testpages/pages). Until now every connected test
 # drove interact.html, so modes that read console errors, network traffic,
 # websocket frames, long tasks or layout shift were invoked against a page that
 # contains none of those. They returned empty, and empty is not an error, so
@@ -617,7 +617,7 @@ stop_event_recording() {
 # Payloads go over stdin: a large body passed as one argv entry exceeds
 # Linux MAX_ARG_STRLEN (128KiB) and curl never runs (empty status).
 # POST to an extension-protected endpoint under a chosen client identity.
-# Client classes are defined in internal/extclient:
+# Client classes are defined in internal/sync/extclient:
 #   kaboom-extension — owns the extension session (adopts settings, bumps generation)
 #   kaboom-probe     — contract prober; the daemon answers with an empty envelope
 #                      and adopts nothing, so it cannot disturb a live extension.

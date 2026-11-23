@@ -6,11 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-05
 code_paths:
-  - internal/hook/session.go
+  - internal/hooks/session.go
   - cmd/hooks/main.go
 test_paths:
-  - internal/hook/session_test.go
-  - internal/hook/eval/testdata/session-track/
+  - internal/hooks/session_test.go
+  - internal/hooks/eval/testdata/session-track/
   - cmd/hooks/main_test.go
 ---
 

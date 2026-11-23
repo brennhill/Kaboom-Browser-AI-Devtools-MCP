@@ -89,18 +89,18 @@ AI stops watchdog (or duration elapses)
 
 **Server changes** (planned; none of this exists yet):
 
-Shared types (planned, in a new watchdog package under `cmd/browser-agent/internal/`):
+Shared types (planned, in a new watchdog package under its owning context in `internal/`):
 - Add `WatchdogSession` struct containing session state
 - Add `WatchdogAlert` struct containing alert details
 - Add `WatchdogThresholds` struct containing configurable thresholds
 
-Configure dispatch (`cmd/browser-agent/internal/toolconfigure/dispatcher.go`, with the mode registered in `cmd/browser-agent/internal/toolruntime/tools_configure.go`):
+Configure dispatch (`internal/tools/configure/handler/dispatcher.go`, with the mode registered in `internal/composition/toolruntime/tools_configure.go`):
 - Add a new `what: "watchdog"` mode with sub-actions: `start`, `status`, `stop`
 - Start creates session, captures baseline, spawns checker goroutine
 - Status returns current session state with alerts
 - Stop terminates session, generates summary
 
-Observe dispatch (`cmd/browser-agent/internal/toolobserve/dispatcher.go`):
+Observe dispatch (`internal/tools/observe/handler/dispatcher.go`):
 - Add a new `what: "deployment_status"` mode returning active watchdogs and recent completions
 - Optionally add a new `what: "changes"` mode (does not exist today) to carry a `deployment_alerts` field
 

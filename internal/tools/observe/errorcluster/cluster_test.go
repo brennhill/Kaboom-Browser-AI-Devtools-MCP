@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )
 
 func entry(level, msg, ts, url, stack string) types.LogEntry {

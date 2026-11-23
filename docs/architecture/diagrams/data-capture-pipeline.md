@@ -49,7 +49,7 @@ graph TB
         HTTPPost["POST /sync<br/>- Content-Type: JSON<br/>- Authorization header<br/>- Batch size: < 10MB"]
     end
 
-    subgraph ServerSide["🟠 Server (internal/capture/)"]
+    subgraph ServerSide["🟠 Server (internal/composition/capture/)"]
         direction TB
         SyncHandler["Sync Handler<br/>(handlers.go)"]
         Router["Router<br/>By event type"]
@@ -80,7 +80,7 @@ graph TB
         Buffers --> Management
     end
 
-    subgraph Queries["🔎 Query Layer (internal/capture/)"]
+    subgraph Queries["🔎 Query Layer (internal/composition/capture/)"]
         PendingQueries["Pending Queries<br/>Max 5 per client<br/>30s timeout"]
         CompletedResults["Completed Results<br/>Max 100 per client<br/>60s expiry"]
         Dispatcher["Query Dispatcher<br/>Route to extension<br/>Track correlation_id"]
@@ -480,7 +480,7 @@ type BufferStats struct {
 - `src/background/dom/dom-queries.ts` - Selector generation
 - `src/lib/ai-context/ai-context-parsing.ts` - Stack, source-map, and snippet parsing
 - `src/lib/ai-context/ai-context-enrichment.ts` - Error context enrichment
-- `internal/redaction/redaction.go` - PII masking
+- `internal/platform/redaction/redaction.go` - PII masking
 
 **Batching & Transport:**
 - `src/background/sync/batchers.ts` - Event batching
@@ -491,16 +491,16 @@ type BufferStats struct {
 - `src/background/caches/debug-log.ts` - Bounded debug log
 
 **Server-Side Storage:**
-- `internal/capture/capture.go` - Capture struct
-- `internal/capture/telemetrystore/store.go` - WS and network ingestion composition
-- `internal/capture/network_waterfall.go` - Waterfall buffer
-- `internal/capture/network_bodies.go` - Body storage
-- `internal/capture/actionstore/store.go` - Actions buffer
-- `internal/capture/extension_logs.go` - Logs buffer
-- `internal/capture/httpingest/handlers.go` - /sync endpoint
-- `internal/capture/memory.go` - Memory tracking
-- `internal/capture/ttl.go` - TTL eviction
-- `internal/capture/buffer_clear.go` - Cleanup logic
+- `internal/composition/capture/capture.go` - Capture struct
+- `internal/observation/store/telemetry/store.go` - WS and network ingestion composition
+- `internal/composition/capture/network_waterfall.go` - Waterfall buffer
+- `internal/composition/capture/network_bodies.go` - Body storage
+- `internal/observation/store/actions/store.go` - Actions buffer
+- `internal/composition/capture/extension_logs.go` - Logs buffer
+- `internal/ingestion/http/handlers.go` - /sync endpoint
+- `internal/composition/capture/memory.go` - Memory tracking
+- `internal/composition/capture/ttl.go` - TTL eviction
+- `internal/composition/capture/buffer_clear.go` - Cleanup logic
 
 ### Related Diagrams
 - [Extension Message Protocol](extension-message-protocol.md) - HTTP messages

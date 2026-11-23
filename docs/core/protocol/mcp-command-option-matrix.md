@@ -13,7 +13,7 @@ canonical: true
 
 ## Source of Truth
 
-- Schemas: `internal/schema/*.go` (one file per tool)
+- Schemas: `internal/tools/schema/*.go` (one file per tool)
 - Dispatchers: `cmd/browser-agent/tools_*_registry.go` and `tools_*_dispatch.go`
 - Extension execution: `src/background/pending-queries.ts`
 
@@ -312,7 +312,7 @@ selector parameters and shorthand mode names are rejected.
 
 ## End-to-End Processing Layers
 
-1. Schema exposure (`tools/list`) from `internal/schema/*.go`.
+1. Schema exposure (`tools/list`) from `internal/tools/schema/*.go`.
 2. Tool dispatch and option parsing in `cmd/browser-agent/tools_*_registry.go` / `tools_*_dispatch.go`.
 3. Extension-bound options forwarded inside queued query `Params` JSON.
 4. Extension execution and result correlation in `pending-queries.ts` + `/sync`.

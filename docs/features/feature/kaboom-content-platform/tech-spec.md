@@ -37,11 +37,11 @@ last_verified_date: 2026-03-05
 ## Data/Content Sources
 
 - Tool mode/action enums are sourced from:
-  - `internal/schema/observe.go`
-  - `internal/schema/analyze.go`
-  - `internal/schema/configure/properties_core.go`
-  - `internal/schema/generate.go`
-  - `internal/schema/interact/actions.go`
+  - `internal/tools/schema/observe.go`
+  - `internal/tools/schema/analyze.go`
+  - `internal/tools/schema/configure/properties_core.go`
+  - `internal/tools/schema/generate.go`
+  - `internal/tools/schema/interact/actions.go`
 
 ## Failure Modes
 

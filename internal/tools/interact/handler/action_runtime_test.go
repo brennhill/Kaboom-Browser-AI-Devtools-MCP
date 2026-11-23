@@ -1,0 +1,760 @@
+// action_runtime_test.go — Shared action runtime, evidence, and constructed dependency tests.
+// Docs: docs/features/feature/interact-explore/index.md
+
+package toolinteract
+
+import (
+	"context"
+	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/app/a11yaudit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/testsupport/fixture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/page/app/pageinfo"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/page/app/screenshot"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/guard"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+)
+
+func TestSecureJitterStaysWithinRequestedRange(t *testing.T) {
+	t.Parallel()
+	for i := 0; i < 100; i++ {
+		got := secureJitter(7)
+		if got < 0 || got >= 7 {
+			t.Fatalf("secureJitter(7) = %d", got)
+		}
+	}
+	if got := secureJitter(0); got != 0 {
+		t.Fatalf("secureJitter(0) = %d", got)
+	}
+}
+
+func TestApplyJitterContracts(t *testing.T) {
+	runtime := NewActionRuntime(RuntimeDeps{})
+	runtime.SetJitter(2)
+	for action := range ReadOnlyInteractActions {
+		if got := runtime.ApplyJitter(action); got != 0 {
+			t.Fatalf("read-only %q jitter = %d", action, got)
+		}
+	}
+	for _, action := range []string{"click", "type", "navigate", "select", "check", "focus", "scroll_to", "key_press"} {
+		for i := 0; i < 20; i++ {
+			if got := runtime.ApplyJitter(action); got < 0 || got >= 2 {
+				t.Fatalf("%q jitter = %d, want [0,2)", action, got)
+			}
+		}
+	}
+	runtime.SetJitter(0)
+	if got := runtime.ApplyJitter("click"); got != 0 || runtime.GetJitter() != 0 {
+		t.Fatalf("disabled jitter = %d, configured=%d", got, runtime.GetJitter())
+	}
+}
+
+func TestRetryContractStopsUnchangedSecondAttempt(t *testing.T) {
+	runtime := NewActionRuntime(RuntimeDeps{})
+	firstArgs := json.RawMessage(`{"what":"click","selector":"#save"}`)
+	runtime.armRetryContract("first", "", firstArgs)
+	runtime.armRetryContract("second", "click", json.RawMessage(`{"selector":"#save","correlation_id":"first"}`))
+
+	data := map[string]any{"error_code": "element_not_found", "effective_url": "https://example.test"}
+	decision := runtime.AttachRetryContext("second", data, "error", "")
+	if !decision.Terminal || decision.Cause != "strategy_not_changed" {
+		t.Fatalf("decision = %+v", decision)
+	}
+	if data["terminal"] != true || data["retryable"] != false || data["evidence_summary"] == nil {
+		t.Fatalf("terminal response = %#v", data)
+	}
+	context, ok := data["retry_context"].(map[string]any)
+	if !ok || context["attempt"] != 2 || context["policy_violation"] != "strategy_unchanged" {
+		t.Fatalf("retry context = %#v", data["retry_context"])
+	}
+}
+
+func TestRetryContractMissingParentAndAttemptLimit(t *testing.T) {
+	runtime := NewActionRuntime(RuntimeDeps{})
+	runtime.armRetryContract("orphan", "click", json.RawMessage(`{"element_id":"x","correlation_id":"missing"}`))
+	orphan, _ := runtime.getRetryState("orphan")
+	if orphan.Attempt != 2 || orphan.PolicyViolation != "parent_context_missing" {
+		t.Fatalf("orphan = %+v", orphan)
+	}
+
+	runtime.armRetryContract("third", "click", json.RawMessage(`{"scope_selector":"main","correlation_id":"orphan"}`))
+	third, _ := runtime.getRetryState("third")
+	if third.Attempt != maxRetryAttemptsPerStep || third.PolicyViolation != "attempt_limit_exceeded" {
+		t.Fatalf("third = %+v", third)
+	}
+	data := map[string]any{"error": " timeout "}
+	decision := runtime.AttachRetryContext("third", data, "timeout", "")
+	if !decision.Terminal || decision.Cause != "max_attempts_reached" {
+		t.Fatalf("decision = %+v", decision)
+	}
+}
+
+func TestRetryHelpersCoverStrategiesAndPruning(t *testing.T) {
+	for _, tc := range []struct {
+		args string
+		want string
+	}{
+		{args: `{}`, want: "default"},
+		{args: `{"element_id":"e"}`, want: "element_handle"},
+		{args: `{"scope_rect":{"x":1}}`, want: "scoped_selector"},
+		{args: `{"frame":"main"}`, want: "frame_targeted"},
+		{args: `{"selector":"button"}`, want: "selector"},
+		{args: `{"index":1}`, want: "indexed"},
+		{args: `{"world":"isolated"}`, want: "world_switch"},
+	} {
+		strategy, fingerprint := deriveRetryStrategy("click", json.RawMessage(tc.args))
+		if strategy != tc.want || !strings.Contains(fingerprint, `"action":"click"`) {
+			t.Fatalf("%s => %q %q", tc.args, strategy, fingerprint)
+		}
+	}
+	if stableMarshalForRetry(nil) != "" {
+		t.Fatal("nil retry map was marshaled")
+	}
+
+	runtime := NewActionRuntime(RuntimeDeps{})
+	runtime.retryByCommand = map[string]*commandRetryState{
+		"old": {CreatedAt: time.Unix(1, 0)},
+		"new": {CreatedAt: time.Unix(2, 0)},
+	}
+	runtime.pruneRetryStatesLocked(1)
+	if _, exists := runtime.retryByCommand["old"]; exists {
+		t.Fatal("old retry state was not pruned")
+	}
+	if decision := runtime.AttachRetryContext("missing", map[string]any{}, "error", "fallback"); decision.Terminal {
+		t.Fatal("missing retry state became terminal")
+	}
+	if decision := (*ActionRuntime)(nil).AttachRetryContext("x", map[string]any{}, "error", "fallback"); decision.Terminal {
+		t.Fatal("nil runtime became terminal")
+	}
+}
+
+func TestQueuedResponseRecognitionEdgeCases(t *testing.T) {
+	queued := mcp.Succeed(testReq(), "queued", map[string]any{"status": "queued"})
+	if !isResponseQueued(queued) {
+		t.Fatal("queued response not recognized")
+	}
+	for _, response := range []mcp.JSONRPCResponse{
+		{},
+		{Result: json.RawMessage(`bad`)},
+		{Result: mustRuntimeJSON(t, mcp.MCPToolResult{})},
+		mcp.SucceedText(testReq(), "not json"),
+		mcp.Succeed(testReq(), "complete", map[string]any{"status": "complete"}),
+	} {
+		if isResponseQueued(response) {
+			t.Fatalf("false queued response: %s", response.Result)
+		}
+	}
+}
+
+func mustRuntimeJSON(t *testing.T, value any) json.RawMessage {
+	t.Helper()
+	data, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data
+}
+
+func TestActionOwnersDoNotReexportMCPProtocolSurface(t *testing.T) {
+	_, testFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("resolve test source path")
+	}
+	source, err := os.ReadFile(filepath.Join(filepath.Dir(testFile), "action_owners.go"))
+	if err != nil {
+		t.Fatalf("read action_owners.go: %v", err)
+	}
+	for _, forbidden := range []string{
+		"type JSONRPCRequest =",
+		"type JSONRPCResponse =",
+		"type MCPToolResult =",
+		"type MCPContentBlock =",
+		"type StructuredError =",
+		"const JSONRPCVersion =",
+		"ErrInvalidJSON =",
+		"func withParam(",
+		"func withHint(",
+		"func withAction(",
+		"func withSelector(",
+		"func withRetryable(",
+		"func withRetryAfterMs(",
+		"func withFinal(",
+		"func withRecoveryToolCall(",
+		"type RedactionEngine interface",
+		"GetRedactionEngine func()",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("action_owners.go retains MCP compatibility facade %q", forbidden)
+		}
+	}
+}
+
+func TestActionFamiliesHaveNoBroadHandlerOrDependencyBag(t *testing.T) {
+	_, testFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("resolve test source path")
+	}
+	files, err := filepath.Glob(filepath.Join(filepath.Dir(testFile), "*.go"))
+	if err != nil {
+		t.Fatalf("list toolinteract sources: %v", err)
+	}
+	for _, path := range files {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		source, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		for _, forbidden := range []string{
+			"type Deps struct",
+			"type InteractActionHandler struct",
+			"NewInteractActionHandler",
+			"NewUploadInteractHandler",
+			"NewStateInteractHandler",
+		} {
+			if strings.Contains(string(source), forbidden) {
+				t.Errorf("%s retains broad interact surface %q", filepath.Base(path), forbidden)
+			}
+		}
+	}
+}
+
+// fakeState captures interactions with the injected Deps and exposes behavior toggles.
+type fakeState struct {
+	mu sync.Mutex
+
+	cap *capture.Capture
+
+	// diagnostics records Doctor diagnostics reported by page actions.
+	diagnostics diagnosticRecorder
+
+	// Guard toggles — when true, the corresponding guard blocks the command.
+	blockPilot   bool
+	blockExt     bool
+	blockTab     bool
+	blockCSP     bool
+	blockSession bool
+	blockEnqueue bool
+
+	// Captured interactions.
+	enqueued        []queries.PendingQuery
+	recordedActions []string
+	drawStarted     int
+
+	// Pluggable overrides (nil => default behavior).
+	waitFn           func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse
+	waitTrackedURLFn func(beforeURL string, timeout time.Duration) (string, bool)
+	nowFn            func() time.Time // controlled clock; nil => time.Now
+	screenshot       func(screenshot.Options) (screenshot.Result, error)
+	pageInfo         func() pageinfo.Info
+	auditFn          func(scope string) (a11yaudit.Result, error)
+	sarifFn          func(a11yResult json.RawMessage, scope, saveTo string) (map[string]any, error)
+	listenPort       int
+	evidenceFn       func(clientID string) EvidenceShot
+}
+
+type fakeCapabilities struct {
+	RequirePilot, RequireExtension, RequireTabTracking toolguard.Check
+	RequireCSPClear                                    func(mcp.JSONRPCRequest, string) (mcp.JSONRPCResponse, bool)
+	EnqueuePendingQuery                                func(mcp.JSONRPCRequest, queries.PendingQuery, time.Duration) (mcp.JSONRPCResponse, bool)
+	MaybeWaitForCommand                                func(mcp.JSONRPCRequest, string, json.RawMessage, string) mcp.JSONRPCResponse
+	Commands                                           Commands
+	Diagnostics                                        statediag.Reporter
+	RecordAIAction                                     func(string, string, map[string]any)
+	RecordAIEnhancedAction                             func(types.EnhancedAction)
+	RecordDOMPrimitiveAction                           func(string, string, string, string)
+	InjectCSPBlockedActions                            func(mcp.JSONRPCResponse) mcp.JSONRPCResponse
+	CaptureScreenshot                                  func(context.Context, screenshot.Options) (screenshot.Result, error)
+	PageInfo                                           func() pageinfo.Info
+	MarkDrawStarted                                    func()
+	GetListenPort                                      func() int
+	DefaultEvidenceCapture                             func(string) EvidenceShot
+	EvidenceRetryWait                                  func(time.Duration)
+	RequireSessionStore                                func(mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool)
+	DiagnosticHint                                     func() func(*mcp.StructuredError)
+	Redact                                             func(map[string]any) map[string]any
+	GetCommandResult                                   func(string) (*queries.CommandResult, bool)
+}
+
+// newFakeState builds a fakeState with pilot enabled, a tracked tab, and a connected extension.
+func newFakeState() *fakeState {
+	c := capture.NewCapture()
+	capturefixture.SetPilot(c, true)
+	capturefixture.Track(c, 1, "https://example.com/page")
+	capturefixture.Connect(c)
+	return &fakeState{cap: c, listenPort: 7890}
+}
+
+func (fs *fakeState) record(action string) {
+	fs.mu.Lock()
+	fs.recordedActions = append(fs.recordedActions, action)
+	fs.mu.Unlock()
+}
+
+func (fs *fakeState) enqueue(q queries.PendingQuery) {
+	fs.mu.Lock()
+	fs.enqueued = append(fs.enqueued, q)
+	fs.mu.Unlock()
+}
+
+func (fs *fakeState) enqueuedCount() int {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	return len(fs.enqueued)
+}
+
+func (fs *fakeState) enqueuedSnapshot() []queries.PendingQuery {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	return append([]queries.PendingQuery(nil), fs.enqueued...)
+}
+
+func (fs *fakeState) recordedCount() int {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	return len(fs.recordedActions)
+}
+
+func guardFn(block *bool, code, msg string) toolguard.Check {
+	return func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
+		if *block {
+			return mcp.Fail(req, code, msg, "adjust and retry", opts...), true
+		}
+		return mcp.JSONRPCResponse{}, false
+	}
+}
+
+// deps builds a fully-populated *Deps wired to this fakeState.
+func (fs *fakeState) deps() *fakeCapabilities {
+	return &fakeCapabilities{
+		RequirePilot:       guardFn(&fs.blockPilot, mcp.ErrCodePilotDisabled, "Pilot mode disabled"),
+		RequireExtension:   guardFn(&fs.blockExt, mcp.ErrNotInitialized, "Extension not connected"),
+		RequireTabTracking: guardFn(&fs.blockTab, mcp.ErrNotInitialized, "Tab tracking not active"),
+		RequireCSPClear: func(req mcp.JSONRPCRequest, world string) (mcp.JSONRPCResponse, bool) {
+			if fs.blockCSP {
+				return mcp.Fail(req, mcp.ErrInvalidParam, "CSP restricted for world "+world, "use isolated world"), true
+			}
+			return mcp.JSONRPCResponse{}, false
+		},
+
+		EnqueuePendingQuery: func(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
+			fs.enqueue(query)
+			if fs.blockEnqueue {
+				return mcp.Fail(req, mcp.ErrQueueFull, "Queue full", "retry later"), true
+			}
+			if query.Type == "page_summary" {
+				_, _ = fs.cap.Commands().Enqueue(query, timeout, req.ClientID)
+				commandtest.Complete(fs.cap.Commands(),
+					query.CorrelationID,
+					"complete",
+					json.RawMessage(`{"main_content_preview":"Example content"}`),
+					"",
+				)
+			}
+			return mcp.JSONRPCResponse{}, false
+		},
+
+		MaybeWaitForCommand: func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
+			if fs.waitFn != nil {
+				return fs.waitFn(req, correlationID, args, queuedSummary)
+			}
+			return mcp.Succeed(req, queuedSummary, map[string]any{
+				"status":         "complete",
+				"correlation_id": correlationID,
+			})
+		},
+
+		Commands:    fs.cap.Commands(),
+		Diagnostics: &fs.diagnostics,
+
+		RecordAIAction:           func(action, url string, extra map[string]any) { fs.record(action) },
+		RecordAIEnhancedAction:   func(action types.EnhancedAction) { fs.record("enhanced") },
+		RecordDOMPrimitiveAction: func(action, selector, text, value string) { fs.record("dom:" + action) },
+
+		InjectCSPBlockedActions: func(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse { return resp },
+
+		CaptureScreenshot: func(_ context.Context, opts screenshot.Options) (screenshot.Result, error) {
+			if fs.screenshot != nil {
+				return fs.screenshot(opts)
+			}
+			return screenshot.Result{Fields: map[string]any{}, DataURL: "data:image/png;base64,QUJD"}, nil
+		},
+		PageInfo: func() pageinfo.Info {
+			if fs.pageInfo != nil {
+				return fs.pageInfo()
+			}
+			return pageinfo.Info{URL: "https://example.com/page", Title: "Example", TabID: 1}
+		},
+
+		MarkDrawStarted: func() { fs.mu.Lock(); fs.drawStarted++; fs.mu.Unlock() },
+		GetListenPort:   func() int { return fs.listenPort },
+
+		DefaultEvidenceCapture: func(clientID string) EvidenceShot {
+			if fs.evidenceFn != nil {
+				return fs.evidenceFn(clientID)
+			}
+			return EvidenceShot{Path: "/tmp/evidence-" + clientID + ".png", Filename: "evidence.png"}
+		},
+
+		RequireSessionStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
+			if fs.blockSession {
+				return mcp.Fail(req, mcp.ErrNotInitialized, "Session store unavailable", "enable persistence"), true
+			}
+			return mcp.JSONRPCResponse{}, false
+		},
+		DiagnosticHint: func() func(*mcp.StructuredError) { return mcp.WithHint("diagnostic hint") },
+		Redact:         func(data map[string]any) map[string]any { return data },
+		GetCommandResult: func(correlationID string) (*queries.CommandResult, bool) {
+			return fs.cap.Commands().Command(correlationID)
+		},
+	}
+}
+
+type fakeActionOwners struct {
+	runtime  *ActionRuntime
+	dom      *DOMActions
+	browser  *BrowserActions
+	page     *PageActions
+	workflow *WorkflowActions
+	storage  *StorageActions
+}
+
+func newFakeActionOwners(t *testing.T) (*fakeActionOwners, *fakeState) {
+	t.Helper()
+	fs := newFakeState()
+	deps := fs.deps()
+	runtime := NewActionRuntime(RuntimeDeps{
+		RequireCSPClear: deps.RequireCSPClear, EnqueuePendingQuery: deps.EnqueuePendingQuery,
+		MaybeWaitForCommand: deps.MaybeWaitForCommand, RecordAIAction: deps.RecordAIAction,
+		DefaultEvidenceCapture: deps.DefaultEvidenceCapture,
+		EvidenceRetryWait:      deps.EvidenceRetryWait,
+	})
+	dom := NewDOMActions(runtime, DOMDeps{deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.RecordDOMPrimitiveAction})
+	storage := NewStorageActions(runtime, StorageDeps{deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking})
+	page := NewPageActions(runtime, dom, storage, PageDeps{
+		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, fs.cap.Extension(), fs.cap.Performance().Entries, deps.Commands,
+		deps.EnqueuePendingQuery, deps.RecordAIAction, deps.MarkDrawStarted, deps.CaptureScreenshot, deps.PageInfo,
+		deps.Diagnostics,
+	})
+	browser := NewBrowserActions(runtime, page, BrowserDeps{
+		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, fs.cap.Extension(), fs.cap.Performance(), deps.Commands,
+		deps.InjectCSPBlockedActions, deps.GetListenPort,
+	})
+	workflow := NewWorkflowActions(runtime, dom, browser, page, WorkflowDeps{
+		TrackingStatus: fs.cap.Extension().GetTrackingStatus,
+		AuditA11y: func(scope string) (a11yaudit.Result, error) {
+			if fs.auditFn != nil {
+				return fs.auditFn(scope)
+			}
+			return a11yaudit.Result{Data: map[string]any{"issues": []any{}}}, nil
+		},
+		A11yFailure: func(req mcp.JSONRPCRequest, err error) mcp.JSONRPCResponse {
+			return mcp.Fail(req, mcp.ErrExtError, err.Error(), "retry")
+		},
+		ExportSARIF: func(a11yResult json.RawMessage, scope, saveTo string) (map[string]any, error) {
+			if fs.sarifFn != nil {
+				return fs.sarifFn(a11yResult, scope, saveTo)
+			}
+			return map[string]any{"status": "exported"}, nil
+		},
+		Now: fs.now,
+		WaitForTrackedURLChange: func(beforeURL string, timeout time.Duration) (string, bool) {
+			if fs.waitTrackedURLFn != nil {
+				return fs.waitTrackedURLFn(beforeURL, timeout)
+			}
+			_, _, currentURL := fs.cap.Extension().GetTrackingStatus()
+			return currentURL, currentURL != "" && currentURL != beforeURL
+		},
+	})
+	return &fakeActionOwners{runtime, dom, browser, page, workflow, storage}, fs
+}
+
+func newFakeDOMActions(t *testing.T) (*DOMActions, *fakeState) {
+	o, s := newFakeActionOwners(t)
+	return o.dom, s
+}
+func newFakeBrowserActions(t *testing.T) (*BrowserActions, *fakeState) {
+	o, s := newFakeActionOwners(t)
+	return o.browser, s
+}
+func newFakePageActions(t *testing.T) (*PageActions, *fakeState) {
+	o, s := newFakeActionOwners(t)
+	return o.page, s
+}
+func newFakeWorkflowActions(t *testing.T) (*WorkflowActions, *fakeState) {
+	o, s := newFakeActionOwners(t)
+	return o.workflow, s
+}
+func newFakeStorageActions(t *testing.T) (*StorageActions, *fakeState) {
+	o, s := newFakeActionOwners(t)
+	return o.storage, s
+}
+
+func TestComposablePageCommandsPreservePayloadsAndUniqueCorrelations(t *testing.T) {
+	h, state := newFakePageActions(t)
+	h.QueueComposableSubtitle(testReq(), "first")
+	h.QueueComposableSubtitle(testReq(), "")
+	h.QueueComposableActionDiff(testReq())
+	queued := state.enqueuedSnapshot()
+	if len(queued) != 3 {
+		t.Fatalf("queued commands = %#v", queued)
+	}
+	if queued[0].Type != "subtitle" || queued[1].Type != "subtitle" ||
+		!strings.HasPrefix(queued[0].CorrelationID, "subtitle_") ||
+		queued[0].CorrelationID == queued[1].CorrelationID {
+		t.Fatalf("subtitle commands = %#v", queued[:2])
+	}
+	for index, want := range []string{"first", ""} {
+		var params map[string]string
+		if err := json.Unmarshal(queued[index].Params, &params); err != nil || params["text"] != want {
+			t.Fatalf("subtitle %d params = %#v, err=%v", index, params, err)
+		}
+	}
+	var diff map[string]any
+	if err := json.Unmarshal(queued[2].Params, &diff); err != nil {
+		t.Fatalf("action diff params: %v", err)
+	}
+	if queued[2].Type != "dom_action" || !strings.HasPrefix(queued[2].CorrelationID, "dom_action_diff_") ||
+		diff["action"] != "action_diff" || diff["timeout_ms"].(float64) <= 0 {
+		t.Fatalf("action diff command = %#v params=%#v", queued[2], diff)
+	}
+}
+
+// testReq returns a standard JSON-RPC request for interact handler tests.
+func testReq() mcp.JSONRPCRequest {
+	return mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: float64(1), ClientID: "client-test"}
+}
+
+// assertErr fails the test unless resp is an MCP error whose text contains codeSubstr.
+func assertErr(t *testing.T, resp mcp.JSONRPCResponse, codeSubstr string) {
+	t.Helper()
+	result := parseToolResult(t, resp)
+	if !result.IsError {
+		t.Fatalf("expected error response, got success: %s", firstText(result))
+	}
+	if codeSubstr != "" && !contains(firstText(result), codeSubstr) {
+		t.Fatalf("expected error text to contain %q, got: %s", codeSubstr, firstText(result))
+	}
+}
+
+// assertOK fails the test unless resp is a non-error MCP result.
+func assertOK(t *testing.T, resp mcp.JSONRPCResponse) mcp.MCPToolResult {
+	t.Helper()
+	result := parseToolResult(t, resp)
+	if result.IsError {
+		t.Fatalf("expected success response, got error: %s", firstText(result))
+	}
+	return result
+}
+
+func contains(haystack, needle string) bool {
+	return len(needle) == 0 || indexOf(haystack, needle) >= 0
+}
+
+func indexOf(s, sub string) int {
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return i
+		}
+	}
+	return -1
+}
+
+func TestEvidenceArgumentAndEnvironmentParsing(t *testing.T) {
+	for _, tc := range []struct {
+		args string
+		want evidenceMode
+		ok   bool
+	}{
+		{args: `{}`, want: evidenceModeOff, ok: true},
+		{args: `{"evidence":" ALWAYS "}`, want: evidenceModeAlways, ok: true},
+		{args: `{"evidence":"on_mutation"}`, want: evidenceModeOnMutation, ok: true},
+		{args: `{"evidence":"sometimes"}`, want: evidenceModeOff, ok: false},
+	} {
+		got, err := ParseEvidenceMode(json.RawMessage(tc.args))
+		if (err == nil) != tc.ok || got != tc.want {
+			t.Fatalf("ParseEvidenceMode(%s) = %q, %v", tc.args, got, err)
+		}
+	}
+	t.Setenv(evidenceRetryEnv, "bad")
+	if got := evidenceRetryCount(); got != 1 {
+		t.Fatalf("bad retry = %d", got)
+	}
+	t.Setenv(evidenceRetryEnv, "-3")
+	if got := evidenceRetryCount(); got != 0 {
+		t.Fatalf("low retry = %d", got)
+	}
+	t.Setenv(evidenceRetryEnv, "99")
+	if got := evidenceRetryCount(); got != 3 {
+		t.Fatalf("high retry = %d", got)
+	}
+	t.Setenv(evidenceMaxCapturesEnv, "1")
+	if got := evidenceMaxCapturesPerCommand(); got != 1 {
+		t.Fatalf("capture max = %d", got)
+	}
+	if got := canonicalActionFromInteractArgs(json.RawMessage(`{"action":" CLICK "}`)); got != "click" {
+		t.Fatalf("canonical action = %q", got)
+	}
+	if !IsMutationAction(" Navigate ") || IsMutationAction("get_text") {
+		t.Fatal("mutation classification mismatch")
+	}
+}
+
+func TestEvidenceLifecycleUsesRuntimeScopedCaptureAndDeterministicRetry(t *testing.T) {
+	t.Setenv(evidenceRetryEnv, "1")
+	shots := []EvidenceShot{
+		{Path: "/tmp/before.png"},
+		{Error: "screenshot_timeout"},
+		{Path: "/tmp/after.png"},
+	}
+	calls := 0
+	waits := make([]time.Duration, 0, 1)
+	runtime := NewActionRuntime(RuntimeDeps{
+		DefaultEvidenceCapture: func(string) EvidenceShot {
+			shot := shots[calls]
+			calls++
+			return shot
+		},
+		EvidenceRetryWait: func(delay time.Duration) { waits = append(waits, delay) },
+	})
+
+	runtime.ArmEvidenceForCommand("click-1", "click", json.RawMessage(`{"evidence":"always"}`), "client-1")
+	response := map[string]any{}
+	runtime.AttachEvidencePayload("click-1", response)
+	evidence, ok := response["evidence"].(map[string]any)
+	if !ok {
+		t.Fatalf("evidence payload = %#v", response["evidence"])
+	}
+	if evidence["before"] != "/tmp/before.png" || evidence["after"] != "/tmp/after.png" || evidence["partial"] == true {
+		t.Fatalf("evidence lifecycle = %#v", evidence)
+	}
+	if calls != 3 || len(waits) != 1 || waits[0] != evidenceRetryDelay {
+		t.Fatalf("capture calls=%d waits=%v", calls, waits)
+	}
+
+	// Finalization is idempotent and must not recapture or expose mutable state.
+	evidence["before"] = "mutated"
+	second := map[string]any{}
+	runtime.AttachEvidencePayload("click-1", second)
+	secondEvidence := second["evidence"].(map[string]any)
+	if secondEvidence["before"] != "/tmp/before.png" || calls != 3 {
+		t.Fatalf("cached evidence was aliased or recaptured: %#v calls=%d", secondEvidence, calls)
+	}
+}
+
+func TestEvidenceOnMutationClassifiesReadOnlyActionWithoutCapture(t *testing.T) {
+	calls := 0
+	runtime := NewActionRuntime(RuntimeDeps{
+		DefaultEvidenceCapture: func(string) EvidenceShot {
+			calls++
+			return EvidenceShot{Path: "/tmp/unexpected.png"}
+		},
+	})
+	runtime.ArmEvidenceForCommand("text-1", "get_text", json.RawMessage(`{"evidence":"on_mutation"}`), "client-1")
+	response := map[string]any{}
+	runtime.AttachEvidencePayload("text-1", response)
+	evidence, ok := response["evidence"].(map[string]any)
+	if !ok || evidence["skipped"] != "non_mutating_action" {
+		t.Fatalf("read-only evidence = %#v", response["evidence"])
+	}
+	if _, exists := evidence["before"]; exists || calls != 0 {
+		t.Fatalf("read-only evidence captured unexpectedly: %#v calls=%d", evidence, calls)
+	}
+}
+
+func TestEvidencePartialPayloadPreservesSuccessfulBeforeCapture(t *testing.T) {
+	t.Setenv(evidenceRetryEnv, "0")
+	shots := []EvidenceShot{{Path: "/tmp/before.png"}, {Error: "screenshot_timeout"}}
+	calls := 0
+	runtime := NewActionRuntime(RuntimeDeps{DefaultEvidenceCapture: func(string) EvidenceShot {
+		shot := shots[calls]
+		calls++
+		return shot
+	}})
+	runtime.ArmEvidenceForCommand("click-1", "click", json.RawMessage(`{"evidence":"always"}`), "client-1")
+	response := map[string]any{}
+	runtime.AttachEvidencePayload("click-1", response)
+	evidence := response["evidence"].(map[string]any)
+	errors, ok := evidence["errors"].(map[string]any)
+	if evidence["before"] != "/tmp/before.png" || evidence["partial"] != true || !ok || errors["after"] != "screenshot_timeout" {
+		t.Fatalf("partial evidence = %#v", evidence)
+	}
+}
+
+func TestCaptureEvidencePreconditions(t *testing.T) {
+	if got := CaptureEvidence(nil, nil, "client"); got.Error != "capture_not_initialized" {
+		t.Fatalf("nil capture = %+v", got)
+	}
+	store := capture.NewCapture()
+	if got := CaptureEvidence(store.Commands(), trackingOf(store), "client"); got.Error != "no_tracked_tab" {
+		t.Fatalf("untracked capture = %+v", got)
+	}
+}
+
+func TestCaptureEvidenceResultContracts(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+		want    EvidenceShot
+	}{
+		{name: "success", payload: `{"path":"/tmp/shot.png","filename":"shot.png"}`, want: EvidenceShot{Path: "/tmp/shot.png", Filename: "shot.png"}},
+		{name: "extension error", payload: `{"error":"capture denied"}`, want: EvidenceShot{Error: "capture denied"}},
+		{name: "missing path", payload: `{"filename":"shot.png"}`, want: EvidenceShot{Filename: "shot.png", Error: "screenshot_missing_path"}},
+		{name: "invalid JSON", payload: `{bad`, want: EvidenceShot{Error: "screenshot_parse_error:"}},
+	}
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			store := capture.NewCapture()
+			t.Cleanup(store.Close)
+			store.Extension().UpdateTrackedTab(7, "https://example.test", "Example")
+			done := make(chan EvidenceShot, 1)
+			go func() { done <- CaptureEvidence(store.Commands(), trackingOf(store), "client") }()
+			store.Commands().AwaitPending(time.Second)
+			queryID := ""
+			for _, query := range store.Commands().Pending() {
+				if query.Type == "screenshot" {
+					queryID = query.ID
+					break
+				}
+			}
+			if queryID == "" {
+				t.Fatal("screenshot query was not queued")
+			}
+			commandtest.Deliver(store.Commands(), queryID, json.RawMessage(tc.payload))
+			select {
+			case got := <-done:
+				if tc.name == "invalid JSON" {
+					if len(got.Error) < len(tc.want.Error) || got.Error[:len(tc.want.Error)] != tc.want.Error {
+						t.Fatalf("shot = %+v", got)
+					}
+				} else if got != tc.want {
+					t.Fatalf("shot = %+v, want %+v", got, tc.want)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("CaptureEvidence did not return")
+			}
+		})
+	}
+}
+
+// now is the workflow owner clock. Tests that assert a derived stage timeout
+// pin nowFn so the budget does not shrink by however long the run took.
+func (fs *fakeState) now() time.Time {
+	if fs.nowFn != nil {
+		return fs.nowFn()
+	}
+	return time.Now()
+}

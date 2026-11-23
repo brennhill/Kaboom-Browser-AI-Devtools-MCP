@@ -62,7 +62,7 @@ last_verified_date: 2026-03-05
 - Performance diff enrichment is attached at command-result formatting time.
 
 ## Code Anchors
-- `cmd/browser-agent/internal/toolinteract/action_runtime.go`
+- `internal/tools/interact/handler/action_runtime.go`
 - `cmd/browser-agent/tools_interact_dispatch.go`
 - `cmd/browser-agent/tools_interact_dispatch.go`
 - `cmd/browser-agent/tools_interact_draw.go`

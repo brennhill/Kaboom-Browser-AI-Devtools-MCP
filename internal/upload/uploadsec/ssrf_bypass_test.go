@@ -80,6 +80,7 @@ func TestSSRFBypassIPv6MappedIPv4(t *testing.T) {
 		})
 	}
 }
+
 // DNS rebinding is covered by TestResolvePublicIP_RebindingToPrivateAddressIsBlocked
 // in ssrf_resolver_test.go. The version that stood here resolved 127.0.0.1.nip.io
 // and friends over the real network, so it tested whether nip.io was up as much as

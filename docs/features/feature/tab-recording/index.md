@@ -6,23 +6,23 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
-  - internal/schema/interact/actions.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
+  - internal/tools/schema/interact/actions.go
+  - internal/composition/toolruntime/tools_core.go
   - cmd/browser-agent/server.go
-  - cmd/browser-agent/internal/toolobserve/dispatcher.go
-  - cmd/browser-agent/internal/toolobserve/deps.go
-  - cmd/browser-agent/internal/screenrec/deps.go
-  - cmd/browser-agent/internal/toolguard/guards.go
-  - cmd/browser-agent/internal/screenrec/types.go
-  - cmd/browser-agent/internal/screenrec/handlers.go
-  - cmd/browser-agent/internal/screenrec/state.go
-  - cmd/browser-agent/internal/screenrec/paths.go
-  - cmd/browser-agent/internal/screenrec/save.go
-  - cmd/browser-agent/internal/screenrec/reveal.go
-  - cmd/browser-agent/internal/screenrec/observe.go
-  - internal/statediag/collector.go
-  - internal/statefile/statefile.go
+  - internal/tools/observe/handler/dispatcher.go
+  - internal/tools/observe/handler/deps.go
+  - internal/screenrec/deps.go
+  - internal/tools/guard/guards.go
+  - internal/screenrec/types.go
+  - internal/screenrec/handlers.go
+  - internal/screenrec/state.go
+  - internal/screenrec/paths.go
+  - internal/screenrec/save.go
+  - internal/screenrec/reveal.go
+  - internal/screenrec/observe.go
+  - internal/lifecycle/doctor/statediag/collector.go
+  - internal/platform/state/file/statefile.go
   - internal/recording/actionlog/recorder.go
   - src/background/event-listeners.ts
   - src/background/init.ts
@@ -53,20 +53,20 @@ code_paths:
   - extension/popup.css
   - internal/recording/manager.go
   - internal/recording/manager_store.go
-  - internal/capture/capture.go
-  - cmd/browser-agent/internal/toolrecording/handler.go
+  - internal/composition/capture/capture.go
+  - internal/tools/recording/handler.go
   - src/popup/recording/action-recording.ts
   - src/popup/recording/recording-io.ts
   - src/background/recording/listeners.ts
 test_paths:
-  - cmd/browser-agent/internal/screenrec/state_test.go
+  - internal/screenrec/state_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/internal/interactdispatch/handler_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_browser_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_dom_test.go
-  - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
-  - cmd/browser-agent/internal/screenrec/screenrec_test.go
-  - internal/statediag/collector_test.go
+  - internal/tools/interact/dispatch/handler_test.go
+  - internal/tools/interact/handler/interact_browser_test.go
+  - internal/tools/interact/handler/interact_dom_test.go
+  - internal/tools/interact/handler/interactstate/state_test.go
+  - internal/screenrec/screenrec_test.go
+  - internal/lifecycle/doctor/statediag/collector_test.go
   - internal/recording/actionlog/recorder_test.go
   - tests/extension/recording-ui/recording-shortcut-command.test.js
   - tests/extension/ui-controls/context-menus-labels.test.js
@@ -101,9 +101,9 @@ links here.
 
 | Kind | Source of truth | Starts | Restores | Stops | Persists |
 | --- | --- | --- | --- | --- | --- |
-| Event recording (`configure` `event_recording_start` / `event_recording_stop`) | Go `RecordingManager` (`internal/recording/manager.go`), held by `Capture` and exposed only through `Capture.Recordings()` (`internal/capture/capture.go`) | `toolrecording.Handler.EventRecordingStart` (`cmd/browser-agent/internal/toolrecording/handler.go`); the popup action-recording row calls the same daemon API | Not restored. The active recording lives in memory only, so a daemon restart drops it. Saved recordings are listed from disk (`manager_store.go`) | `toolrecording.Handler.EventRecordingStop` | `persistRecordingToDisk` on stop (`manager_store.go`); quota in `manager_storage.go` |
+| Event recording (`configure` `event_recording_start` / `event_recording_stop`) | Go `RecordingManager` (`internal/recording/manager.go`), held by `Capture` and exposed only through `Capture.Recordings()` (`internal/composition/capture/capture.go`) | `toolrecording.Handler.EventRecordingStart` (`internal/tools/recording/handler.go`); the popup action-recording row calls the same daemon API | Not restored. The active recording lives in memory only, so a daemon restart drops it. Saved recordings are listed from disk (`manager_store.go`) | `toolrecording.Handler.EventRecordingStop` | `persistRecordingToDisk` on stop (`manager_store.go`); quota in `manager_storage.go` |
 | Live screen recording (`interact` `screen_recording_start` / `screen_recording_stop`, aliases `record_start` / `record_stop`; popup, keyboard, context menu, hover launcher) | Offscreen `MediaRecorder` (`src/offscreen/recording-worker.ts`). The background mirrors it in memory and in `kaboom_recording` | `startRecording` in `src/background/recording/index.ts`. Every entry point goes through it; the MCP path waits for the popup gesture (`capture.ts`) | `rehydrateRecordingStateOnLoad` (`index.ts`) asks the offscreen document via `rehydration.ts`. With no live recorder it clears `kaboom_recording`; it always clears `kaboom_pending_recording` | `stopRecording` in `index.ts`, which stops the offscreen recorder | The offscreen worker POSTs the WebM blob to daemon `/recordings/save` |
-| Saved video artifact | Daemon recordings directory (`screenrec.Dir`, `cmd/browser-agent/internal/screenrec/paths.go`) | `screenrec.InteractHandler.HandleRecordStart` queues the start command (`handlers.go`) | Read back from disk by `HandleObserveSavedVideos` (`observe.go`) | `HandleRecordStop` (`handlers.go`) | `screenrec.HandleSave` and `writeVideoToDisk` (`save.go`) |
+| Saved video artifact | Daemon recordings directory (`screenrec.Dir`, `internal/screenrec/paths.go`) | `screenrec.InteractHandler.HandleRecordStart` queues the start command (`handlers.go`) | Read back from disk by `HandleObserveSavedVideos` (`observe.go`) | `HandleRecordStop` (`handlers.go`) | `screenrec.HandleSave` and `writeVideoToDisk` (`save.go`) |
 
 Extension storage keys and their writers (CLAUDE.md rule 18):
 

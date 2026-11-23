@@ -10,13 +10,13 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/buffers"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
-	performance_navigation "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance/navigation"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance/tracecorr"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/buffers"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/performance"
+	performance_navigation "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/performance/navigation"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/performance/tracecorr"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // GetEnhancedActions returns captured user actions (clicks, inputs, navigations).

@@ -11,8 +11,8 @@ code_paths:
   - src/lib/ai-context/ai-context-enrichment.ts
   - src/lib/page/exceptions.ts
   - src/inject/api.ts
-  - internal/capture/bodystore/store.go
-  - internal/capture/actionstore/store.go
+  - internal/observation/store/bodies/store.go
+  - internal/observation/store/actions/store.go
 test_paths:
   - internal/tools/observe/timeline/correlation_test.go
   - tests/extension/ai-context/ai-context-fixture.js
@@ -22,8 +22,8 @@ test_paths:
   - tests/extension/ai-context/ai-context-parsing.test.js
   - tests/extension/ai-context/ai-context-enrichment.test.js
   - tests/extension/contracts/no-compatibility-facades.test.js
-  - internal/capture/bodystore/store_test.go
-  - internal/capture/actionstore/store_test.go
+  - internal/observation/store/bodies/store_test.go
+  - internal/observation/store/actions/store_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

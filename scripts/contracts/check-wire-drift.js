@@ -22,12 +22,12 @@ const __dirname = path.dirname(__filename)
 
 const WIRE_PAIRS = [
   {
-    go: 'internal/types/wire_enhanced_action.go',
+    go: 'internal/platform/types/wire_enhanced_action.go',
     ts: 'src/types/wire/wire-enhanced-action.ts',
     types: [{ go: 'WireEnhancedAction', ts: 'WireEnhancedAction' }]
   },
   {
-    go: 'internal/types/wire_network.go',
+    go: 'internal/platform/types/wire_network.go',
     ts: 'src/types/wire/wire-network.ts',
     types: [
       { go: 'WireNetworkBody', ts: 'WireNetworkBody' },
@@ -37,12 +37,12 @@ const WIRE_PAIRS = [
     ]
   },
   {
-    go: 'internal/types/wire_network.go',
+    go: 'internal/platform/types/wire_network.go',
     ts: 'src/types/wire/wire-websocket-event.ts',
     types: [{ go: 'WireWebSocketEvent', ts: 'WireWebSocketEvent' }]
   },
   {
-    go: 'internal/performance/wire_performance.go',
+    go: 'internal/observation/performance/wire_performance.go',
     ts: 'src/types/wire/wire-performance-snapshot.ts',
     types: [
       { go: 'WirePerformanceTiming', ts: 'WirePerformanceTiming' },
@@ -56,7 +56,7 @@ const WIRE_PAIRS = [
     ]
   },
   {
-    go: 'internal/qafixture/wire_fixture.go',
+    go: 'internal/testgen/qafixture/wire_fixture.go',
     ts: 'src/types/wire/wire-qa-fixture.ts',
     types: [
       { go: 'WireQAFixture', ts: 'WireQAFixture' },
@@ -67,12 +67,12 @@ const WIRE_PAIRS = [
     ]
   },
   {
-    go: 'internal/types/wire_log.go',
+    go: 'internal/platform/types/wire_log.go',
     ts: 'src/types/wire/wire-extension-log.ts',
     types: [{ go: 'ExtensionLog', ts: 'ExtensionLog' }]
   },
   {
-    go: 'internal/capture/syncruntime/wire_sync.go',
+    go: 'internal/sync/runtime/wire_sync.go',
     ts: 'src/types/wire/wire-sync.ts',
     types: [
       { go: 'SyncRequest', ts: 'SyncRequest' },

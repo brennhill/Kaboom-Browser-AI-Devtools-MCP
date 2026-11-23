@@ -10,7 +10,7 @@ code_paths:
   - src/types/runtime/telemetry-messages.ts
   - src/content/message-forwarding.ts
   - src/background/message-routing/telemetry-handler.ts
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_configure.go
   - scripts/contracts/check-silent-catches.cjs
   - src/background/
   - src/content/
@@ -65,18 +65,18 @@ code_paths:
   - src/lib/tabs/tracked-tab-storage.ts
   - src/popup/recording/recording.ts
   - src/offscreen/recording-worker.ts
-  - cmd/browser-agent/internal/health/doctor_live_checks.go
-  - internal/commandcontract/generated.go
-  - cmd/browser-agent/internal/daemonlife/
-  - cmd/browser-agent/internal/screenrec/
-  - cmd/browser-agent/internal/sequencehandler/
-  - cmd/browser-agent/internal/summarypref/
-  - cmd/browser-agent/internal/toolinteract/interactstate/
-  - internal/noise/
-  - internal/persistence/
+  - internal/tools/commandhealth/doctor_live_checks.go
+  - internal/browsercommand/contract/generated.go
+  - internal/lifecycle/daemon/
+  - internal/screenrec/
+  - internal/recording/sequence/
+  - internal/tools/summarypref/
+  - internal/tools/interact/handler/interactstate/
+  - internal/observation/noise/
+  - internal/platform/state/persistence/
   - internal/recording/
-  - internal/statediag/collector.go
-  - internal/statediag/store.go
+  - internal/lifecycle/doctor/statediag/collector.go
+  - internal/lifecycle/doctor/statediag/store.go
   - internal/telemetry/install_id.go
   - extension/popup.html
   - extension/popup.css
@@ -85,17 +85,17 @@ test_paths:
   - tests/extension/performance/rate-limit.test.js
   - tests/extension/network-http/network-waterfall.test.js
   - tests/extension/content/message-handlers.test.js
-  - cmd/browser-agent/internal/doctorsupport/projections_test.go
+  - internal/lifecycle/doctor/support/projections_test.go
   - scripts/contracts/check-silent-catches.test.cjs
   - tests/architecture/async-failure-evidence.test.cjs
   - tests/architecture/user-state-loaders.test.cjs
   - internal/recording/manager_test.go
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/system-doctor/system-doctor-ui.test.js
-  - cmd/browser-agent/internal/health/health_coverage_test.go
-  - cmd/browser-agent/internal/asynccommand/handler_test.go
-  - cmd/browser-agent/internal/health/health_test.go
-  - internal/statediag/collector_test.go
+  - internal/tools/commandhealth/health_coverage_test.go
+  - internal/tools/asynccommand/handler_test.go
+  - internal/tools/commandhealth/health_test.go
+  - internal/lifecycle/doctor/statediag/collector_test.go
   - tests/extension/popup-shell/popup-features.test.js
   - tests/extension/popup-shell/popup-toggles.test.js
   - tests/extension/ui-controls/toggle-feature.test.js

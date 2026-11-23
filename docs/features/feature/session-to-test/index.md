@@ -6,18 +6,18 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-05
 code_paths:
-  - internal/reproduction/reproduction_locators.go
-  - internal/reproduction/reproduction_playwright.go
-  - internal/reproduction/reproduction_kaboom.go
-  - internal/reproduction/reproduction.go
-  - internal/types/wire_enhanced_action.go
-  - internal/types/network.go
-  - internal/capture/actionstore/store.go
-  - internal/schema/interact/actions.go
-  - internal/schema/interact/properties_core.go
-  - cmd/browser-agent/internal/toolinteract/interact_browser.go
-  - cmd/browser-agent/internal/cli/parser/interact.go
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
+  - internal/recording/reproduction/reproduction_locators.go
+  - internal/recording/reproduction/reproduction_playwright.go
+  - internal/recording/reproduction/reproduction_kaboom.go
+  - internal/recording/reproduction/reproduction.go
+  - internal/platform/types/wire_enhanced_action.go
+  - internal/platform/types/network.go
+  - internal/observation/store/actions/store.go
+  - internal/tools/schema/interact/actions.go
+  - internal/tools/schema/interact/properties_core.go
+  - internal/tools/interact/handler/interact_browser.go
+  - internal/tools/cli/parser/interact.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
   - src/lib/page/reproduction.ts
   - src/background/dom/cdp/cdp-env-pin.ts
   - src/background/environment-transaction/env-pin.ts
@@ -25,10 +25,10 @@ code_paths:
   - src/early-patch.ts
   - src/types/wire/wire-enhanced-action.ts
 test_paths:
-  - internal/reproduction/reproduction_locators_test.go
-  - internal/reproduction/golden_test.go
-  - internal/reproduction/testdata/reproduction-playwright.golden.txt
-  - internal/capture/actionstore/store_test.go
+  - internal/recording/reproduction/reproduction_locators_test.go
+  - internal/recording/reproduction/golden_test.go
+  - internal/recording/reproduction/testdata/reproduction-playwright.golden.txt
+  - internal/observation/store/actions/store_test.go
   - tests/extension/session-to-test/cdp-env-pin.test.js
   - tests/extension/session-to-test/early-patch-seeded-random.test.js
   - tests/extension/session-to-test/three-locator-capture.test.js
@@ -71,7 +71,7 @@ Every recorded step carries all three, in a fixed fallback order.
 | 2 | `ax` | What the control means — role plus accessible name | Survives DOM restructuring, class churn and wrapper elements, because it describes semantics rather than shape. Costs an accessibility-tree snapshot over CDP, so it is not first. |
 | 3 | `coordinate` | The point it occupied, plus the frame and viewport measured in | A point always resolves to *something*, so it can never report "not found" — it silently hits whatever occupies that point now. Correct only once both semantic strategies have failed. |
 
-`FallbackOrder` in `internal/reproduction/reproduction_locators.go` is the single declaration of
+`FallbackOrder` in `internal/recording/reproduction/reproduction_locators.go` is the single declaration of
 that order; both backends render from it.
 
 Three deliberate omissions:

@@ -4,7 +4,7 @@
  *
  * CONTRACT: this file reports what the page renders and judges none of it. It
  * never decides which value is a token, what the norm is, or what counts as
- * drift — that arithmetic lives in Go (cmd/browser-agent/internal/toolanalyze/
+ * drift — that arithmetic lives in Go (internal/tools/analyze/handler/
  * designdrift) where it is table-tested. Content scripts are bundled and
  * awkward to test, so keep this a measurement.
  */

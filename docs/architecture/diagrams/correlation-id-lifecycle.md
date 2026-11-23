@@ -240,13 +240,13 @@ observe({what: 'failed_commands'})
 
 **Check AsyncCommandTimeout:**
 ```bash
-grep AsyncCommandTimeout internal/queries/types.go
+grep AsyncCommandTimeout internal/browsercommand/query/types.go
 # Should show: AsyncCommandTimeout = 30 * time.Second
 ```
 
 ## References
 
-- [Implementation: dispatcher_queries.go](../../../internal/queries/dispatcher_queries.go)
-- [Type Definition: CommandResult](../../internal/queries/types.go)
+- [Implementation: dispatcher_queries.go](../../../internal/browsercommand/query/dispatcher_queries.go)
+- [Type Definition: CommandResult](../../internal/browsercommand/query/types.go)
 - [Async Queue Flow Diagram](async-queue-flow.md)
 - [Architecture Enforcement](../boundaries/ARCHITECTURE-ENFORCEMENT.md)

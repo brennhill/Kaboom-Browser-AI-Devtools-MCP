@@ -21,10 +21,10 @@ This file defines externally meaningful contracts and the compatibility policy f
 
 | Interface | Source of Truth | Compatibility Rule | Validation |
 | --- | --- | --- | --- |
-| MCP tool schemas (`observe`, `analyze`, `generate`, `configure`, `interact`) | `internal/schema/` | No breaking parameter/result changes without versioned plan | `go test ./cmd/browser-agent/...` |
-| MCP JSON-RPC request/response envelope | `cmd/browser-agent/handler.go`, `internal/mcp/` | Must remain valid JSON-RPC 2.0 | MCP handler tests |
-| Extension sync protocol (`/sync` and related result posts) | `internal/capture/syncruntime/handler.go`, `internal/capture/httpingest/handlers.go`, `src/background/sync/sync-client.ts` | Server/extension changes are coordinated in same PR | Go + extension tests |
-| Go/TypeScript wire types | `internal/types/wire_*.go`, `src/types/wire/wire-*.ts` | Must stay generated/synchronized | `make check-wire-drift` |
+| MCP tool schemas (`observe`, `analyze`, `generate`, `configure`, `interact`) | `internal/tools/schema/` | No breaking parameter/result changes without versioned plan | `go test ./cmd/browser-agent/...` |
+| MCP JSON-RPC request/response envelope | `cmd/browser-agent/handler.go`, `internal/tools/mcp/` | Must remain valid JSON-RPC 2.0 | MCP handler tests |
+| Extension sync protocol (`/sync` and related result posts) | `internal/sync/runtime/handler.go`, `internal/ingestion/http/handlers.go`, `src/background/sync/sync-client.ts` | Server/extension changes are coordinated in same PR | Go + extension tests |
+| Go/TypeScript wire types | `internal/platform/types/wire_*.go`, `src/types/wire/wire-*.ts` | Must stay generated/synchronized | `make check-wire-drift` |
 | Extension message protocol (background <-> content/popup) | `src/background/message-handlers.ts`, `src/content.ts`, docs in `docs/core/protocol/extension-message-protocol.md` | Preserve existing message semantics unless versioned | Extension tests |
 | CLI mode behavior | `cmd/browser-agent/cli.go`, `cli_commands.go` | Existing command behavior/output should not regress silently | CLI-focused Go tests |
 

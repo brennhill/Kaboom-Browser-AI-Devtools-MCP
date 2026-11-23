@@ -6,16 +6,16 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
-  - internal/circuit/breaker.go
-  - internal/lifecycle/observer.go
-  - internal/capture/capture.go
-  - internal/capture/httpingest/handlers.go
+  - internal/ingestion/circuit/breaker.go
+  - internal/observation/lifecycle/observer.go
+  - internal/composition/capture/capture.go
+  - internal/ingestion/http/handlers.go
 test_paths:
-  - internal/capture/httpingest/handlers_test.go
-  - internal/circuit/breaker_test.go
-  - internal/lifecycle/observer_test.go
-  - internal/capture/coverage_gaps_test.go
-  - internal/capture/no_facade_test.go
+  - internal/ingestion/http/handlers_test.go
+  - internal/ingestion/circuit/breaker_test.go
+  - internal/observation/lifecycle/observer_test.go
+  - internal/composition/capture/coverage_gaps_test.go
+  - internal/composition/capture/no_facade_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

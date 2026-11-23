@@ -6,10 +6,10 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - internal/hook/eval/eval.go
-  - internal/hook/eval/testdata/
+  - internal/hooks/eval/eval.go
+  - internal/hooks/eval/testdata/
 test_paths:
-  - internal/hook/eval/eval_test.go
+  - internal/hooks/eval/eval_test.go
 ---
 
 # Hook Eval Rig

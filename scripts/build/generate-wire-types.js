@@ -23,24 +23,24 @@ const ROOT = path.resolve(__dirname, '..', '..')
 // ============================================
 
 const WIRE_PAIRS = [
-  { go: 'internal/types/wire_enhanced_action.go', ts: 'src/types/wire/wire-enhanced-action.ts' },
+  { go: 'internal/platform/types/wire_enhanced_action.go', ts: 'src/types/wire/wire-enhanced-action.ts' },
   {
-    go: 'internal/types/wire_network.go',
+    go: 'internal/platform/types/wire_network.go',
     ts: 'src/types/wire/wire-network.ts',
     types: ['WireNetworkBody', 'WireNetworkWaterfallEntry', 'WireServerTiming', 'WireNetworkWaterfallPayload']
   },
   {
-    go: 'internal/types/wire_network.go',
+    go: 'internal/platform/types/wire_network.go',
     ts: 'src/types/wire/wire-websocket-event.ts',
     types: ['WireWebSocketEvent']
   },
-  { go: 'internal/performance/wire_performance.go', ts: 'src/types/wire/wire-performance-snapshot.ts' },
-  { go: 'internal/qafixture/wire_fixture.go', ts: 'src/types/wire/wire-qa-fixture.ts' },
-  { go: 'internal/perftrace/wire_trace.go', ts: 'src/types/wire/wire-performance-trace.ts' },
-  { go: 'internal/types/wire_log.go', ts: 'src/types/wire/wire-extension-log.ts', types: ['ExtensionLog'] },
-  { go: 'internal/styleprobe/wire_style_probe.go', ts: 'src/types/wire/wire-style-probe.ts' },
-  { go: 'internal/capture/syncruntime/wire_sync.go', ts: 'src/types/wire/wire-sync.ts' },
-  { go: 'internal/screenshotframe/wire_screenshot.go', ts: 'src/types/wire/wire-screenshot.ts' }
+  { go: 'internal/observation/performance/wire_performance.go', ts: 'src/types/wire/wire-performance-snapshot.ts' },
+  { go: 'internal/testgen/qafixture/wire_fixture.go', ts: 'src/types/wire/wire-qa-fixture.ts' },
+  { go: 'internal/observation/perftrace/wire_trace.go', ts: 'src/types/wire/wire-performance-trace.ts' },
+  { go: 'internal/platform/types/wire_log.go', ts: 'src/types/wire/wire-extension-log.ts', types: ['ExtensionLog'] },
+  { go: 'internal/page/styleprobe/wire_style_probe.go', ts: 'src/types/wire/wire-style-probe.ts' },
+  { go: 'internal/sync/runtime/wire_sync.go', ts: 'src/types/wire/wire-sync.ts' },
+  { go: 'internal/page/screenshotframe/wire_screenshot.go', ts: 'src/types/wire/wire-screenshot.ts' }
 ]
 
 /**
@@ -447,9 +447,9 @@ function synchronizeSyncOpenAPI(checkOnly) {
   const openAPIPath = path.join(ROOT, 'cmd/browser-agent/openapi.json')
   const document = JSON.parse(fs.readFileSync(openAPIPath, 'utf8'))
   const sources = [
-    { path: 'internal/types/wire_log.go', types: ['ExtensionLog'] },
+    { path: 'internal/platform/types/wire_log.go', types: ['ExtensionLog'] },
     {
-      path: 'internal/capture/syncruntime/wire_sync.go',
+      path: 'internal/sync/runtime/wire_sync.go',
       types: [
         'SyncRequest',
         'SyncSettings',

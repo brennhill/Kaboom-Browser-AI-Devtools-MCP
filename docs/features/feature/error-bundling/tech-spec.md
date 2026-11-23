@@ -187,11 +187,11 @@ func GetErrorBundles(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessag
 - `buildBundles` window-joins each error by timestamp (`matchNetworkBodies`, `matchWaterfall`, `matchActions`, `matchLogs`)
 - `buildErrorBundlesSummary` backs the `summary: true` response
 
-#### 2. `cmd/browser-agent/internal/toolobserve/dispatcher.go`
+#### 2. `internal/tools/observe/handler/dispatcher.go`
 
 The observe dispatcher maps `"error_bundles"` to `observetimeline.GetErrorBundles`.
 
-#### 3. `internal/schema/observe.go`
+#### 3. `internal/tools/schema/observe.go`
 
 `"error_bundles"` is in the observe `what` enum; `window_seconds`, `scope`, `url` and `summary` parameter descriptions mention it.
 

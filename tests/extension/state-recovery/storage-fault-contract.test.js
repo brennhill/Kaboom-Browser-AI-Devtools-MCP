@@ -10,7 +10,7 @@ function source(path) {
 }
 
 test('extension and daemon share one persistence fault vocabulary', () => {
-  const daemon = source('internal/statefault/fault.go')
+  const daemon = source('internal/platform/state/fault/fault.go')
   const extension = source('src/lib/storage/fault.ts')
 
   assert.deepEqual(STORAGE_FAULT_KINDS, [

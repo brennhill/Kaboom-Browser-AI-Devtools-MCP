@@ -5,11 +5,11 @@ package testgen
 
 import (
 	"errors"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/reproduction"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/reproduction"
 )
 
 // DataProvider abstracts access to captured browser data for test generation.

@@ -8,7 +8,7 @@
 # proving only that it returns JSON.
 #
 # Every expectation comes from the shared table at
-# cmd/browser-agent/internal/toolanalyze/designdrift/testdata/expected-findings.json,
+# internal/tools/analyze/handler/designdrift/testdata/expected-findings.json,
 # which the Go analyzer tests assert against too. One source, so the two cannot
 # drift apart. Both directions are checked — each planted positive must be
 # found, and each negative control must yield nothing.
@@ -23,7 +23,7 @@ OUTPUT_FILE="${2:-/dev/null}"
 init_framework "$PORT" "$OUTPUT_FILE"
 
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-EXPECTED_TABLE="$REPO_ROOT/cmd/browser-agent/internal/toolanalyze/designdrift/testdata/expected-findings.json"
+EXPECTED_TABLE="$REPO_ROOT/internal/tools/analyze/handler/designdrift/testdata/expected-findings.json"
 
 if [ ! -f "$EXPECTED_TABLE" ]; then
     begin_category "36" "Design Drift Audit" "1"

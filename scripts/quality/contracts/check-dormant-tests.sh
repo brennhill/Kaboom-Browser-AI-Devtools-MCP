@@ -5,15 +5,15 @@
 # `//go:build integration` with justifications that were plainly false by the
 # time anyone looked —
 #
-#   internal/security/security_test.go        1295 lines  "NetworkBody needs to be
+#   internal/analysis/security/security_test.go        1295 lines  "NetworkBody needs to be
 #                                                          imported from capture"  (it imported fine)
-#   internal/security/security_flagging_test.go 323 lines  same tag, same story
+#   internal/analysis/security/security_flagging_test.go 323 lines  same tag, same story
 #   internal/analysis/binary_integration_test.go           the "justification" was a
 #                                                          run instruction, not a constraint
-#   internal/redaction/redaction_test.go       823 lines  "raceEnabled needs to be
+#   internal/platform/redaction/redaction_test.go       823 lines  "raceEnabled needs to be
 #                                                          exported or defined here" (it was defined
 #                                                          in the same package)
-#   internal/export/sarif/export_test.go       977 lines  "requires MCP handler types
+#   internal/analysis/export/sarif/export_test.go       977 lines  "requires MCP handler types
 #                                                          that aren't exported" (referenced none)
 #
 # That is ~3,400 lines and several hundred assertions that CI never ran, in code
@@ -22,7 +22,7 @@
 # transient problem, and nobody revisits it once the problem goes away.
 #
 # A dormant test is worse than no test. It looks like coverage in the tree and on
-# a checklist, and it silently rots — `internal/capture/boundary_test.go.skip`
+# a checklist, and it silently rots — `internal/composition/capture/boundary_test.go.skip`
 # drifted so far it no longer compiles against the code it claims to test.
 #
 # So: excluding a Go test from the default suite is a decision that must be made

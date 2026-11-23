@@ -7,36 +7,36 @@ owners: []
 last_reviewed: 2026-11-21
 code_paths:
   - .github/workflows/ci.yml
-  - cmd/browser-agent/internal/bridge/bridge_startup.go
-  - cmd/browser-agent/internal/bridge/bridge_startup_state.go
-  - cmd/browser-agent/internal/bridge/healthprobe/probe.go
-  - cmd/browser-agent/internal/bridge/daemoncmd/command.go
-  - cmd/browser-agent/internal/bridge/startuplock/lock.go
-  - cmd/browser-agent/internal/bridge/bridge.go
-  - cmd/browser-agent/internal/bridge/bridge_fastpath.go
-  - cmd/browser-agent/internal/bridge/fastpathtelemetry/telemetry.go
-  - cmd/browser-agent/internal/launchmode/launch_mode.go
-  - cmd/browser-agent/internal/launchmode/runtime_mode.go
-  - cmd/browser-agent/internal/toolguard/guards.go
-  - internal/identity/mcp.go
+  - internal/lifecycle/bridge/bridge_startup.go
+  - internal/lifecycle/bridge/bridge_startup_state.go
+  - internal/lifecycle/bridge/healthprobe/probe.go
+  - internal/lifecycle/bridge/daemoncmd/command.go
+  - internal/lifecycle/bridge/startuplock/lock.go
+  - internal/lifecycle/bridge/bridge.go
+  - internal/lifecycle/bridge/bridge_fastpath.go
+  - internal/lifecycle/bridge/fastpathtelemetry/telemetry.go
+  - internal/lifecycle/launchmode/launch_mode.go
+  - internal/lifecycle/launchmode/runtime_mode.go
+  - internal/tools/guard/guards.go
+  - internal/platform/identity/mcp.go
   - src/popup/tabs/tab-tracking.ts
   - src/popup/shell/status-display.ts
   - extension/popup.html
 test_paths:
   - cmd/browser-agent/integration/bridge/faststart_extended_test.go
-  - cmd/browser-agent/internal/bridge/fastpathtelemetry/telemetry_test.go
-  - cmd/browser-agent/internal/toolguard/guards_test.go
-  - cmd/browser-agent/internal/bridge/bridge_test_support_test.go
-  - cmd/browser-agent/internal/bridge/bridge_startup_test.go
-  - cmd/browser-agent/internal/bridge/startuplock/lock_test.go
-  - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
-  - cmd/browser-agent/internal/bridge/healthprobe/probe_test.go
-  - cmd/browser-agent/internal/bridge/daemoncmd/command_test.go
-  - cmd/browser-agent/internal/launchmode/launch_mode_test.go
-  - cmd/browser-agent/internal/launchmode/runtime_mode_test.go
-  - cmd/browser-agent/internal/toolguard/guards_test.go
-  - cmd/browser-agent/internal/asynccommand/handler_test.go
-  - internal/identity/mcp_test.go
+  - internal/lifecycle/bridge/fastpathtelemetry/telemetry_test.go
+  - internal/tools/guard/guards_test.go
+  - internal/lifecycle/bridge/bridge_test_support_test.go
+  - internal/lifecycle/bridge/bridge_startup_test.go
+  - internal/lifecycle/bridge/startuplock/lock_test.go
+  - internal/lifecycle/bridge/bridge_fastpath_unit_test.go
+  - internal/lifecycle/bridge/healthprobe/probe_test.go
+  - internal/lifecycle/bridge/daemoncmd/command_test.go
+  - internal/lifecycle/launchmode/launch_mode_test.go
+  - internal/lifecycle/launchmode/runtime_mode_test.go
+  - internal/tools/guard/guards_test.go
+  - internal/tools/asynccommand/handler_test.go
+  - internal/platform/identity/mcp_test.go
 ---
 
 # Lazy Server Start
@@ -101,7 +101,7 @@ When the daemon starts (or restarts), the extension's sync client reconnects aut
 5. `requireExtension` guard waits up to 5 seconds for extension connectivity
 
 The runtime guard checks and the diagnostic state rendered in their recovery
-responses are intentionally colocated in `internal/toolguard/guards.go`; changes to a
+responses are intentionally colocated in `internal/tools/guard/guards.go`; changes to a
 guard and its user-facing recovery context must ship together.
 
 ## UX Contract

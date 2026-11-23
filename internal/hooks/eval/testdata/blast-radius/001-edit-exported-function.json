@@ -1,0 +1,17 @@
+{
+  "description": "Edit an exported function in protocol.go — should warn about importers",
+  "hook": "blast-radius",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "func WriteOutput(w io.Writer, context string) error {\n\treturn nil\n}"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["Blast Radius", "imported by"],
+    "max_latency_ms": 5000
+  }
+}

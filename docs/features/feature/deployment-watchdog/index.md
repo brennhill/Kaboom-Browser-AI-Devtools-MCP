@@ -6,24 +6,24 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/binarywatch/watcher.go
+  - internal/lifecycle/upgrade/binarywatch/watcher.go
   - cmd/browser-agent/config.go
-  - cmd/browser-agent/internal/startupconfig/runtime.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - cmd/browser-agent/internal/operationalapi/handler.go
-  - cmd/browser-agent/internal/mcpendpoint/handler.go
+  - internal/lifecycle/startupconfig/runtime.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/tools/configure/handler/dispatcher.go
+  - internal/composition/http/operational/handler.go
+  - internal/tools/mcpserver/endpoint/handler.go
   - cmd/browser-agent/server.go
   - cmd/browser-agent/openapi.json
-  - cmd/browser-agent/internal/dashboard/diagnostics.html
+  - internal/composition/http/dashboard/diagnostics.html
   - src/generated/openapi-types.ts
 test_paths:
-  - internal/capture/healthreader/reader_test.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/internal/binarywatch/watcher_test.go
-  - cmd/browser-agent/internal/startupconfig/runtime_test.go
-  - cmd/browser-agent/internal/operationalapi/health_test.go
-  - cmd/browser-agent/internal/mcpendpoint/handler_test.go
+  - internal/observation/healthreader/reader_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
+  - internal/lifecycle/upgrade/binarywatch/watcher_test.go
+  - internal/lifecycle/startupconfig/runtime_test.go
+  - internal/composition/http/operational/health_test.go
+  - internal/tools/mcpserver/endpoint/handler_test.go
   - cmd/browser-agent/composition_test.go
   - tests/extension/contracts/no-compatibility-facades.test.js
 last_verified_version: 0.7.12

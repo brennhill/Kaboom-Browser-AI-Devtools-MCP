@@ -39,16 +39,16 @@ on:
       - "extension/**"
       # The daemon side: command dispatch, the sync transport, wire contracts.
       - "cmd/browser-agent/**"
-      - "internal/capture/**"
-      - "internal/queries/**"
-      - "internal/commandcontract/**"
-      # Covers internal/types/wire_*.go and every other package's wire pair.
+      - "internal/composition/capture/**"
+      - "internal/browsercommand/query/**"
+      - "internal/browsercommand/contract/**"
+      # Covers internal/platform/types/wire_*.go and every other package's wire pair.
       - "internal/**/wire_*.go"
       - "src/types/wire/**"
       # The fixtures themselves — a re-record must be checked against reality.
       - "scripts/tests/transcripts/**"
       # The record and replay machinery.
-      - "internal/synctranscript/**"
+      - "internal/browsercommand/transcript/**"
       - "cmd/kaboom-replay-extension/**"
       - "scripts/tests/transcripts/record-connected-transcripts.sh"
       - "scripts/tests/framework/uat-replay.sh"

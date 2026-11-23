@@ -42,13 +42,13 @@ The bridge forwards JSON-RPC from stdin to the HTTP daemon. Each request gets a 
 
 | Timeout | Value | Location | Purpose |
 |---------|-------|----------|---------|
-| Default query timeout | 2s | `internal/queries/types.go` | Generic extension queries |
-| Async command timeout | 60s | `internal/queries/types.go` | Browser actions, execute_js, etc. |
+| Default query timeout | 2s | `internal/browsercommand/query/types.go` | Generic extension queries |
+| Async command timeout | 60s | `internal/browsercommand/query/types.go` | Browser actions, execute_js, etc. |
 | Screenshot query timeout | 20s | `tools_observe_analysis.go` | Screenshot capture + upload round-trip |
-| Sync long-poll hold | 5s | `internal/capture/syncruntime/handler.go` | Server holds `/sync` response waiting for pending queries |
-| Query result TTL | 60s | `internal/capture/query_dispatcher.go` | Cleanup interval for uncollected query results |
+| Sync long-poll hold | 5s | `internal/sync/runtime/handler.go` | Server holds `/sync` response waiting for pending queries |
+| Query result TTL | 60s | `internal/composition/capture/query_dispatcher.go` | Cleanup interval for uncollected query results |
 
-## Extension Disconnect Detection (`internal/capture/`)
+## Extension Disconnect Detection (`internal/composition/capture/`)
 
 | Threshold | Value | Field | Location |
 |-----------|-------|-------|----------|

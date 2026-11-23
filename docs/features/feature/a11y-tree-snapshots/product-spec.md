@@ -222,7 +222,7 @@ Not yet built (reviewed 2026-11-21: no `a11y_tree` mode exists in the code). Pla
 
 ### New Server Handler
 
-- Planned: a `toolObserveA11yTree()` handler in the observe tool package (today `cmd/browser-agent/internal/toolobserve/`) -- Creates pending query of type `"a11y_tree"`, waits for result, formats response
+- Planned: a `toolObserveA11yTree()` handler in the observe tool package (today `internal/tools/observe/handler/`) -- Creates pending query of type `"a11y_tree"`, waits for result, formats response
 - New query type `"a11y_tree"` dispatched through the existing background command registry and content-script bridge
 
 ### Message Flow

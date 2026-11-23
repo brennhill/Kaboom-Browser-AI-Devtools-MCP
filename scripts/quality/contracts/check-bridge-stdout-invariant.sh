@@ -9,16 +9,16 @@ echo "Checking bridge/wrapper stdout invariant..."
 PATTERN='fmt\.Print(f|ln)?\(|fmt\.Fprintf\(os\.Stdout|fmt\.Fprint\(os\.Stdout|io\.WriteString\(os\.Stdout|os\.Stdout\.(Write|WriteString|Sync)\('
 
 TARGET_FILES=(
-  "cmd/browser-agent/internal/bridge/bridge.go"
-  "cmd/browser-agent/internal/bridge/bridge_fastpath.go"
-  "cmd/browser-agent/internal/bridge/stdioisolate/isolation.go"
-  "cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix.go"
-  "cmd/browser-agent/internal/bridge/stdioisolate/isolation_windows.go"
-  "cmd/browser-agent/internal/bridge/bridge_transport.go"
+  "internal/lifecycle/bridge/bridge.go"
+  "internal/lifecycle/bridge/bridge_fastpath.go"
+  "internal/lifecycle/bridge/stdioisolate/isolation.go"
+  "internal/lifecycle/bridge/stdioisolate/isolation_unix.go"
+  "internal/lifecycle/bridge/stdioisolate/isolation_windows.go"
+  "internal/lifecycle/bridge/bridge_transport.go"
   "cmd/browser-agent/config.go"
-  "cmd/browser-agent/internal/connectmode/runner.go"
+  "internal/lifecycle/connectmode/runner.go"
   "cmd/browser-agent/main_connection_mcp.go"
-  "cmd/browser-agent/internal/pushapi/runtime.go"
+  "internal/push/adapters/http/runtime.go"
 )
 
 VIOLATIONS=0
@@ -46,7 +46,7 @@ if ! grep -En -- 'bridge\.SendStartupError\("Bridge stdio isolation failed:' cmd
   VIOLATIONS=1
 fi
 
-if ! grep -En -- 'syscall\.CloseOnExec\(fd\)' cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix.go >/dev/null 2>&1; then
+if ! grep -En -- 'syscall\.CloseOnExec\(fd\)' internal/lifecycle/bridge/stdioisolate/isolation_unix.go >/dev/null 2>&1; then
   echo "INVARIANT VIOLATION: duplicated MCP transport fd must be marked close-on-exec"
   VIOLATIONS=1
 fi

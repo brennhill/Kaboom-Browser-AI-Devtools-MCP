@@ -6,11 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-03
 code_paths:
-  - internal/workflowverify/runner.go
-  - internal/verification/contract.go
-  - internal/verification/evidence.go
+  - internal/analysis/workflowverify/runner.go
+  - internal/analysis/verification/contract.go
+  - internal/analysis/verification/evidence.go
 test_paths:
-  - internal/workflowverify/runner_test.go
+  - internal/analysis/workflowverify/runner_test.go
 ---
 
 # Workflow Verification

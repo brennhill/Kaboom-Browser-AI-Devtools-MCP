@@ -1,0 +1,17 @@
+{
+  "description": "ASPIRATIONAL U9 Discovery: engine should detect that project uses table-driven tests and surface it as a convention",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy_test.go",
+      "new_string": "func TestValidateA(t *testing.T) { check(\"a\") }\nfunc TestValidateB(t *testing.T) { check(\"b\") }\nfunc TestValidateC(t *testing.T) { check(\"c\") }"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["U9", "table-driven", "tests := []struct"],
+    "max_latency_ms": 5000
+  }
+}

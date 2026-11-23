@@ -216,7 +216,7 @@ A simplified version of this design shipped. The rest of this spec (multi-signal
 
 What shipped:
 
-- `analyze({what: "error_clusters"})` is dispatched in `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go` to `AnalyzeErrors` in `internal/tools/observe/logs/logs.go`.
+- `analyze({what: "error_clusters"})` is dispatched in `internal/tools/analyze/handler/analyzedispatch/dispatcher.go` to `AnalyzeErrors` in `internal/tools/observe/logs/logs.go`.
 - Clustering is **stateless**: each call groups the current error-level log entries; nothing is kept between calls, so there is no expiry, eviction or cluster alert.
 - The only signal is **message similarity**: `normalizeErrorMessage` replaces UUIDs, URLs, ISO-8601 timestamps and numeric IDs (3+ digits) with placeholders; the normalized form (capped at 100 bytes) is the cluster key. Stack-frame similarity and temporal proximity are not used.
 - Response: `{clusters, total_count, metadata}`; each cluster has `message`, `count`, `first_seen`, `last_seen`, `urls` and `stack_trace`, ordered by count (largest first), ties broken by pattern.

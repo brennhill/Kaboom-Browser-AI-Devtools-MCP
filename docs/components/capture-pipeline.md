@@ -3,7 +3,7 @@ doc_type: component_spec
 component_id: capture-pipeline
 last_reviewed: 2026-02-16
 code_paths:
-  - internal/capture/
+  - internal/composition/capture/
 ---
 
 # Capture Pipeline

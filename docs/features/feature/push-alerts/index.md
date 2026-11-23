@@ -6,32 +6,32 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - cmd/browser-agent/internal/toolobserve/dispatcher.go
-  - cmd/browser-agent/internal/toolobserve/deps.go
-  - cmd/browser-agent/internal/toolobserve/inbox.go
-  - cmd/browser-agent/internal/toolconfigure/clear.go
-  - cmd/browser-agent/internal/toolconfigure/runtime_modes.go
-  - internal/streaming/stream.go
-  - internal/streaming/stream_emit.go
-  - internal/streaming/types.go
-  - internal/streaming/stream_filters.go
-  - internal/streaming/alertbuf/types.go
-  - internal/streaming/alertbuf/buffer.go
-  - internal/streaming/alertbuf/process.go
-  - internal/identity/mcp.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/tools/configure/handler/dispatcher.go
+  - internal/tools/observe/handler/dispatcher.go
+  - internal/tools/observe/handler/deps.go
+  - internal/tools/observe/handler/inbox.go
+  - internal/tools/configure/handler/clear.go
+  - internal/tools/configure/handler/runtime_modes.go
+  - internal/observation/streaming/stream.go
+  - internal/observation/streaming/stream_emit.go
+  - internal/observation/streaming/types.go
+  - internal/observation/streaming/stream_filters.go
+  - internal/observation/streaming/alertbuf/types.go
+  - internal/observation/streaming/alertbuf/buffer.go
+  - internal/observation/streaming/alertbuf/process.go
+  - internal/platform/identity/mcp.go
   - internal/push/inbox.go
-  - internal/types/alert.go
+  - internal/platform/types/alert.go
 test_paths:
-  - internal/capture/resetter/resetter_test.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - internal/streaming/stream_test.go
-  - internal/streaming/alertbuf/alertbuf_test.go
+  - internal/observation/resetter/resetter_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
+  - internal/observation/streaming/stream_test.go
+  - internal/observation/streaming/alertbuf/alertbuf_test.go
   - internal/push/inbox_test.go
-  - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
-  - cmd/browser-agent/internal/toolobserve/toolobserve_test.go
-  - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
+  - internal/tools/observe/handler/toolobserve_coverage_test.go
+  - internal/tools/observe/handler/toolobserve_test.go
+  - internal/tools/configure/handler/handlers_coverage_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

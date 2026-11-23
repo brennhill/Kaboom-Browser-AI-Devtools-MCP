@@ -207,7 +207,7 @@ if (storage.trackedTabId) {
 
 Tools registered conditionally based on extension state. When disabled, tools still appear in `tools/list` but return the opt-in error on invocation. This gives AI visibility that the capability exists.
 
-As shipped, these are actions of the `interact` tool (not `configure`), gated by the pilot check in `cmd/browser-agent/internal/toolguard/guards.go`:
+As shipped, these are actions of the `interact` tool (not `configure`), gated by the pilot check in `internal/tools/guard/guards.go`:
 ```
 interact what:"highlight" selector:"#submit-btn" duration_ms:3000
 interact what:"save_state" snapshot_name:"cart_full"
@@ -237,7 +237,7 @@ interact what:"execute_js" script:"window.__NEXT_DATA__"
 | `src/popup/ai-web-pilot.ts`, `src/popup.ts` | AI Web Pilot toggle in the popup (compiled to `extension/popup.js`; markup in `extension/popup.html`) |
 | `src/background/commands/interact.ts` | Background routing for `highlight` and `execute_js` |
 | `src/inject/state.ts` | Page-context state capture/restore |
-| `internal/schema/interact/actions.go` | `highlight`, `save_state`, `load_state`, `list_states`, `delete_state`, `execute_js` action specs |
-| `cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go` | Interact dispatch table entries for the actions above |
-| `cmd/browser-agent/internal/toolinteract/interactstate/state.go` | `HandleStateSave` / `HandleStateLoad` / `HandleStateList` / `HandleStateDelete` |
-| `cmd/browser-agent/internal/toolguard/guards.go` | Pilot opt-in gate (no separate pilot domain file was created) |
+| `internal/tools/schema/interact/actions.go` | `highlight`, `save_state`, `load_state`, `list_states`, `delete_state`, `execute_js` action specs |
+| `internal/composition/toolruntime/tools_interact_dispatch.go` | Interact dispatch table entries for the actions above |
+| `internal/tools/interact/handler/interactstate/state.go` | `HandleStateSave` / `HandleStateLoad` / `HandleStateList` / `HandleStateDelete` |
+| `internal/tools/guard/guards.go` | Pilot opt-in gate (no separate pilot domain file was created) |

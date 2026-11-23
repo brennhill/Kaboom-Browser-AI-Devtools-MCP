@@ -237,7 +237,7 @@ Add a "replay_request" action to the interact tool that replays captured HTTP re
 
 **Context:**
 - Review tools_interact.go for similar async command patterns
-- Check internal/capture/network_bodies.go for request data structure
+- Check internal/composition/capture/network_bodies.go for request data structure
 - Follow async queue pattern (docs/async-queue-correlation-tracking.md)
 
 Start with Gate 1 (product-spec.md). Ask clarifying questions if needed.
@@ -282,7 +282,7 @@ Start with Gate 1. Create product-spec in docs/features/feature/error-clustering
 ### Example 3: Refactoring Request (Split Large File)
 
 ```markdown
-Split internal/security/security.go (1054 lines) into smaller focused files.
+Split internal/analysis/security/security.go (1054 lines) into smaller focused files.
 
 **This is a refactoring, not a new feature. Process:**
 
@@ -295,8 +295,8 @@ Split internal/security/security.go (1054 lines) into smaller focused files.
    - `git tag before-split-security-$(date +%Y%m%d)`
 
 3. Run baseline tests:
-   - `go test ./internal/security/... > tests-before.txt`
-   - `go test -bench=. ./internal/security/... > bench-before.txt`
+   - `go test ./internal/analysis/security/... > tests-before.txt`
+   - `go test -bench=. ./internal/analysis/security/... > bench-before.txt`
 
 4. Split incrementally:
    - Create new files
@@ -306,7 +306,7 @@ Split internal/security/security.go (1054 lines) into smaller focused files.
 
 5. Verify nothing broke:
    - `bash scripts/quality/verification/verify-refactor.sh`
-   - `go test ./internal/security/...`
+   - `go test ./internal/analysis/security/...`
    - Compare benchmarks
 
 6. Run quality gate:
@@ -528,20 +528,20 @@ Review product-spec.md. Approve to proceed to tech-spec.
 Creating docs/features/feature/request-replay/tech-spec.md
 
 **Architecture:**
-- Add to internal/toolgenerate/dispatcher.go (currently 130 lines, room for ~100 more)
+- Add to internal/tools/generate/handler/dispatcher.go (currently 130 lines, room for ~100 more)
 - New method: toolGenerateReplayScript()
-- Reuses: internal/capture/network_bodies.go for request data
+- Reuses: internal/composition/capture/network_bodies.go for request data
 
 **Implementation Steps:**
 1. Add MCP tool schema to tools_schema.go
-2. Add handler to internal/toolgenerate/dispatcher.go
+2. Add handler to internal/tools/generate/handler/dispatcher.go
 3. Add format "replay" to generate tool
 4. Create tests beside the canonical feature owner
 
 **Files Affected:**
 - cmd/browser-agent/tools_schema.go (+30 lines)
-- cmd/browser-agent/internal/toolgenerate/dispatcher.go (+80 lines)
-- cmd/browser-agent/internal/toolcatalog/catalog_test.go (+50 lines)
+- internal/tools/generate/handler/dispatcher.go (+80 lines)
+- internal/tools/catalog/catalog_test.go (+50 lines)
 
 All files stay under 800 lines ✅
 

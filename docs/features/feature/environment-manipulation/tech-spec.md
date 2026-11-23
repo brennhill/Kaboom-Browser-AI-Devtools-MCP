@@ -316,7 +316,7 @@ observe({
 Nothing in this spec is implemented; no `environment_*` interact actions, environment snapshot configure mode, or `environment_audit` observe mode exist. (The shipped `interact` actions `pin_environment` / `unpin_environment` are unrelated: they pin a browser tab, not service env vars.)
 
 ### Planned new package
-A new environment package under `cmd/browser-agent/internal/` (the cmd/server tree referenced in earlier drafts never existed) covering:
+A new environment package under its owning context in `internal/` (the cmd/server tree referenced in earlier drafts never existed) covering:
 - Service and config discovery
 - Environment variable inspection
 - Environment modification
@@ -327,10 +327,10 @@ A new environment package under `cmd/browser-agent/internal/` (the cmd/server tr
 - Audit logger
 
 ### Existing files to modify (planned):
-- `cmd/browser-agent/internal/toolinteract/action_owners.go` (action owner registry) — Add environment_* action handlers
-- `cmd/browser-agent/internal/toolconfigure/dispatcher.go` — Add environment snapshot support
-- `cmd/browser-agent/internal/toolobserve/dispatcher.go` — Add environment_audit mode
-- `internal/schema/` — Declare the new modes/parameters in the tool schemas
+- `internal/tools/interact/handler/action_owners.go` (action owner registry) — Add environment_* action handlers
+- `internal/tools/configure/handler/dispatcher.go` — Add environment snapshot support
+- `internal/tools/observe/handler/dispatcher.go` — Add environment_audit mode
+- `internal/tools/schema/` — Declare the new modes/parameters in the tool schemas
 
 ## Performance Requirements
 - Service discovery: <100ms

@@ -53,15 +53,15 @@ The call **blocks for up to 55 seconds** waiting for annotations to arrive. This
 
 ### Implementation Details
 
-1. **Server** (`cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go`): When blocking annotation retrieval has no ready data, generates an `ann_<timestamp>_<random>` correlation ID, registers it as a pending command and annotation waiter, then returns the recovery handle.
+1. **Server** (`internal/tools/analyze/handler/annotationanalysis/handler.go`): When blocking annotation retrieval has no ready data, generates an `ann_<timestamp>_<random>` correlation ID, registers it as a pending command and annotation waiter, then returns the recovery handle.
 
 2. **AnnotationStore** (`internal/annotation/store.go`): Maintains annotation waiters. When `StoreSession()` or `AppendToNamedSession()` receives annotations, it completes matching waiters through the command-completion callback.
 
 3. **CommandTracker** (`internal/browsercommand/internal/dispatch/dispatcher_commands.go`): Provides `WaitForCommand(correlationID, timeout)` which blocks using a `commandNotify` channel. `ApplyCommandResult(correlationID, status, result, err)` closes the channel to wake all waiters. The waiter registration uses a 10-minute TTL to give users ample drawing time.
 
-4. **Observe handler** (`cmd/browser-agent/internal/asynccommand/handler.go`): Waits through the canonical command tracker and returns either the terminal result or the current pending lifecycle state.
+4. **Observe handler** (`internal/tools/asynccommand/handler.go`): Waits through the canonical command tracker and returns either the terminal result or the current pending lifecycle state.
 
-5. **Bridge** (`cmd/browser-agent/internal/bridge/`): Applies the bounded MCP request timeout policy while the daemon owns command waiting and lifecycle state.
+5. **Bridge** (`internal/lifecycle/bridge/`): Applies the bounded MCP request timeout policy while the daemon owns command waiting and lifecycle state.
 
 ### LLM Usage Patterns
 

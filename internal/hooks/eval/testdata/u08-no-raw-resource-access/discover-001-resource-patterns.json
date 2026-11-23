@@ -1,0 +1,14 @@
+{
+  "description": "U8 Discovery: convention summary should surface file I/O patterns (os.WriteFile, os.ReadFile) used across the project",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "internal/hooks/hook_policy.go", "new_string": "func helper() {}" }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["PROJECT CONVENTIONS", "os.WriteFile("],
+    "max_latency_ms": 5000
+  }
+}

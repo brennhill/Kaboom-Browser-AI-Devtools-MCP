@@ -1,46 +1,46 @@
 {
   "extension_contract": "tests/extension/state-recovery/state-recovery-contract.test.js",
   "go_scan_roots": [
-    "internal/persistence",
-    "internal/noise",
+    "internal/platform/state/persistence",
+    "internal/observation/noise",
     "internal/recording",
     "internal/telemetry/install_id.go",
-    "cmd/browser-agent/internal/summarypref",
-    "cmd/browser-agent/internal/sequencehandler",
-    "cmd/browser-agent/internal/toolinteract/interactstate",
-    "cmd/browser-agent/internal/screenrec",
-    "cmd/browser-agent/internal/daemonlife",
-    "cmd/browser-agent/internal/toolruntime/tools_core.go",
-    "internal/proclock",
-    "internal/instancereg"
+    "internal/tools/summarypref",
+    "internal/recording/sequence",
+    "internal/tools/interact/handler/interactstate",
+    "internal/screenrec",
+    "internal/lifecycle/daemon",
+    "internal/composition/toolruntime/tools_core.go",
+    "internal/lifecycle/process/lock",
+    "internal/lifecycle/instance/registry"
   ],
   "go_loaders": [
     {
-      "path": "internal/persistence/persistence_store.go",
+      "path": "internal/platform/state/persistence/persistence_store.go",
       "owner": "session metadata",
       "fallback": "rebuild project metadata",
       "doctor": "session_metadata_state"
     },
     {
-      "path": "internal/persistence/persistence_context.go",
+      "path": "internal/platform/state/persistence/persistence_context.go",
       "owner": "session context",
       "fallback": "return an empty context or history",
       "doctor": "session_context_state"
     },
     {
-      "path": "internal/persistence/persistence_crud.go",
+      "path": "internal/platform/state/persistence/persistence_crud.go",
       "owner": "stored session values",
       "fallback": "classify absence and return read failure to the owning loader",
       "doctor": "owning state diagnostic"
     },
     {
-      "path": "internal/persistence/persistence_handler.go",
+      "path": "internal/platform/state/persistence/persistence_handler.go",
       "owner": "explicit configure store loads",
       "fallback": "return a structured load error",
       "doctor": "stored_session_state"
     },
     {
-      "path": "internal/noise/noise_rules.go",
+      "path": "internal/observation/noise/noise_rules.go",
       "owner": "noise rules",
       "fallback": "activate default noise rules",
       "doctor": "noise_rules_state"
@@ -58,56 +58,56 @@
       "doctor": "state_recovery_failed (correlation_id=install_identity)"
     },
     {
-      "path": "cmd/browser-agent/internal/summarypref/cache.go",
+      "path": "internal/tools/summarypref/cache.go",
       "owner": "response-mode preference",
       "fallback": "use full responses",
       "doctor": "response_mode_state",
       "scan": false
     },
     {
-      "path": "cmd/browser-agent/internal/sequencehandler/handler.go",
+      "path": "internal/recording/sequence/handler.go",
       "owner": "saved action sequences",
       "fallback": "skip corrupt sequences and reject corrupt replay",
       "doctor": "saved_sequence_state"
     },
     {
-      "path": "cmd/browser-agent/internal/toolinteract/interactstate/state.go",
+      "path": "internal/tools/interact/handler/interactstate/state.go",
       "owner": "saved page snapshots",
       "fallback": "do not restore corrupt state and retain its list entry",
       "doctor": "page_snapshot_state"
     },
     {
-      "path": "cmd/browser-agent/internal/screenrec/observe.go",
+      "path": "internal/screenrec/observe.go",
       "owner": "saved screen recording metadata",
       "fallback": "isolate invalid metadata and preserve valid videos",
       "doctor": "screen_recording_state"
     },
     {
-      "path": "cmd/browser-agent/internal/daemonlife/install_epoch.go",
+      "path": "internal/lifecycle/daemon/install_epoch.go",
       "owner": "daemon install epoch",
       "fallback": "use the current executable timestamp",
       "doctor": "install_epoch_state"
     },
     {
-      "path": "cmd/browser-agent/internal/daemonlife/startup_throttle.go",
+      "path": "internal/lifecycle/daemon/startup_throttle.go",
       "owner": "daemon restart history",
       "fallback": "reset corrupt restart history",
       "doctor": "restart_history_state"
     },
     {
-      "path": "cmd/browser-agent/internal/toolruntime/tools_core.go",
+      "path": "internal/composition/toolruntime/tools_core.go",
       "owner": "state-loader composition root",
       "fallback": "delegate to the owning loader with the shared diagnostic collector",
       "doctor": "shared state recovery collector"
     },
     {
-      "path": "internal/proclock/proclock.go",
+      "path": "internal/lifecycle/process/lock/proclock.go",
       "owner": "kernel-held singleton lock",
       "fallback": "treat an unreadable lock as unheld; the flock itself is authoritative",
       "doctor": "daemon_lock_state"
     },
     {
-      "path": "internal/instancereg/registry.go",
+      "path": "internal/lifecycle/instance/registry/registry.go",
       "owner": "machine-wide instance registry record",
       "fallback": "skip an unparseable record and continue the census",
       "doctor": "instance_registry"

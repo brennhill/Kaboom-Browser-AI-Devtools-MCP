@@ -33,7 +33,7 @@ UAT_TELEMETRY_ERROR_COUNT=5
 
 # The six fireConsoleSpam entries are captured as ZERO, and that is correct
 # behaviour rather than a capture gap: they match the builtin_hmr_console noise
-# rule (internal/noise/noise_builtin.go:156, MessageRegex ^\[(vite|HMR|webpack|next)\]).
+# rule (internal/observation/noise/noise_builtin.go:156, MessageRegex ^\[(vite|HMR|webpack|next)\]).
 #
 # That makes the spam a stronger negative control than a plain level filter. A
 # log pipeline that returned everything would show 11 entries here; one that

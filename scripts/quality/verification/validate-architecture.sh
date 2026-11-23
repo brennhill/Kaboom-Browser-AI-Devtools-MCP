@@ -46,15 +46,15 @@ CRITICAL_FILES=(
     "internal/browsercommand/internal/dispatch/dispatcher_queries.go"
     "internal/browsercommand/internal/dispatch/dispatcher_commands.go"
     "internal/browsercommand/internal/dispatch/dispatcher_results.go"
-    "internal/queries/types.go"
-    "internal/capture/capture.go"
-    "internal/capture/httpingest/handlers.go"
-    "internal/capture/syncruntime/handler.go"
-    "$CMD_DIR/internal/toolruntime/tools_core.go"
-    "$CMD_DIR/internal/toolruntime/tools_interact_dispatch.go"
-    "$CMD_DIR/internal/toolobserve/dispatcher.go"
-    "$CMD_DIR/internal/toolinteract/interact_browser.go"
-    "$CMD_DIR/internal/bridge/bridge.go"
+    "internal/browsercommand/query/types.go"
+    "internal/composition/capture/capture.go"
+    "internal/ingestion/http/handlers.go"
+    "internal/sync/runtime/handler.go"
+    "internal/composition/toolruntime/tools_core.go"
+    "internal/composition/toolruntime/tools_interact_dispatch.go"
+    "internal/tools/observe/handler/dispatcher.go"
+    "internal/tools/interact/handler/interact_browser.go"
+    "internal/lifecycle/bridge/bridge.go"
 )
 
 for file in "${CRITICAL_FILES[@]}"; do
@@ -91,14 +91,14 @@ done
 echo ""
 echo "3️⃣  Checking transport and MCP boundaries..."
 
-require_method "HandleSync" "internal/capture/syncruntime/handler.go"
-require_method "CommandResult" "$CMD_DIR/internal/toolobserve/dispatcher.go"
-require_method "pendingCommands" "$CMD_DIR/internal/toolobserve/dispatcher.go"
-require_method "FailedCommands" "$CMD_DIR/internal/toolobserve/dispatcher.go"
-require_method "handleExecuteJS" "$CMD_DIR/internal/toolinteract/interact_browser.go"
-require_method "handleNavigate" "$CMD_DIR/internal/toolinteract/interact_browser.go"
+require_method "HandleSync" "internal/sync/runtime/handler.go"
+require_method "CommandResult" "internal/tools/observe/handler/dispatcher.go"
+require_method "pendingCommands" "internal/tools/observe/handler/dispatcher.go"
+require_method "FailedCommands" "internal/tools/observe/handler/dispatcher.go"
+require_method "handleExecuteJS" "internal/tools/interact/handler/interact_browser.go"
+require_method "handleNavigate" "internal/tools/interact/handler/interact_browser.go"
 
-if grep -q 'queries.*\\[\\]interface{}{}' internal/capture/httpingest/handlers.go; then
+if grep -q 'queries.*\\[\\]interface{}{}' internal/ingestion/http/handlers.go; then
     fail "STUB DETECTED: handlers.go returns an empty query array"
 else
     pass "capture handlers contain no empty query stub"
@@ -109,7 +109,7 @@ if awk '
     in_func && /^func / { in_func=0 }
     in_func && /d\.commands\.(Command|WaitCommand)\(/ { found=1 }
     END { exit(found ? 0 : 1) }
-' "$CMD_DIR/internal/toolobserve/dispatcher.go"; then
+' "internal/tools/observe/handler/dispatcher.go"; then
     pass "observe command_result reads the canonical command store"
 else
     fail "STUB DETECTED: observe CommandResult does not read the command owner"
@@ -118,7 +118,7 @@ fi
 echo ""
 echo "4️⃣  Running executable architecture contracts..."
 
-if go test ./internal/browsercommand/... ./internal/capture "$CMD_PKG/internal/toolobserve" \
+if go test ./internal/browsercommand/... ./internal/composition/capture ./internal/tools/observe/handler \
     -run 'Test(QueryDispatcherArchitectureBoundaries|CaptureHasNoCompatibilityAliases|AsyncQueueIntegration|ApplySyncExchange|SubmitResultValidatesEachSource|CommandResult)' \
     > /tmp/kaboom-architecture-tests.log 2>&1; then
     pass "query, capture, and observe architecture contracts pass"
@@ -130,7 +130,7 @@ fi
 echo ""
 echo "5️⃣  Checking bounded queue constants..."
 
-ASYNC_TIMEOUT_SECONDS=$(grep -E 'AsyncCommandTimeout[[:space:]]*=' internal/queries/types.go | head -1 | grep -oE '[0-9]+' | head -1 || true)
+ASYNC_TIMEOUT_SECONDS=$(grep -E 'AsyncCommandTimeout[[:space:]]*=' internal/browsercommand/query/types.go | head -1 | grep -oE '[0-9]+' | head -1 || true)
 if [ -z "${ASYNC_TIMEOUT_SECONDS:-}" ]; then
     fail "AsyncCommandTimeout constant not found"
 elif [ "$ASYNC_TIMEOUT_SECONDS" -lt 30 ]; then
@@ -139,7 +139,7 @@ else
     pass "AsyncCommandTimeout = ${ASYNC_TIMEOUT_SECONDS}s"
 fi
 
-MAX_PENDING_QUERIES_VALUE=$(grep -E 'MaxPendingQueries[[:space:]]*=' internal/queries/types.go | head -1 | grep -oE '[0-9]+' | head -1 || true)
+MAX_PENDING_QUERIES_VALUE=$(grep -E 'MaxPendingQueries[[:space:]]*=' internal/browsercommand/query/types.go | head -1 | grep -oE '[0-9]+' | head -1 || true)
 if [ -z "${MAX_PENDING_QUERIES_VALUE:-}" ]; then
     fail "MaxPendingQueries constant not found"
 elif [ "$MAX_PENDING_QUERIES_VALUE" -lt 5 ]; then

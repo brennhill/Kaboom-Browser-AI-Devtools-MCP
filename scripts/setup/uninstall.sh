@@ -394,7 +394,7 @@ remove_path "$EXT_DIR"
 
 # remove_state_root clears a runtime state root (binaries always; data
 # only without --keep-data). Roots: ~/.kaboom plus KABOOM_STATE_DIR /
-# XDG_STATE_HOME overrides honored by the daemon (internal/state/paths.go).
+# XDG_STATE_HOME overrides honored by the daemon (internal/platform/state/paths/paths.go).
 remove_state_root() {
     local root="$1"
     [ -n "$root" ] || return 0

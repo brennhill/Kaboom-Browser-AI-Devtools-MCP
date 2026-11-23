@@ -16,35 +16,35 @@ last_verified_date: 2026-03-05
 #### All 7 modes fully implemented with comprehensive tests:
 
 1. ✅ **test_from_context.error** — Generate tests from console errors
-   - [Implementation](../../../../../cmd/browser-agent/internal/testgenhandler/provider_adapter.go)
+   - [Implementation](../../../../../internal/tools/generate/testgen/provider_adapter.go)
    - 12 tests passing
 
 2. ✅ **test_from_context.interaction** — Generate tests from user actions
-   - [Implementation](../../../../../cmd/browser-agent/internal/testgenhandler/provider_adapter.go)
+   - [Implementation](../../../../../internal/tools/generate/testgen/provider_adapter.go)
    - 10 tests passing
 
 3. ✅ **test_from_context.regression** — Generate regression tests
-   - [Implementation](../../../../../cmd/browser-agent/internal/testgenhandler/provider_adapter.go)
+   - [Implementation](../../../../../internal/tools/generate/testgen/provider_adapter.go)
    - 8 tests passing
 
 4. ✅ **test_heal.analyze** — Find selectors in test files
-   - [Implementation](../../../../../cmd/browser-agent/internal/testgenhandler/heal.go)
+   - [Implementation](../../../../../internal/tools/generate/testgen/heal.go)
    - 3 tests passing
 
 5. ✅ **test_heal.repair** — Heal broken selectors
-   - [Implementation](../../../../../cmd/browser-agent/internal/testgenhandler/heal.go)
+   - [Implementation](../../../../../internal/tools/generate/testgen/heal.go)
    - 6 tests passing
 
 6. ✅ **test_heal.batch** — Heal entire test directories
-   - [Implementation](../../../../../cmd/browser-agent/internal/testgenhandler/heal.go)
+   - [Implementation](../../../../../internal/tools/generate/testgen/heal.go)
    - 11 tests passing
 
 7. ✅ **test_classify.failure** — Classify single test failure
-   - [Implementation](../../../../../cmd/browser-agent/internal/testgenhandler/classify.go)
+   - [Implementation](../../../../../internal/tools/generate/testgen/classify.go)
    - 12 tests passing
 
 8. ✅ **test_classify.batch** — Classify multiple failures
-   - [Implementation](../../../../../cmd/browser-agent/internal/testgenhandler/classify.go)
+   - [Implementation](../../../../../internal/tools/generate/testgen/classify.go)
    - 7 tests passing
 
 #### Total: 1,693 lines of implementation + 2,996 lines of tests

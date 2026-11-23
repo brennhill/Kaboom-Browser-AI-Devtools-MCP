@@ -1,0 +1,17 @@
+{
+  "description": "ASPIRATIONAL: Edit silently discards error return — quality gate should flag the specific unchecked error",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "func process() {\n\tdata, _ := os.ReadFile(path)\n\tos.WriteFile(out, data, 0644)\n}"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["unchecked error", "os.WriteFile"],
+    "max_latency_ms": 5000
+  }
+}

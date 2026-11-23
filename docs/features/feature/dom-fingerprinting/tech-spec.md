@@ -276,7 +276,7 @@ A performance guard warns (console.warn) if extraction exceeds the 30ms budget.
 
 Nothing in this spec is implemented yet; no `get_dom_fingerprint` / `compare_dom_fingerprint` handler exists in the repo. Planned locations:
 
-- Server implementation: a new fingerprint handler package under `cmd/browser-agent/internal/` (exposed as an `analyze` mode, since the 5-tool limit forbids new top-level tools)
+- Server implementation: a new fingerprint handler package under its owning context in `internal/` (exposed as an `analyze` mode, since the 5-tool limit forbids new top-level tools)
 - Server tests: alongside that package
 - Extension extraction logic: a new module under `src/inject/`, compiled into the extension bundle
 - Extension tests: a new test file under `tests/extension/`

@@ -3,7 +3,7 @@
 
 package configure
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
+import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/audit"
 
 // SummarizeAuditEntries aggregates audit entries into a summary map
 // with tool call counts, success/failure rates, and session counts.

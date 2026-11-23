@@ -38,17 +38,17 @@ branch away from being SIGTERMed.
 See `docs/features/feature/instance-governance/index.md` for the full design.
 In short:
 
-- **`internal/proclock`** — the singleton is a kernel-held `flock`, so there is no
+- **`internal/lifecycle/process/lock`** — the singleton is a kernel-held `flock`, so there is no
   stale-lock detection to get wrong and no read-decide-write race to lose.
-- **`internal/procidentity`** — liveness is pid **plus start time plus command**.
-- **`internal/instancereg`** — a machine-wide census whose location ignores
+- **`internal/lifecycle/process/identity`** — liveness is pid **plus start time plus command**.
+- **`internal/lifecycle/instance/registry`** — a machine-wide census whose location ignores
   `KABOOM_STATE_DIR`, so `--parallel` and `--state-dir` can no longer create
   private universes with private (and therefore meaningless) singletons.
-- **`internal/idlewatch`** — a daemon serving nobody exits instead of holding two
+- **`internal/lifecycle/idlewatch`** — a daemon serving nobody exits instead of holding two
   ports indefinitely.
-- **`internal/procwatch`** — a bridge whose MCP client died stands down.
-- **`internal/reaper`** — `kaboom --instances` and `kaboom --reap`.
-- **`internal/retention`** — count/bytes/age budgets per capture directory.
+- **`internal/lifecycle/process/watch`** — a bridge whose MCP client died stands down.
+- **`internal/lifecycle/instance/reaper`** — `kaboom --instances` and `kaboom --reap`.
+- **`internal/lifecycle/retention`** — count/bytes/age budgets per capture directory.
 
 ### 3. Port Conflict Fast-Fail (Implemented)
 
@@ -77,7 +77,7 @@ leak permanent:
   session it killed `npx`, and **no signal reached the launcher at all**. The
   launcher and the Go binary below it were orphaned and reparented to PID 1.
 - Nothing else unwound them. The Go bridge exits on stdin `io.EOF`
-  (`cmd/browser-agent/internal/bridge/bridge.go`), but the client held its end of
+  (`internal/lifecycle/bridge/bridge.go`), but the client held its end of
   the stdin pipe open, so EOF never arrived.
 
 Signal forwarding alone would not have fixed this — an orphaned process receives

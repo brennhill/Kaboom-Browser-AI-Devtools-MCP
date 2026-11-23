@@ -296,7 +296,7 @@ Not yet implemented; no code exists for this feature. (The original plan named a
 
 ### Planned integration points:
 - MCP tool dispatch: add the `code_*` action handlers to the appropriate tool's mode dispatcher
-- `observe` dispatcher (`cmd/browser-agent/internal/toolobserve/dispatcher.go`): add a `modification_log` mode
+- `observe` dispatcher (`internal/tools/observe/handler/dispatcher.go`): add a `modification_log` mode
 
 ## Performance Requirements
 - File search: <100ms for typical project (5K files)

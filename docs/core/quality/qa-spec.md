@@ -36,7 +36,7 @@ Ensure every MCP tool command and documented option is valid end-to-end: schema 
 - MCP handler and tool call routing:
 - `cmd/browser-agent/handler_consistency_test.go`
 - Observe coverage and mode handlers:
-- `cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go`
+- `internal/tools/observe/handler/dispatcher_commands_test.go`
 - `internal/tools/observe/logs/logs_edge_test.go`
 - `internal/tools/observe/network/network_test.go`
 - `internal/tools/observe/page/page_readiness_test.go`
@@ -47,9 +47,9 @@ Ensure every MCP tool command and documented option is valid end-to-end: schema 
 - Analyze command paths:
 - `cmd/browser-agent/tools_analyze_*test.go`
 - Sync endpoint + queue lifecycle:
-- `internal/capture/syncruntime/sync_test.go`
-- `internal/capture/async_queue_integration_test.go`
-- `internal/capture/correlation_tracking_test.go`
+- `internal/sync/runtime/sync_test.go`
+- `internal/composition/capture/async_queue_integration_test.go`
+- `internal/composition/capture/correlation_tracking_test.go`
 
 ## Manual UAT Checklist (Contract-level)
 1. Run `configure(what:"health")` and confirm extension/tracking status fields.

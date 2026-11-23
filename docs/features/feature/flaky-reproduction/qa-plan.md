@@ -8,8 +8,8 @@ last_reviewed: 2026-08-04
 
 ## Automated Coverage
 
-- `internal/flakerepro/runner_test.go` covers validation, attempt bounds, correlation IDs, original-evidence immutability, cancellation, and each verdict class.
-- `internal/workflowverify/runner_test.go` covers the upstream failure and evidence semantics consumed by reproduction.
+- `internal/analysis/flakerepro/runner_test.go` covers validation, attempt bounds, correlation IDs, original-evidence immutability, cancellation, and each verdict class.
+- `internal/analysis/workflowverify/runner_test.go` covers the upstream failure and evidence semantics consumed by reproduction.
 
 ## Required Scenarios
 
@@ -24,4 +24,4 @@ last_reviewed: 2026-08-04
 
 ## Release Gate
 
-Run `go test ./internal/flakerepro ./internal/workflowverify` and the repository race-enabled Go test gate.
+Run `go test ./internal/analysis/flakerepro ./internal/analysis/workflowverify` and the repository race-enabled Go test gate.

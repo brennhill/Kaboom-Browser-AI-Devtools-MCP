@@ -6,22 +6,22 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-05
 code_paths:
-  - internal/hook/hook_policy.go
-  - internal/hook/session.go
-  - internal/hook/eval/eval.go
+  - internal/hooks/hook_policy.go
+  - internal/hooks/session.go
+  - internal/hooks/eval/eval.go
   - cmd/hooks/main.go
-  - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
+  - internal/tools/configure/handler/qualitygates/handler.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/tools/configure/handler/dispatcher.go
 test_paths:
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - internal/hook/hook_policy_test.go
-  - internal/hook/session_test.go
-  - internal/hook/eval/eval_test.go
-  - internal/hook/eval/testdata/quality-gate/standards/002-file-size-warning.json
-  - internal/hook/eval/testdata/u02-single-responsibility/enforce-001-file-over-limit.json
+  - internal/tools/configure/handler/dispatcher_test.go
+  - internal/hooks/hook_policy_test.go
+  - internal/hooks/session_test.go
+  - internal/hooks/eval/eval_test.go
+  - internal/hooks/eval/testdata/quality-gate/standards/002-file-size-warning.json
+  - internal/hooks/eval/testdata/u02-single-responsibility/enforce-001-file-over-limit.json
   - cmd/hooks/main_test.go
-  - cmd/browser-agent/internal/toolconfigure/qualitygates/handler_test.go
+  - internal/tools/configure/handler/qualitygates/handler_test.go
 ---
 
 # Multi-Agent Hook Protocol

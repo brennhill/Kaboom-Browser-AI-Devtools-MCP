@@ -1,0 +1,17 @@
+{
+  "description": "ASPIRATIONAL U1 Migrate: migration from errors.Wrap to fmt.Errorf declared — new code using errors.Wrap should be flagged",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "return errors.Wrap(err, \"process failed\")"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["migration", "fmt.Errorf", "errors.Wrap"],
+    "max_latency_ms": 5000
+  }
+}

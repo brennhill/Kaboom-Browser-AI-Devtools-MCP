@@ -1,0 +1,49 @@
+// page_inventory.go — observe(what:"page_inventory") handler.
+// Why: Returns combined page info and interactive elements in a single extension query.
+
+package toolobserve
+
+import (
+	"encoding/json"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/response"
+)
+
+// HandlePageInventory handles observe(what="page_inventory").
+// Creates a pending query for the extension to return combined page info
+// and interactive elements in one response.
+func HandlePageInventory(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params struct {
+		TabID       int  `json:"tab_id"`
+		VisibleOnly bool `json:"visible_only"`
+		Limit       int  `json:"limit"`
+		Verbose     bool `json:"verbose"`
+	}
+	if len(args) > 0 {
+		if err := json.Unmarshal(args, &params); err != nil {
+			return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+		}
+	}
+
+	correlationID := toolresp.NewCorrelationID("page_inventory")
+
+	query := queries.PendingQuery{
+		Type:          "page_inventory",
+		Params:        args,
+		TabID:         params.TabID,
+		CorrelationID: correlationID,
+	}
+	if enqueueResp, blocked := d.EnqueuePendingQuery(req, query, queries.AsyncCommandTimeout); blocked {
+		return enqueueResp
+	}
+
+	// page_inventory is 92% interactive_elements — 33 elements cost 8,471 of its
+	// 9,190 bytes — and they are the same shape list_interactive returns, so the
+	// same projection applies. verbose=true restores every field.
+	return toolresp.ProjectElementsInResponse(
+		d.MaybeWaitForCommand(req, correlationID, args, "Page inventory queued"),
+		params.Verbose,
+	)
+}

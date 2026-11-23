@@ -51,7 +51,7 @@ We declare the async queue-and-poll architecture **IMMUTABLE** and enforce it wi
 
 ### Layer 2: Integration Tests (Compilation Guarantee)
 
-`internal/capture/async_queue_integration_test.go` exercises the **full flow**:
+`internal/composition/capture/async_queue_integration_test.go` exercises the **full flow**:
 ```
 MCP → CreatePendingQuery → Extension polls → Extension executes → SetQueryResult → GetCommandResult
 ```
@@ -64,9 +64,9 @@ If ANY component is deleted, the test **fails to compile or run**.
 ### Layer 3: Architecture Validation Script (CI Enforcement)
 
 `scripts/quality/verification/validate-architecture.sh` checks:
-- Canonical post-refactor owner existence across `internal/queries`,
-  `internal/capture`, `internal/toolobserve`, `internal/toolinteract`, and
-  `internal/bridge`
+- Canonical post-refactor owner existence across `internal/browsercommand/query`,
+  `internal/composition/capture`, `internal/toolobserve`, `internal/tools/interact/handler`, and
+  `internal/lifecycle/bridge/framing`
 - Query and command lifecycle method existence
 - Real observe command-store use and absence of empty query stubs
 - Executable integration and no-facade contracts
@@ -120,7 +120,7 @@ If `Capture` doesn't implement `AsyncQueue`, compilation fails.
 
 ✅ **Clear error messages** - Each layer provides actionable guidance:
 ```
-❌ COMMIT BLOCKED: Critical file 'internal/queries/dispatcher_queries.go' is missing!
+❌ COMMIT BLOCKED: Critical file 'internal/browsercommand/query/dispatcher_queries.go' is missing!
    See docs/architecture/decisions/ADR-002-async-queue-immutability.md
    Or ask: 'How do I restore the async queue implementation?'
 ```
@@ -232,7 +232,7 @@ To modify the async queue architecture:
 
 - Incident Report: Phase 4b async queue deletion (2026-02-02)
 - [async-queue-correlation-tracking.md](../../core/product/README.md)
-- [async_queue_integration_test.go](internal/capture/async_queue_integration_test.go)
+- [async_queue_integration_test.go](internal/composition/capture/async_queue_integration_test.go)
 - [validate-architecture.sh](scripts/quality/verification/validate-architecture.sh)
 
 ---

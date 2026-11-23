@@ -21,16 +21,29 @@ func TestProductionStdoutIsReservedForMCPTransport(t *testing.T) {
 		t.Fatal("resolve contract source path")
 	}
 	repositoryRoot := filepath.Clean(filepath.Join(filepath.Dir(sourceFile), "..", ".."))
-	root := filepath.Join(repositoryRoot, "cmd", "browser-agent")
+	root := repositoryRoot
 	allowed := map[string]bool{
-		"internal/bridge/stdioisolate/isolation.go":         true,
-		"internal/bridge/stdioisolate/isolation_unix.go":    true,
-		"internal/bridge/stdioisolate/isolation_windows.go": true,
+		"internal/lifecycle/bridge/stdioisolate/isolation.go":         true,
+		"internal/lifecycle/bridge/stdioisolate/isolation_unix.go":    true,
+		"internal/lifecycle/bridge/stdioisolate/isolation_windows.go": true,
 	}
 	var violations []string
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
+		}
+		if entry.IsDir() {
+			// The daemon's production Go lives under cmd/browser-agent and internal/ (the
+			// bounded-context layout moved the former cmd/browser-agent/internal packages there).
+			relative, err := filepath.Rel(root, path)
+			if err != nil {
+				return err
+			}
+			rel := filepath.ToSlash(relative)
+			if rel == "." || rel == "cmd" || rel == "internal" || strings.HasPrefix(rel, "internal/") || strings.HasPrefix(rel, "cmd/browser-agent") {
+				return nil
+			}
+			return filepath.SkipDir
 		}
 		if entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil

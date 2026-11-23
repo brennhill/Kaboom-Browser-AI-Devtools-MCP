@@ -203,7 +203,7 @@ type ValueDiff struct {
 
 ## MCP API Design
 
-> Shipped surface (verified 2026-11-21). Recording lifecycle, playback and log diff are `configure` modes; queries are `observe` modes. Handlers: `cmd/browser-agent/internal/toolrecording/handler.go`, registered in `cmd/browser-agent/internal/toolruntime/tools_configure.go` and `cmd/browser-agent/internal/toolobserve/dispatcher.go`.
+> Shipped surface (verified 2026-11-21). Recording lifecycle, playback and log diff are `configure` modes; queries are `observe` modes. Handlers: `internal/tools/recording/handler.go`, registered in `internal/composition/toolruntime/tools_configure.go` and `internal/tools/observe/handler/dispatcher.go`.
 
 ### Recording Actions
 
@@ -344,7 +344,7 @@ The diff compares two recordings (`internal/recording/logdiff/compare.go`: actio
 - `StartRecording` / `StopRecording` / `AddRecordingAction` manage the lifecycle
 - Recordings persist as `metadata.json` under the Kaboom state recordings directory and are loaded from disk
 - Storage capped at 1GB (`RecordingStorageMax`); start fails with `recording_storage_full` when exceeded
-- `DeleteRecording` / `GetStorageInfo` for manual cleanup (exposed over HTTP via `HandleRecordingStorage` in `internal/capture/httpingest/handlers.go`)
+- `DeleteRecording` / `GetStorageInfo` for manual cleanup (exposed over HTTP via `HandleRecordingStorage` in `internal/ingestion/http/handlers.go`)
 
 ### Playback Engine (Go)
 
@@ -397,8 +397,8 @@ OCR recovery remains Phase 2.
 ### Test Boundary Tagging (Go)
 
 Already implemented and reused unchanged:
-- Active boundary set: `activeTestIDs` in `internal/capture/syncruntime/runtime.go`
-- `TestIDs []string` on network bodies, WebSocket events and enhanced actions, plus `TestID` filter fields, in `internal/types/network.go`
+- Active boundary set: `activeTestIDs` in `internal/sync/runtime/runtime.go`
+- `TestIDs []string` on network bodies, WebSocket events and enhanced actions, plus `TestID` filter fields, in `internal/platform/types/network.go`
 
 ---
 
@@ -585,16 +585,16 @@ configure({what: 'test_boundary_end', test_id: 'replay-1'})
 | `internal/recording/playback/` | Playback sessions, self-healing click, fragile-selector detection |
 | `internal/recording/logdiff/` | Recording comparison and reports |
 | `internal/recording/actionlog/recorder.go` | Server-side recorder for the general actions buffer |
-| `cmd/browser-agent/internal/toolrecording/handler.go` | MCP handlers (`EventRecordingStart/Stop`, `Recordings`, `RecordingActions`, `Playback`, `PlaybackResults`, `LogDiff`, `LogDiffReport`) |
-| `cmd/browser-agent/internal/toolruntime/tools_configure.go` | Registers the configure modes |
-| `cmd/browser-agent/internal/toolobserve/dispatcher.go` | Registers the observe modes |
+| `internal/tools/recording/handler.go` | MCP handlers (`EventRecordingStart/Stop`, `Recordings`, `RecordingActions`, `Playback`, `PlaybackResults`, `LogDiff`, `LogDiffReport`) |
+| `internal/composition/toolruntime/tools_configure.go` | Registers the configure modes |
+| `internal/tools/observe/handler/dispatcher.go` | Registers the observe modes |
 | `src/lib/page/actions.ts` | Page-side action capture (reused) |
 
 ### Tests
 
 - `internal/recording/manager_test.go`, `internal/recording/manager_active_test.go`, `internal/recording/types_test.go`
 - `internal/recording/playback/playback_test.go`, `internal/recording/logdiff/logdiff_test.go`
-- `cmd/browser-agent/internal/toolrecording/handler_test.go`, `cmd/browser-agent/internal/toolrecording/playback_result_test.go`
+- `internal/tools/recording/handler_test.go`, `internal/tools/recording/playback_result_test.go`
 - `tests/extension/recording-lifecycle/` (extension recording lifecycle tests)
 
 ### Not built

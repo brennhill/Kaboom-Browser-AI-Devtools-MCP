@@ -8,7 +8,7 @@ const { join } = require('node:path')
 const { describe, test } = require('node:test')
 const vm = require('node:vm')
 
-const SCRIPT_PATH = join('cmd', 'browser-agent', 'internal', 'toolinteract', 'pagescripts', 'clipboard-read.js')
+const SCRIPT_PATH = join('internal', 'tools', 'interact', 'handler', 'pagescripts', 'clipboard-read.js')
 const SCRIPT = readFileSync(join(process.cwd(), SCRIPT_PATH), 'utf8')
 
 /** Let every already-queued microtask run before driving the next fixture step. */

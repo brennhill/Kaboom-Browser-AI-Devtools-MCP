@@ -6,199 +6,199 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - internal/listenport/store.go
-  - cmd/browser-agent/internal/runtimeflags/flags.go
-  - internal/serverdefaults/defaults.go
-  - internal/warningqueue/queue.go
-  - cmd/browser-agent/internal/httpapi/openapi.go
-  - internal/mcp/response.go
-  - internal/mcp/response_content.go
-  - internal/mcp/protocol.go
-  - internal/mcp/types.go
-  - cmd/browser-agent/internal/asynccommand/handler.go
-  - internal/types/wire_log.go
-  - internal/identity/mcp.go
-  - cmd/browser-agent/internal/toolresp/rate_limiter.go
-  - cmd/browser-agent/internal/toolresp/toolresp.go
-  - cmd/browser-agent/internal/toolguard/guards.go
-  - cmd/browser-agent/internal/toolrouting/routing.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - cmd/browser-agent/internal/mcpendpoint/handler.go
-  - cmd/browser-agent/internal/appruntime/runtime.go
+  - internal/lifecycle/listenport/store.go
+  - internal/lifecycle/runtimeflags/flags.go
+  - internal/platform/defaults/defaults.go
+  - internal/platform/warningqueue/queue.go
+  - internal/composition/http/openapi/openapi.go
+  - internal/tools/mcp/response.go
+  - internal/tools/mcp/response_content.go
+  - internal/tools/mcp/protocol.go
+  - internal/tools/mcp/types.go
+  - internal/tools/asynccommand/handler.go
+  - internal/platform/types/wire_log.go
+  - internal/platform/identity/mcp.go
+  - internal/tools/response/rate_limiter.go
+  - internal/tools/response/toolresp.go
+  - internal/tools/guard/guards.go
+  - internal/tools/routing/routing.go
+  - internal/tools/configure/handler/dispatcher.go
+  - internal/tools/mcpserver/endpoint/handler.go
+  - internal/composition/appruntime/runtime.go
   - cmd/browser-agent/main.go
   - cmd/browser-agent/config.go
-  - cmd/browser-agent/internal/startupconfig/paths.go
-  - cmd/browser-agent/internal/startupconfig/runtime.go
-  - cmd/browser-agent/internal/runtimeconfig/parallel.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
-  - cmd/browser-agent/internal/toolruntime/server_state.go
-  - cmd/browser-agent/internal/toolruntime/modes.go
-  - cmd/browser-agent/internal/toolusage/key.go
-  - cmd/browser-agent/internal/toolpostprocess/postprocess.go
-  - internal/session/snapshot-manager.go
-  - cmd/browser-agent/internal/toolmodule/registry.go
-  - cmd/browser-agent/internal/toolcatalog/catalog.go
+  - internal/lifecycle/startupconfig/paths.go
+  - internal/lifecycle/startupconfig/runtime.go
+  - internal/lifecycle/runtimeconfig/parallel.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
+  - internal/composition/toolruntime/server_state.go
+  - internal/composition/toolruntime/modes.go
+  - internal/tools/usage/key.go
+  - internal/tools/postprocess/postprocess.go
+  - internal/analysis/snapshots/snapshot-manager.go
+  - internal/tools/module/registry.go
+  - internal/tools/catalog/catalog.go
   - cmd/browser-agent/server.go
-  - internal/incident/projections.go
-  - cmd/browser-agent/internal/health/response_builders.go
-  - cmd/browser-agent/internal/health/response_types.go
-  - cmd/browser-agent/internal/health/doctor_live_checks.go
-  - cmd/browser-agent/internal/playbooks/resources/catalog.go
-  - cmd/browser-agent/internal/playbooks/resources/resolver.go
-  - cmd/browser-agent/internal/playbooks/resources/audits.go
-  - cmd/browser-agent/internal/bridge/bridge.go
-  - cmd/browser-agent/internal/bridge/bridge_startup.go
-  - cmd/browser-agent/internal/bridge/healthprobe/probe.go
-  - cmd/browser-agent/internal/bridge/daemoncmd/command.go
-  - cmd/browser-agent/internal/bridge/bridge_transport.go
-  - cmd/browser-agent/internal/bridge/stdioisolate/isolation.go
-  - cmd/browser-agent/internal/daemonlife/lifecycle.go
-  - internal/proclock/proclock.go
-  - internal/instancegov/runtime.go
-  - internal/instancegov/instancegov.go
-  - internal/instancereg/registry.go
-  - cmd/browser-agent/internal/daemonlife/install_epoch.go
-  - cmd/browser-agent/internal/daemonlife/startup_throttle.go
-  - cmd/browser-agent/internal/daemonlife/deps.go
-  - cmd/browser-agent/internal/daemonrecovery/primitives.go
-  - internal/statediag/collector.go
-  - internal/statefault/fault.go
-  - internal/statefile/statefile.go
-  - cmd/browser-agent/internal/daemonrecovery/reclaimer.go
-  - cmd/browser-agent/internal/daemonhttp/server.go
-  - cmd/browser-agent/internal/integrationtest/harness.go
-  - cmd/browser-agent/internal/procctl/stop.go
+  - internal/lifecycle/doctor/incident/projections.go
+  - internal/tools/commandhealth/response_builders.go
+  - internal/tools/commandhealth/response_types.go
+  - internal/tools/commandhealth/doctor_live_checks.go
+  - internal/tools/playbooks/resources/catalog.go
+  - internal/tools/playbooks/resources/resolver.go
+  - internal/tools/playbooks/resources/audits.go
+  - internal/lifecycle/bridge/bridge.go
+  - internal/lifecycle/bridge/bridge_startup.go
+  - internal/lifecycle/bridge/healthprobe/probe.go
+  - internal/lifecycle/bridge/daemoncmd/command.go
+  - internal/lifecycle/bridge/bridge_transport.go
+  - internal/lifecycle/bridge/stdioisolate/isolation.go
+  - internal/lifecycle/daemon/lifecycle.go
+  - internal/lifecycle/process/lock/proclock.go
+  - internal/lifecycle/instance/gov/runtime.go
+  - internal/lifecycle/instance/gov/instancegov.go
+  - internal/lifecycle/instance/registry/registry.go
+  - internal/lifecycle/daemon/install_epoch.go
+  - internal/lifecycle/daemon/startup_throttle.go
+  - internal/lifecycle/daemon/deps.go
+  - internal/lifecycle/daemon/recovery/primitives.go
+  - internal/lifecycle/doctor/statediag/collector.go
+  - internal/platform/state/fault/fault.go
+  - internal/platform/state/file/statefile.go
+  - internal/lifecycle/daemon/recovery/reclaimer.go
+  - internal/composition/http/listener/server.go
+  - internal/composition/testsupport/integration/harness.go
+  - internal/lifecycle/procctl/stop.go
   - cmd/browser-agent/main_connection_mcp.go
-  - cmd/browser-agent/internal/procctl/pidfile.go
-  - cmd/browser-agent/internal/procctl/port.go
-  - cmd/browser-agent/internal/procctl/argv0.go
-  - cmd/browser-agent/internal/operationalapi/handler.go
-  - cmd/browser-agent/internal/dashboard/handler.go
-  - cmd/browser-agent/internal/dashboard/dashboard.html
-  - cmd/browser-agent/internal/dashboard/diagnostics.html
-  - cmd/browser-agent/internal/dashboard/logs.html
-  - cmd/browser-agent/internal/dashboard/setup.html
-  - cmd/browser-agent/internal/dashboard/docs.html
-  - cmd/browser-agent/internal/logstore/store.go
-  - cmd/browser-agent/internal/logstore/async.go
-  - cmd/browser-agent/internal/logstore/accessors.go
-  - cmd/browser-agent/internal/logstore/persistence.go
-  - cmd/browser-agent/internal/logstore/validate.go
-  - cmd/browser-agent/internal/logstore/seed.go
-  - cmd/browser-agent/internal/exitdiag/recorder.go
-  - cmd/browser-agent/internal/httpguard/middleware.go
-  - cmd/browser-agent/internal/httpapi/response.go
-  - cmd/browser-agent/internal/mcphttp/handler.go
-  - cmd/browser-agent/internal/mcpcall/handler.go
-  - cmd/browser-agent/internal/mcprouter/router.go
-  - cmd/browser-agent/internal/mcpprotocol/responses.go
-  - cmd/browser-agent/internal/mcptelemetry/owner.go
-  - cmd/browser-agent/internal/mcpresponse/owner.go
-  - cmd/browser-agent/internal/connectmode/runner.go
-  - cmd/browser-agent/internal/versioncheck/checker.go
-  - internal/diag/output.go
-  - internal/diag/debug_file.go
-  - cmd/browser-agent/internal/mediaapi/screenshots.go
-  - internal/identity/mcp.go
-  - internal/util/proc_unix.go
-  - internal/util/proc_windows.go
+  - internal/lifecycle/procctl/pidfile.go
+  - internal/lifecycle/procctl/port.go
+  - internal/lifecycle/procctl/argv0.go
+  - internal/composition/http/operational/handler.go
+  - internal/composition/http/dashboard/handler.go
+  - internal/composition/http/dashboard/dashboard.html
+  - internal/composition/http/dashboard/diagnostics.html
+  - internal/composition/http/dashboard/logs.html
+  - internal/composition/http/dashboard/setup.html
+  - internal/composition/http/dashboard/docs.html
+  - internal/observation/daemonlog/store.go
+  - internal/observation/daemonlog/async.go
+  - internal/observation/daemonlog/accessors.go
+  - internal/observation/daemonlog/persistence.go
+  - internal/observation/daemonlog/validate.go
+  - internal/observation/daemonlog/seed.go
+  - internal/lifecycle/exitdiag/recorder.go
+  - internal/platform/httpguard/middleware.go
+  - internal/composition/http/openapi/response.go
+  - internal/tools/mcpserver/http/handler.go
+  - internal/tools/mcpserver/call/handler.go
+  - internal/tools/mcpserver/router/router.go
+  - internal/tools/mcpserver/protocol/responses.go
+  - internal/observation/adapters/mcptelemetry/owner.go
+  - internal/tools/mcpserver/response/owner.go
+  - internal/lifecycle/connectmode/runner.go
+  - internal/lifecycle/upgrade/versioncheck/checker.go
+  - internal/platform/diag/output.go
+  - internal/platform/diag/debug_file.go
+  - internal/annotation/adapters/http/screenshots.go
+  - internal/platform/identity/mcp.go
+  - internal/platform/util/proc_unix.go
+  - internal/platform/util/proc_windows.go
 test_paths:
-  - cmd/browser-agent/internal/toolruntime/composition_test.go
-  - cmd/browser-agent/internal/toolobserve/dispatcher_commands_test.go
-  - cmd/browser-agent/internal/daemonrecovery/primitives_test.go
-  - cmd/browser-agent/internal/daemonrecovery/reclaimer_test.go
-  - cmd/browser-agent/internal/daemonhttp/server_test.go
-  - cmd/browser-agent/internal/integrationtest/harness_test.go
-  - cmd/browser-agent/internal/daemonlife/helpers_test.go
-  - internal/listenport/store_test.go
-  - internal/warningqueue/queue_test.go
-  - cmd/browser-agent/internal/httpapi/openapi_test.go
-  - cmd/browser-agent/internal/runtimeconfig/parallel_test.go
-  - cmd/browser-agent/internal/doctorsupport/projections_test.go
-  - cmd/browser-agent/internal/daemonlife/startup_throttle_test.go
+  - internal/composition/toolruntime/composition_test.go
+  - internal/tools/observe/handler/dispatcher_commands_test.go
+  - internal/lifecycle/daemon/recovery/primitives_test.go
+  - internal/lifecycle/daemon/recovery/reclaimer_test.go
+  - internal/composition/http/listener/server_test.go
+  - internal/composition/testsupport/integration/harness_test.go
+  - internal/lifecycle/daemon/helpers_test.go
+  - internal/lifecycle/listenport/store_test.go
+  - internal/platform/warningqueue/queue_test.go
+  - internal/composition/http/openapi/openapi_test.go
+  - internal/lifecycle/runtimeconfig/parallel_test.go
+  - internal/lifecycle/doctor/support/projections_test.go
+  - internal/lifecycle/daemon/startup_throttle_test.go
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/release/install-upgrade-regression.mjs
   - tests/architecture/user-state-loaders.test.cjs
-  - internal/statediag/collector_test.go
+  - internal/lifecycle/doctor/statediag/collector_test.go
   - cmd/browser-agent/integration/cli/modes_test.go
   - cmd/browser-agent/integration/runtime/persistence_test.go
   - cmd/browser-agent/integration/runtime/reliability_test.go
   - cmd/browser-agent/integration/runtime/reliability_lifecycle_test.go
-  - cmd/browser-agent/internal/startupconfig/paths_test.go
-  - cmd/browser-agent/internal/startupconfig/runtime_test.go
-  - cmd/browser-agent/internal/asynccommand/handler_test.go
-  - internal/capture/healthreader/reader_test.go
-  - cmd/browser-agent/internal/toolrouting/routing_test.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
+  - internal/lifecycle/startupconfig/paths_test.go
+  - internal/lifecycle/startupconfig/runtime_test.go
+  - internal/tools/asynccommand/handler_test.go
+  - internal/observation/healthreader/reader_test.go
+  - internal/tools/routing/routing_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
   - internal/tools/configure/boundaries_test.go
-  - internal/mcp/response_test.go
-  - cmd/browser-agent/internal/toolresp/toolresp_test.go
-  - internal/mcp/errors_test.go
-  - cmd/browser-agent/internal/toolpostprocess/postprocess_test.go
-  - cmd/browser-agent/internal/toolguard/guards_test.go
-  - cmd/browser-agent/internal/health/health_test.go
-  - cmd/browser-agent/internal/mcpresponse/owner_test.go
-  - cmd/browser-agent/internal/mcpendpoint/handler_test.go
-  - cmd/browser-agent/internal/appruntime/runtime_test.go
-  - cmd/browser-agent/internal/mcptelemetry/owner_test.go
-  - cmd/browser-agent/internal/toolusage/key_test.go
+  - internal/tools/mcp/response_test.go
+  - internal/tools/response/toolresp_test.go
+  - internal/tools/mcp/errors_test.go
+  - internal/tools/postprocess/postprocess_test.go
+  - internal/tools/guard/guards_test.go
+  - internal/tools/commandhealth/health_test.go
+  - internal/tools/mcpserver/response/owner_test.go
+  - internal/tools/mcpserver/endpoint/handler_test.go
+  - internal/composition/appruntime/runtime_test.go
+  - internal/observation/adapters/mcptelemetry/owner_test.go
+  - internal/tools/usage/key_test.go
   - cmd/browser-agent/composition_test.go
-  - cmd/browser-agent/internal/procctl/stop_parse_test.go
-  - cmd/browser-agent/internal/procctl/stop_test.go
-  - cmd/browser-agent/internal/runtimeflags/parsing_test.go
-  - cmd/browser-agent/internal/runtimeflags/repeatable_test.go
-  - internal/diag/output_test.go
-  - internal/diag/debug_file_test.go
-  - cmd/browser-agent/internal/playbooks/resources/catalog_test.go
-  - cmd/browser-agent/internal/playbooks/resources/resolver_test.go
-  - cmd/browser-agent/internal/playbooks/resources/content_test.go
+  - internal/lifecycle/procctl/stop_parse_test.go
+  - internal/lifecycle/procctl/stop_test.go
+  - internal/lifecycle/runtimeflags/parsing_test.go
+  - internal/lifecycle/runtimeflags/repeatable_test.go
+  - internal/platform/diag/output_test.go
+  - internal/platform/diag/debug_file_test.go
+  - internal/tools/playbooks/resources/catalog_test.go
+  - internal/tools/playbooks/resources/resolver_test.go
+  - internal/tools/playbooks/resources/content_test.go
   - scripts/contracts/stdout_protocol_test.go
   - cmd/browser-agent/integration/bridge/stdio_silence_test.go
   - scripts/uat/protocol/smoke-mcp-transport.sh
-  - cmd/browser-agent/internal/mcpprotocol/responses_test.go
-  - cmd/browser-agent/internal/bridge/bridge_unit_test.go
-  - cmd/browser-agent/internal/toolmodule/registry_test.go
-  - cmd/browser-agent/internal/toolcatalog/catalog_test.go
-  - cmd/browser-agent/internal/terminal/status/status_test.go
+  - internal/tools/mcpserver/protocol/responses_test.go
+  - internal/lifecycle/bridge/bridge_unit_test.go
+  - internal/tools/module/registry_test.go
+  - internal/tools/catalog/catalog_test.go
+  - internal/terminal/adapters/status/status_test.go
   - cmd/browser-agent/integration/bridge/startup_contention_test.go
   - cmd/browser-agent/integration/bridge/faststart_extended_test.go
-  - cmd/browser-agent/internal/mcphttp/handler_test.go
-  - cmd/browser-agent/internal/mcpcall/handler_test.go
-  - cmd/browser-agent/internal/mcprouter/router_test.go
-  - cmd/browser-agent/internal/httpguard/middleware_test.go
-  - cmd/browser-agent/internal/connectmode/runner_test.go
-  - cmd/browser-agent/internal/versioncheck/checker_test.go
+  - internal/tools/mcpserver/http/handler_test.go
+  - internal/tools/mcpserver/call/handler_test.go
+  - internal/tools/mcpserver/router/router_test.go
+  - internal/platform/httpguard/middleware_test.go
+  - internal/lifecycle/connectmode/runner_test.go
+  - internal/lifecycle/upgrade/versioncheck/checker_test.go
   - scripts/quality/contracts/check-bridge-stdout-invariant.sh
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/internal/dashboard/branding_test.go
+  - internal/composition/http/dashboard/branding_test.go
   - scripts/contracts/openapibranding/branding_test.go
-  - cmd/browser-agent/internal/operationalapi/debug_test.go
-  - cmd/browser-agent/internal/operationalapi/health_test.go
-  - cmd/browser-agent/internal/operationalapi/coverage_contract_test.go
-  - cmd/browser-agent/internal/dashboard/handler_test.go
-  - cmd/browser-agent/internal/exitdiag/recorder_test.go
+  - internal/composition/http/operational/debug_test.go
+  - internal/composition/http/operational/health_test.go
+  - internal/composition/http/operational/coverage_contract_test.go
+  - internal/composition/http/dashboard/handler_test.go
+  - internal/lifecycle/exitdiag/recorder_test.go
 
-  - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
-  - cmd/browser-agent/internal/bridge/daemoncmd/command_test.go
-  - cmd/browser-agent/internal/bridge/contracts/source_contract_test.go
-  - cmd/browser-agent/internal/bridge/healthprobe/probe_test.go
-  - cmd/browser-agent/internal/bridge/bridge_test_support_test.go
-  - cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix_test.go
-  - internal/proclock/proclock_test.go
-  - internal/instancegov/instancegov_test.go
-  - internal/instancegov/policy_test.go
-  - cmd/browser-agent/internal/daemonlife/install_epoch_test.go
-  - cmd/browser-agent/internal/daemonlife/startup_throttle_test.go
-  - cmd/browser-agent/internal/daemonlife/helpers_test.go
-  - cmd/browser-agent/internal/procctl/pidfile_test.go
-  - cmd/browser-agent/internal/procctl/port_test.go
-  - cmd/browser-agent/internal/procctl/port_netstat_test.go
-  - cmd/browser-agent/internal/procctl/argv0_test.go
-  - cmd/browser-agent/internal/logstore/store_test.go
-  - cmd/browser-agent/internal/logstore/async_test.go
-  - cmd/browser-agent/internal/logstore/validate_test.go
+  - internal/lifecycle/bridge/bridge_fastpath_unit_test.go
+  - internal/lifecycle/bridge/daemoncmd/command_test.go
+  - internal/lifecycle/bridge/contracts/source_contract_test.go
+  - internal/lifecycle/bridge/healthprobe/probe_test.go
+  - internal/lifecycle/bridge/bridge_test_support_test.go
+  - internal/lifecycle/bridge/stdioisolate/isolation_unix_test.go
+  - internal/lifecycle/process/lock/proclock_test.go
+  - internal/lifecycle/instance/gov/instancegov_test.go
+  - internal/lifecycle/instance/gov/policy_test.go
+  - internal/lifecycle/daemon/install_epoch_test.go
+  - internal/lifecycle/daemon/startup_throttle_test.go
+  - internal/lifecycle/daemon/helpers_test.go
+  - internal/lifecycle/procctl/pidfile_test.go
+  - internal/lifecycle/procctl/port_test.go
+  - internal/lifecycle/procctl/port_netstat_test.go
+  - internal/lifecycle/procctl/argv0_test.go
+  - internal/observation/daemonlog/store_test.go
+  - internal/observation/daemonlog/async_test.go
+  - internal/observation/daemonlog/validate_test.go
   - tests/regression/08-fast-start/test-fast-start.sh
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-29
@@ -206,33 +206,33 @@ last_verified_date: 2026-03-29
 
 # MCP Persistent Server
 
-The canonical `internal/mcpcall` owner contains the complete `tools/call`
+The canonical `internal/tools/mcpserver/call` owner contains the complete `tools/call`
 pipeline: parameter validation, unknown-argument diagnostics, rate limiting,
 five-tool execution, response redaction, response policy, and passive usage
 telemetry. The root MCP handler only routes requests and composes this owner;
 it defines no duplicate backend contracts or post-processing facade.
 
-The adjacent `internal/mcprouter` owner validates JSON-RPC envelopes, handles
+The adjacent `internal/tools/mcpserver/router` owner validates JSON-RPC envelopes, handles
 notification semantics, routes protocol and static methods, and clamps dynamic
 results. Its configuration exposes only immutable protocol data and one
 tool-call callback, keeping transport routing independent of application state.
-HTTP notification/framing assertions live with `internal/mcphttp`, while bridge
+HTTP notification/framing assertions live with `internal/tools/mcpserver/http`, while bridge
 stdout-forwarding contracts live with the bridge transport they protect; no
 mixed root transport test duplicates these owners.
-Existing-daemon adoption is likewise tested by `internal/bridge`, while the
+Existing-daemon adoption is likewise tested by `internal/lifecycle/bridge/framing`, while the
 real-process exit wait is local to the stdio integration suite. Test-only
 process-global helpers are not shared across unrelated feature suites.
 Security-mode response warning and metadata coverage likewise lives directly
-with `internal/mcpresponse`, independent of full tool-handler composition.
-Passive delta/mode coverage lives with `internal/mcptelemetry`; envelope and
-negotiation coverage lives with `internal/mcprouter`; malformed input,
-content-type, read-failure, and framing coverage lives with `internal/mcphttp`.
-Stateless resource and initialization contracts live with `internal/mcpprotocol`,
+with `internal/tools/mcpserver/response`, independent of full tool-handler composition.
+Passive delta/mode coverage lives with `internal/observation/adapters/mcptelemetry`; envelope and
+negotiation coverage lives with `internal/tools/mcpserver/router`; malformed input,
+content-type, read-failure, and framing coverage lives with `internal/tools/mcpserver/http`.
+Stateless resource and initialization contracts live with `internal/tools/mcpserver/protocol`,
 and warning queues, schema-argument diagnostics, redaction, and rate limiting
-live with `internal/mcpresponse` and `internal/mcpcall`.
+live with `internal/tools/mcpserver/response` and `internal/tools/mcpserver/call`.
 
 MCP documentation resources are owned by the canonical
-`internal/playbooks/resources` package: catalog, URI resolution, guides,
+`internal/tools/playbooks/resources` package: catalog, URI resolution, guides,
 demos, automation, and audit playbooks evolve together without depending on
 interact-failure recovery. Accessibility, performance, and security share one
 audit-content owner, while the parent `playbooks` package contains only the
@@ -270,9 +270,9 @@ instrumentation). This wider setup ceiling only absorbs instrumentation
 overhead; post-start MCP resource latency remains independently enforced at
 500 milliseconds.
 
-The obsolete `internal/mcp/deps.go` provider contracts were deleted after all
+The obsolete `internal/tools/mcp/deps.go` provider contracts were deleted after all
 consumers migrated to explicit owner functions. Asynchronous command lifecycle
-behavior now belongs to `internal/asynccommand.Handler`; MCP transport owns no
+behavior now belongs to `internal/tools/asynccommand.Handler`; MCP transport owns no
 capture, accessibility, log-buffer, noise, or completion provider interface.
 HTTP MCP responses are marshaled once at the transport boundary and those exact
 validated bytes are written to the client. Upstream serialization failures are
@@ -324,16 +324,16 @@ existing-entry loading are one `internal/logstore` startup operation. Its fault
 fixture uses an invalid parent shape rather than platform permission behavior;
 the server composition root only supplies the local warning sink.
 The execution modules, examples, and validation schemas used by that call path
-are constructed once in `internal/toolcatalog.Catalog`; the composition root
+are constructed once in `internal/tools/catalog.Catalog`; the composition root
 does not maintain parallel lazy registries.
 
 > **2026-07-27:** Deleted the package-main type facade. MCP wire contracts and
-> protocol negotiation now come directly from `internal/mcp`; server identity,
+> protocol negotiation now come directly from `internal/tools/mcp`; server identity,
 > annotations, and tool-call limiting come directly from their canonical owner
 > packages. Root handlers no longer re-export these APIs.
 
 > **2026-07-28:** Daemon lifecycle state, logs, PID files, and exit diagnostics
-> resolve only through `internal/state`. Process control no longer reads,
+> resolve only through `internal/platform/state/paths`. Process control no longer reads,
 > removes, or writes fallback filesystem locations.
 
 > **2026-07-30:** Malformed daemon locks no longer block startup, and malformed
@@ -368,13 +368,13 @@ does not maintain parallel lazy registries.
 > and requires the correlated terminal Doctor incident before passing.
 
 > **2026-08-07:** Passive MCP telemetry metadata now has one bounded,
-> per-client owner in `internal/mcptelemetry`. The handler supplies aggregate
+> per-client owner in `internal/observation/adapters/mcptelemetry`. The handler supplies aggregate
 > sources during composition and delegates augmentation directly; cursor
 > synchronization, mode parsing, delta calculation, and expiry no longer live
 > in the root handler or expose mutable test seams.
 
 > **2026-08-07:** Stateless MCP initialization, tool catalog, bundled-resource,
-> and resource-template responses now live in `internal/mcpprotocol`. The same
+> and resource-template responses now live in `internal/tools/mcpserver/protocol`. The same
 > canonical instructions feed initialize responses and bridge identity, and
 > response encoding failures return a redacted JSON-RPC internal error instead
 > of being silently discarded.
@@ -386,7 +386,7 @@ does not maintain parallel lazy registries.
 
 ## Where the tool runtime lives
 
-The five-tool dispatcher is `cmd/browser-agent/internal/toolruntime`, not package
+The five-tool dispatcher is `internal/composition/toolruntime`, not package
 `main`. It receives its dependencies as a `ServerState` value — logs, warnings,
 incidents, push inbox, active codebase, annotation runtime, listen port, upload
 security, terminal status, intent store, and state recovery — which `*Server`

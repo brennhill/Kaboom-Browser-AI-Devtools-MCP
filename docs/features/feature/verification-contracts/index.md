@@ -6,20 +6,20 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-03
 code_paths:
-  - internal/verification/contract.go
-  - internal/verification/evidence.go
-  - internal/verification/store.go
-  - internal/state/paths.go
-  - cmd/browser-agent/internal/toolanalyze/verificationhandler/handler.go
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
-  - internal/schema/analyze.go
+  - internal/analysis/verification/contract.go
+  - internal/analysis/verification/evidence.go
+  - internal/analysis/verification/store.go
+  - internal/platform/state/paths/paths.go
+  - internal/tools/analyze/handler/verificationhandler/handler.go
+  - internal/tools/analyze/handler/analyzedispatch/dispatcher.go
+  - internal/tools/schema/analyze.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
 test_paths:
-  - internal/verification/contract_test.go
-  - internal/verification/evidence_test.go
-  - internal/verification/store_test.go
-  - internal/state/paths_test.go
-  - cmd/browser-agent/internal/toolanalyze/verificationhandler/handler_test.go
+  - internal/analysis/verification/contract_test.go
+  - internal/analysis/verification/evidence_test.go
+  - internal/analysis/verification/store_test.go
+  - internal/platform/state/paths/paths_test.go
+  - internal/tools/analyze/handler/verificationhandler/handler_test.go
 ---
 
 # Verification Contracts

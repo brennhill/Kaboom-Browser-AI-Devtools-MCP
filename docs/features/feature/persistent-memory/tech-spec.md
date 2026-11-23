@@ -30,7 +30,7 @@ Persistent memory gives the server a disk-backed store that survives restarts. W
 
 ### Project-Local Storage
 
-Persistent data lives in a centralized per-project directory under the Kaboom state root: `<state-root>/projects/<absolute-project-path>/`, where the state root is `$KABOOM_STATE_DIR`, else `$XDG_STATE_HOME/kaboom`, else `~/.kaboom` (see `state.ProjectDir` in `internal/state/paths.go`). The absolute project path is the identity; nothing is written into the project tree.
+Persistent data lives in a centralized per-project directory under the Kaboom state root: `<state-root>/projects/<absolute-project-path>/`, where the state root is `$KABOOM_STATE_DIR`, else `$XDG_STATE_HOME/kaboom`, else `~/.kaboom` (see `state.ProjectDir` in `internal/platform/state/paths/paths.go`). The absolute project path is the identity; nothing is written into the project tree.
 
 The developer can inspect, delete, or back up the data trivially.
 
@@ -205,4 +205,4 @@ The `V4Server` struct holds a reference to the `SessionStore`. Initialization cr
 
 ## File Location
 
-Implementation lives in `internal/persistence/` (`persistence_store.go`, `persistence_crud.go`, `persistence_context.go`, `persistence_dirty.go`, `persistence_handler.go`) with tests in `internal/persistence/persistence_test.go` and siblings. MCP wiring: `cmd/browser-agent/internal/toolconfigure/session.go` (`SessionHandler.Store`, `SessionHandler.Load`).
+Implementation lives in `internal/platform/state/persistence/` (`persistence_store.go`, `persistence_crud.go`, `persistence_context.go`, `persistence_dirty.go`, `persistence_handler.go`) with tests in `internal/platform/state/persistence/persistence_test.go` and siblings. MCP wiring: `internal/tools/configure/handler/session.go` (`SessionHandler.Store`, `SessionHandler.Load`).

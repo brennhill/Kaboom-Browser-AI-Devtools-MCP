@@ -183,6 +183,6 @@ The alert's `recommendation` field suggests this: "Use `check_performance` for f
 
 Not built (reviewed 2026-11-21). There is no `get_changes_since` tool, no `check_performance` tool, and no pending-alert store; the files this section originally named never existed.
 
-Planned: alert detection and storage alongside the performance snapshot pipeline (`internal/performance/`, `internal/capture/perfstore/store.go`), and delivery through whatever change-polling surface the observe tool exposes. Planned tests sit next to that code.
+Planned: alert detection and storage alongside the performance snapshot pipeline (`internal/observation/performance/`, `internal/observation/store/perf/store.go`), and delivery through whatever change-polling surface the observe tool exposes. Planned tests sit next to that code.
 
-Related shipped behavior today: `refresh`/`navigate` results carry a `perf_diff` (`internal/performance/diff.go`, attached in `cmd/browser-agent/internal/asynccommand/handler.go`), and `configure({what:"diff_sessions"})` counts performance regressions (`internal/session/snapdiff/errors.go`, type `PerformanceRegression` in `internal/performance/types.go`).
+Related shipped behavior today: `refresh`/`navigate` results carry a `perf_diff` (`internal/observation/performance/diff.go`, attached in `internal/tools/asynccommand/handler.go`), and `configure({what:"diff_sessions"})` counts performance regressions (`internal/analysis/snapshots/snapdiff/errors.go`, type `PerformanceRegression` in `internal/observation/performance/types.go`).

@@ -28,9 +28,9 @@ last_verified_date: 2026-03-05
 - `timeout_ms` and `max_workers` apply to both client and server variants (bounded by implementation limits).
 
 ## Code Anchors
-- `cmd/browser-agent/internal/toolanalyze/navigation.go`
-- `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`
-- `cmd/browser-agent/internal/toolanalyze/linkvalidation/handler.go`
+- `internal/tools/analyze/handler/navigation.go`
+- `internal/tools/analyze/handler/analyzedispatch/dispatcher.go`
+- `internal/tools/analyze/handler/linkvalidation/handler.go`
 - `internal/tools/analyze/link_validation.go`
 - `src/lib/analysis/link-health.ts`
 - `src/background/commands/analyze.ts`

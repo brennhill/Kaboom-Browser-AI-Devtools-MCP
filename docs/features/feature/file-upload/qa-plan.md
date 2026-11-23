@@ -10,7 +10,7 @@ last_verified_date: 2026-03-05
 # File Upload QA Plan
 
 ## Automated Coverage
-- `cmd/browser-agent/internal/toolinteract/interactupload/upload_test.go`
+- `internal/tools/interact/handler/interactupload/upload_test.go`
 - `internal/upload/behavior_test.go`
 - `internal/upload/httpapi/handlers_test.go`
 - `internal/upload/integrationtest/upload_test.go`

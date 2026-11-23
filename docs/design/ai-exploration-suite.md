@@ -724,7 +724,7 @@ A proper fix would wait for the composable correlation IDs, but that requires pl
 | **Text total** | **25-75KB** | **130KB** | |
 | Screenshot (image block) | 200-800KB | 1.5MB | Separate content block |
 
-`MaxResponseBytes = 100_000` (`internal/mcp/response.go`, line 194) applies to the serialized `MCPToolResult` JSON, which includes the text content block(s) but **also** includes the image content block (base64 data is inside the same JSON structure). Let me verify this.
+`MaxResponseBytes = 100_000` (`internal/tools/mcp/response.go`, line 194) applies to the serialized `MCPToolResult` JSON, which includes the text content block(s) but **also** includes the image content block (base64 data is inside the same JSON structure). Let me verify this.
 
 Looking at `appendScreenshotToResponse` (`tools_interact.go`, lines 278-306): it appends an `MCPContentBlock` with `Type: "image"` and `Data` containing the base64 string to the `MCPToolResult.Content` array. The full result (text + image blocks) is then serialized to `resp.Result` as `json.RawMessage`. This means the 100KB limit applies to the **entire result including the base64 screenshot**.
 
@@ -734,7 +734,7 @@ A typical JPEG screenshot at 75% quality is 50-200KB base64. Combined with 25-75
 
 The function is defined but let me verify it is actually applied to explore_page results. Looking at the response path: `handleExplorePage` -> `MaybeWaitForCommand` -> returns response -> `appendScreenshotToResponse` -> returned to `toolInteract` -> returned to caller. `ClampResponseSize` may be called at the transport layer.
 
-**Regardless of whether it is called**: The function (`internal/mcp/response.go`, lines 198-233) truncates the **first text content block** at a byte boundary. If the first content block contains the explore_page JSON payload, truncation at an arbitrary byte position produces **malformed JSON**. For example:
+**Regardless of whether it is called**: The function (`internal/tools/mcp/response.go`, lines 198-233) truncates the **first text content block** at a byte boundary. If the first content block contains the explore_page JSON payload, truncation at an arbitrary byte position produces **malformed JSON**. For example:
 
 ```json
 {"url":"https://example.com","interactive_elements":[{"tag":"button","text":"Sub
@@ -794,7 +794,7 @@ All composable enrichment params (`include_screenshot`, `auto_dismiss`, `wait_fo
 
 #### 9.6.3 Schema Enum Changes Are Non-Breaking
 
-Adding `explore_page` to `interactActions` (`internal/schema/interact/tool.go`, line 28) and `page_structure` / `navigation` to the analyze enum (`internal/schema/analyze.go`, line 19) are additive enum extensions. MCP clients that validate against the enum will accept new values. Clients that do not validate are unaffected.
+Adding `explore_page` to `interactActions` (`internal/tools/schema/interact/tool.go`, line 28) and `page_structure` / `navigation` to the analyze enum (`internal/tools/schema/analyze.go`, line 19) are additive enum extensions. MCP clients that validate against the enum will accept new values. Clients that do not validate are unaffected.
 
 #### 9.6.4 observe(what="screenshot") Is Unchanged
 
@@ -842,7 +842,7 @@ if composableParams.ActionDiff && resp.Error == nil && !isResponseError(resp) {
 }
 ```
 
-Also add `action_diff` to the interact schema (`internal/schema/interact/tool.go`) as a documented parameter:
+Also add `action_diff` to the interact schema (`internal/tools/schema/interact/tool.go`) as a documented parameter:
 ```go
 "action_diff": map[string]any{
     "type":        "boolean",
@@ -1010,7 +1010,7 @@ As detailed in Section 9.3.4, `include_screenshot` executes synchronously while 
 
 #### 9.8.1 What Existing Tests Cover
 
-**`cmd/browser-agent/internal/toolinteract/contracts/explore_test.go`** (3 table-driven contracts):
+**`internal/tools/interact/handler/contracts/explore_test.go`** (3 table-driven contracts):
 - Dispatch creates the canonical query type and correlation prefix
 - URL-less calls use the current tab; explicit tab targets are forwarded
 - URL, `visible_only`, and `limit` parameters are preserved
@@ -1035,9 +1035,9 @@ Both test files validate the Go server layer only. No extension-side unit tests 
 
 | Test Case | File to Modify | Reason |
 |-----------|---------------|--------|
-| `TestExplorePageRejectsMalformedAndUnsafeURLsBeforeDispatch` | `internal/toolinteract/contracts/explore_test.go` | Section 9.7.2: non-HTTP(S) URLs are rejected before dispatch |
+| `TestExplorePageRejectsMalformedAndUnsafeURLsBeforeDispatch` | `internal/tools/interact/handler/contracts/explore_test.go` | Section 9.7.2: non-HTTP(S) URLs are rejected before dispatch |
 | `TestBatch_ConcurrentRejection` | `interactbatch/batch_test.go` | Section 9.3.3: two simultaneous batch calls should fail |
-| Explore screenshot completion branches | `internal/toolinteract/interact_browser_test.go` | Verify screenshot behavior for completed, error, and queued results |
+| Explore screenshot completion branches | `internal/tools/interact/handler/interact_browser_test.go` | Verify screenshot behavior for completed, error, and queued results |
 
 **Priority 2 -- Important (integration correctness):**
 
@@ -1068,13 +1068,13 @@ Both test files validate the Go server layer only. No extension-side unit tests 
 |---|----------|----------|-------|----------|----------------|
 | 1 | HIGH | Security | No URL validation on explore_page | `tools_interact_explore.go:29`, `interact-explore.ts:209` | Reject non-http/https schemes in both Go and extension |
 | 2 | HIGH | Correctness | `action_diff` composable param not wired up | `tools_interact.go:176-183` | Add `ActionDiff bool` to composable struct, add dispatch |
-| 3 | HIGH | Data Integrity | `ClampResponseSize` corrupts JSON | `internal/mcp/response.go:224-225` | Implement JSON-aware truncation or exempt image blocks from byte count |
+| 3 | HIGH | Data Integrity | `ClampResponseSize` corrupts JSON | `internal/tools/mcp/response.go:224-225` | Implement JSON-aware truncation or exempt image blocks from byte count |
 | 4 | HIGH | Correctness | Screenshot captured before queued composable ops complete | `tools_interact.go:194-206` | Reorder: queue composables -> wait -> screenshot |
 | 5 | MEDIUM | Performance | Batch with `include_screenshot` wastes work (screenshots discarded) | `tools_interact_batch.go:88-96` | Strip `include_screenshot` from batch step args or return paths |
 | 6 | MEDIUM | Maintenance | `navigationDiscoveryScript` duplicated with divergence | `interact-explore.ts:83`, `analyze-navigation.ts:13` | Extract to shared module |
 | 7 | MEDIUM | Correctness | explore_page navigation race (listener registered after tabs.update) | `interact-explore.ts:209-225` | Register onUpdated listener before calling tabs.update |
 | 8 | MEDIUM | Response Size | explore_page + screenshot regularly exceeds 100KB | Multiple files | Exempt image blocks from ClampResponseSize byte counting |
-| 9 | RESOLVED | Test Coverage | URL security matrix | `internal/toolinteract/contracts/explore_test.go` | Deterministically rejects malformed and non-HTTP(S) URLs before dispatch |
+| 9 | RESOLVED | Test Coverage | URL security matrix | `internal/tools/interact/handler/contracts/explore_test.go` | Deterministically rejects malformed and non-HTTP(S) URLs before dispatch |
 | 10 | MEDIUM | Test Coverage | No concurrent batch rejection test | Missing file | Add TryLock contention test |
 | 11 | LOW | Performance | page_structure querySelectorAll('*') on huge DOMs | `analyze-page-structure.ts:148` | Add element count bail-out at 50k |
 | 12 | LOW | Maintenance | Cross-file `replayMu` dependency undocumented | `tools_interact_batch.go:54`, `tools_configure_sequence.go` | Add cross-reference comments |

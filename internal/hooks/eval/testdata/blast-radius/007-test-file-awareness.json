@@ -1,0 +1,17 @@
+{
+  "description": "ASPIRATIONAL: Editing source file should list its test files as needing review",
+  "hook": "blast-radius",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "func RunQualityGate(input Input) *QualityGateResult {\n\treturn nil\n}"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["quality_gate_test.go"],
+    "max_latency_ms": 5000
+  }
+}

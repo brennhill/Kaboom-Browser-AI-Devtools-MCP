@@ -6,36 +6,36 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/health/doctor_live_checks.go
-  - cmd/browser-agent/internal/toolconfigure/noise_actions.go
-  - cmd/browser-agent/internal/toolconfigure/deps.go
-  - internal/mcp/response.go
-  - cmd/browser-agent/internal/noiseautorun/autorun.go
-  - cmd/browser-agent/internal/toolconfigure/auditlog/handler.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolconfigure/session.go
-  - internal/noise/noise.go
-  - internal/noise/noise_builtin.go
-  - internal/noise/noise_detect.go
-  - internal/noise/noise_rules.go
-  - internal/util/media.go
+  - internal/tools/commandhealth/doctor_live_checks.go
+  - internal/tools/configure/handler/noise_actions.go
+  - internal/tools/configure/handler/deps.go
+  - internal/tools/mcp/response.go
+  - internal/observation/noise/autorun/autorun.go
+  - internal/tools/configure/handler/auditlog/handler.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/tools/configure/handler/dispatcher.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/tools/configure/handler/session.go
+  - internal/observation/noise/noise.go
+  - internal/observation/noise/noise_builtin.go
+  - internal/observation/noise/noise_detect.go
+  - internal/observation/noise/noise_rules.go
+  - internal/platform/util/media.go
 test_paths:
-  - cmd/browser-agent/internal/doctorsupport/projections_test.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
+  - internal/lifecycle/doctor/support/projections_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
-  - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
-  - cmd/browser-agent/internal/noiseautorun/autorun_test.go
-  - cmd/browser-agent/internal/noiseautorun/autorun_test.go
-  - cmd/browser-agent/internal/toolconfigure/auditlog/handler_test.go
-  - internal/noise/noise_builtin_matching_test.go
-  - internal/noise/noise_rule_management_test.go
-  - internal/noise/noise_detect_test.go
-  - internal/noise/noise_edge_test.go
-  - internal/noise/noise_persistence_test.go
-  - internal/noise/noise_validation_test.go
+  - internal/tools/configure/handler/handlers_coverage_test.go
+  - internal/tools/configure/handler/handlers_coverage_test.go
+  - internal/observation/noise/autorun/autorun_test.go
+  - internal/observation/noise/autorun/autorun_test.go
+  - internal/tools/configure/handler/auditlog/handler_test.go
+  - internal/observation/noise/noise_builtin_matching_test.go
+  - internal/observation/noise/noise_rule_management_test.go
+  - internal/observation/noise/noise_detect_test.go
+  - internal/observation/noise/noise_edge_test.go
+  - internal/observation/noise/noise_persistence_test.go
+  - internal/observation/noise/noise_validation_test.go
   - tests/architecture/user-state-loaders.test.cjs
   - tests/architecture/user-state-loaders.json
   - scripts/tests/capture/cat-20-noise-persistence.sh
@@ -80,9 +80,9 @@ at ten files without compatibility wrappers.
 
 Automatic detection scheduling, navigation debouncing, first-connect lifecycle
 wiring, and telemetry adaptation are owned together by
-`cmd/browser-agent/internal/noiseautorun`. The root handler retains only its
+`internal/observation/noise/autorun`. The root handler retains only its
 required `mcp.NoiseFilterer` method and initialization wiring. Automatic URL
-classification imports the canonical `internal/util` path normalizer directly;
+classification imports the canonical `internal/platform/util` path normalizer directly;
 there is no capture-layer pass-through.
 Runner time, dispatch, and delayed execution cross one private runtime boundary.
 Tests drive callbacks and first-connect timers explicitly, while production uses

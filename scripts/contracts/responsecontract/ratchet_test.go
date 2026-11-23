@@ -43,7 +43,7 @@ func fixture(t *testing.T) (map[string]bool, *Contract) {
 	return shipped, contract
 }
 
-const refreezeCommand = "UPDATE_GOLDEN=1 go test ./cmd/browser-agent/internal/responsegate"
+const refreezeCommand = "UPDATE_GOLDEN=1 go test ./internal/composition/testsupport/responsegate"
 
 func TestUndeclaredModesOnlyShrink(t *testing.T) {
 	t.Parallel()

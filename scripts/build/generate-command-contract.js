@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const sourceRoot = join(root, 'src/background')
-const goOutput = join(root, 'internal/commandcontract/generated.go')
+const goOutput = join(root, 'internal/browsercommand/contract/generated.go')
 const tsOutput = join(root, 'src/types/runtime/command-contract.ts')
 const check = process.argv.includes('--check')
 

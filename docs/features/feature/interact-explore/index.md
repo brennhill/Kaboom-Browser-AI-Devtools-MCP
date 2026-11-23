@@ -8,43 +8,43 @@ last_reviewed: 2026-11-21
 code_paths:
   - src/content/provenance/collect.ts
   - src/lib/provenance/classify.ts
-  - cmd/browser-agent/internal/interactdispatch/handler.go
-  - cmd/browser-agent/internal/interactdispatch/effects.go
-  - cmd/browser-agent/internal/actioneffects/effects.go
-  - cmd/browser-agent/internal/actioneffects/classify.go
-  - cmd/browser-agent/internal/toolinteract/action_owners.go
-  - cmd/browser-agent/internal/toolguard/guards.go
-  - cmd/browser-agent/internal/toolinteract/interactstate/state.go
-  - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
-  - cmd/browser-agent/internal/toolinteract/action_runtime.go
-  - cmd/browser-agent/internal/toolruntime/interact_wiring.go
-  - internal/app/screenshot/screenshot.go
-  - cmd/browser-agent/internal/toolinteract/interact_dom.go
-  - cmd/browser-agent/internal/toolinteract/interact_browser.go
-  - cmd/browser-agent/internal/toolinteract/interact_page.go
-  - cmd/browser-agent/internal/toolinteract/pagescripts/pagescripts.go
-  - cmd/browser-agent/internal/toolinteract/pagescripts/clipboard-read.js
-  - cmd/browser-agent/internal/toolinteract/interact_workflow.go
-  - cmd/browser-agent/internal/toolinteract/elemindex/registry.go
-  - cmd/browser-agent/internal/toolinteract/elemindex/target.go
-  - cmd/browser-agent/internal/toolinteract/elemindex/snapshot.go
-  - cmd/browser-agent/internal/toolresp/result_block.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
+  - internal/tools/interact/dispatch/handler.go
+  - internal/tools/interact/dispatch/effects.go
+  - internal/tools/interact/effects/effects.go
+  - internal/tools/interact/effects/classify.go
+  - internal/tools/interact/handler/action_owners.go
+  - internal/tools/guard/guards.go
+  - internal/tools/interact/handler/interactstate/state.go
+  - internal/tools/interact/handler/interactupload/upload.go
+  - internal/tools/interact/handler/action_runtime.go
+  - internal/composition/toolruntime/interact_wiring.go
+  - internal/page/app/screenshot/screenshot.go
+  - internal/tools/interact/handler/interact_dom.go
+  - internal/tools/interact/handler/interact_browser.go
+  - internal/tools/interact/handler/interact_page.go
+  - internal/tools/interact/handler/pagescripts/pagescripts.go
+  - internal/tools/interact/handler/pagescripts/clipboard-read.js
+  - internal/tools/interact/handler/interact_workflow.go
+  - internal/tools/interact/handler/elemindex/registry.go
+  - internal/tools/interact/handler/elemindex/target.go
+  - internal/tools/interact/handler/elemindex/snapshot.go
+  - internal/tools/response/result_block.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/tools/configure/handler/dispatcher.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
   - internal/recording/actionlog/recorder.go
   - internal/tools/interact/workflow.go
-  - internal/schema/interact/actions.go
-  - internal/schema/interact/tool.go
-  - internal/schema/interact/properties_targeting.go
-  - internal/schema/interact/properties_output_batch.go
-  - internal/schema/interact/properties_gestures.go
+  - internal/tools/schema/interact/actions.go
+  - internal/tools/schema/interact/tool.go
+  - internal/tools/schema/interact/properties_targeting.go
+  - internal/tools/schema/interact/properties_output_batch.go
+  - internal/tools/schema/interact/properties_gestures.go
   - internal/tools/interact/gestures.go
   - internal/tools/interact/targeting.go
   - internal/tools/interact/selector.go
-  - internal/util/media.go
-  - cmd/browser-agent/internal/cli/parser/interact.go
+  - internal/platform/util/media.go
+  - internal/tools/cli/parser/interact.go
   - internal/tools/configure/capabilities/modespecs_interact.go
   - scripts/docs/reference/check-reference-schema-sync.mjs
   - src/background.ts
@@ -62,7 +62,7 @@ code_paths:
   - src/background/dom/cdp/cdp-dispatch.ts
   - src/background/dom/cdp/cdp-gestures.ts
   - src/lib/screenshot/coordinate-frame.ts
-  - internal/screenshotframe/wire_screenshot.go
+  - internal/page/screenshotframe/wire_screenshot.go
   - src/background/dom/cdp/cdp-key-mappings.ts
   - src/background/dom/cdp/cdp-element-resolve.ts
   - src/background/dom/primitives/gestures/dom-primitives-gestures.ts
@@ -102,56 +102,56 @@ code_paths:
   - scripts/templates/dom-primitives-overlay.ts.tpl
   - scripts/templates/partials/shared/_dom-self-contained-core.tpl
   - scripts/build/generate-dom-primitives.js
-  - cmd/browser-agent/internal/asyncresult/normalization.go
-  - cmd/browser-agent/internal/asyncresult/enrichment.go
-  - cmd/browser-agent/internal/asyncresult/enrichment_csp.go
-  - cmd/browser-agent/internal/asyncresult/enrichment_recovery.go
-  - cmd/browser-agent/internal/asyncresult/lifecycle.go
-  - cmd/browser-agent/internal/asynccommand/handler.go
-  - cmd/browser-agent/internal/summarypref/cache.go
+  - internal/tools/asyncresult/normalization.go
+  - internal/tools/asyncresult/enrichment.go
+  - internal/tools/asyncresult/enrichment_csp.go
+  - internal/tools/asyncresult/enrichment_recovery.go
+  - internal/tools/asyncresult/lifecycle.go
+  - internal/tools/asynccommand/handler.go
+  - internal/tools/summarypref/cache.go
   - src/background/ui/tracked-tab-state.ts
   - src/lib/tabs/tab-focus.ts
 test_paths:
-  - cmd/browser-agent/internal/interactdispatch/effects_test.go
-  - cmd/browser-agent/internal/actioneffects/effects_test.go
-  - cmd/browser-agent/internal/actioneffects/classify_test.go
+  - internal/tools/interact/dispatch/effects_test.go
+  - internal/tools/interact/effects/effects_test.go
+  - internal/tools/interact/effects/classify_test.go
   - tests/extension/provenance/content-provenance.test.js
   - tests/extension/provenance/frame-provenance.test.js
   - extension/background/__tests__/cdp-session.test.js
   - extension/background/__tests__/cdp-ax-tree.test.js
   - tests/extension/contracts/chrome-platform-limits.test.js
-  - cmd/browser-agent/internal/interactdispatch/handler_test.go
+  - internal/tools/interact/dispatch/handler_test.go
   - tests/extension/content/content.test.js
   - tests/extension/content/content-ui.test.js
   - scripts/contracts/check-architecture-boundaries.test.cjs
-  - cmd/browser-agent/internal/toolinteract/action_runtime_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_browser_test.go
+  - internal/tools/interact/handler/action_runtime_test.go
+  - internal/tools/interact/handler/interact_browser_test.go
   - tests/extension/misc/upload-handler.test.js
   - tests/extension/dom/command-element-results.test.js
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - internal/recording/actionlog/recorder_test.go
-  - cmd/browser-agent/internal/summarypref/cache_test.go
-  - cmd/browser-agent/internal/toolinteract/interact_dom_test.go
+  - internal/tools/summarypref/cache_test.go
+  - internal/tools/interact/handler/interact_dom_test.go
   - tests/cli/runtime/clipboard-read-page-script.test.cjs
-  - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
-  - cmd/browser-agent/internal/toolinteract/contracts/explore_test.go
-  - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
-  - cmd/browser-agent/internal/toolinteract/elemindex/target_test.go
-  - cmd/browser-agent/internal/toolinteract/elemindex/snapshot_test.go
-  - cmd/browser-agent/internal/toolresp/result_block_test.go
-  - cmd/browser-agent/internal/toolguard/guards_test.go
-  - cmd/browser-agent/internal/toolinteract/contracts/gates_test.go
-  - cmd/browser-agent/internal/toolinteract/contracts/gestures_test.go
-  - cmd/browser-agent/internal/toolinteract/contracts/targeting_test.go
+  - internal/tools/interact/handler/interact_workflow_test.go
+  - internal/tools/interact/handler/contracts/explore_test.go
+  - internal/tools/interact/handler/elemindex/registry_test.go
+  - internal/tools/interact/handler/elemindex/target_test.go
+  - internal/tools/interact/handler/elemindex/snapshot_test.go
+  - internal/tools/response/result_block_test.go
+  - internal/tools/guard/guards_test.go
+  - internal/tools/interact/handler/contracts/gates_test.go
+  - internal/tools/interact/handler/contracts/gestures_test.go
+  - internal/tools/interact/handler/contracts/targeting_test.go
   - tests/extension/dom/cdp/cdp-gestures.test.js
   - tests/extension/dom/cdp/cdp-type-modifiers.test.js
-  - cmd/browser-agent/internal/toolinteract/contracts/rich_action_test.go
-  - cmd/browser-agent/internal/toolinteract/contracts/performance_test.go
-  - cmd/browser-agent/internal/asynccommand/handler_test.go
+  - internal/tools/interact/handler/contracts/rich_action_test.go
+  - internal/tools/interact/handler/contracts/performance_test.go
+  - internal/tools/asynccommand/handler_test.go
   - cmd/browser-agent/composition_test.go
-  - internal/schema/interact/schema_test.go
-  - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
+  - internal/tools/schema/interact/schema_test.go
+  - internal/tools/interact/handler/interactstate/state_test.go
   - extension/background/__tests__/dom-dispatch-structured.test.js
   - tests/extension/dom/dom-primitives-branding.test.js
   - tests/extension/dom/dom-primitives-generation.test.js
@@ -161,8 +161,8 @@ test_paths:
   - internal/tools/interact/workflow_test.go
   - internal/tools/configure/capabilities/modespecs_test.go
   - tests/extension/ui-controls/toggle-overlay.test.js
-  - cmd/browser-agent/internal/asyncresult/asyncresult_test.go
-  - cmd/browser-agent/internal/asynccommand/formatting_test.go
+  - internal/tools/asyncresult/asyncresult_test.go
+  - internal/tools/asynccommand/formatting_test.go
   - tests/extension/pilot/interact-content-fallback.test.js
   - tests/extension/pilot/async-timeout.test.js
   - tests/extension/sync/pending-query-targeting.test.js
@@ -226,10 +226,10 @@ Interact action owners no longer take `*capture.Capture` (kaboom-jdm5.5):
 `PageDeps` carries `Tab` (`TrackedTab`), `Vitals`, `Commands` and `PageInfo`;
 `BrowserDeps` carries `Tab` (`BrowserTab`: tracking, security mode, retarget) and
 `Perf` (`PerfBaseline`); `WorkflowDeps` carries `TrackingStatus` and the typed
-`AuditA11y` (the `internal/app/a11yaudit` use case), `A11yFailure` and
+`AuditA11y` (the `internal/analysis/app/a11yaudit` use case), `A11yFailure` and
 `ExportSARIF` (`toolgenerate.BuildSARIF`) instead of the MCP-shaped
 `ToolAnalyze`/`ToolExportSARIF`. The layering rule `observe->capture` also
-covers `cmd/browser-agent/internal/toolinteract/**`. Tests acknowledge the action query exactly as the extension
+covers `internal/tools/interact/handler/**`. Tests acknowledge the action query exactly as the extension
 does, then await the screenshot query through the canonical pending-query
 notification barrier; no polling sleeps or undelivered-query shortcuts remain.
 Browser-action completion helpers use that same dispatcher notification rather
@@ -281,7 +281,7 @@ serializes injected functions without module scope.
 - Status: shipped
 - Tool: `interact`
 - Mode key: `what`
-- Contract source: `internal/schema/interact/tool.go`
+- Contract source: `internal/tools/schema/interact/tool.go`
 
 ## Specs
 - Product: `product-spec.md`
@@ -312,7 +312,7 @@ failure is retryable and retained by System Doctor.
 `execute_js` host-object serialization must preserve prototype-backed values (for example `DOMRect`) so return payloads remain structured and parse-safe.
 
 `clipboard_read` runs an embedded page script
-(`internal/toolinteract/pagescripts/clipboard-read.js`) rather than an inline
+(`internal/tools/interact/handler/pagescripts/clipboard-read.js`) rather than an inline
 Go string, so the exact bytes the browser evaluates are covered by Node
 fixtures. The script reads the `clipboard-read` permission state before it
 touches `navigator.clipboard`: a `prompt` origin returns
@@ -360,8 +360,8 @@ former private/exported type alias and root-package test shim have been deleted.
 Pilot, extension, and tab preconditions use the canonical `toolguard.Check`
 contract; interact packages do not mirror the host guard signature.
 
-Interact handlers and their dependency seams use `internal/mcp` and
-`internal/toolresp` directly. Package-local protocol type, error-code, and
+Interact handlers and their dependency seams use `internal/tools/mcp` and
+`internal/tools/response` directly. Package-local protocol type, error-code, and
 structured-error option aliases are prohibited so the canonical contract stays
 visible at every call site.
 State redaction is injected as the single map transformation the state owner
@@ -377,7 +377,7 @@ index construction, and truncation so response-shaping paths cannot drift.
 2. `metadata.workflow_trace` (`trace_id`, `status`, stage-level timing/status envelope).
 3. Explicit `tab_id` now requires an actively tracked tab and must match tracked context before click dispatch.
 
-Interact action metadata now has a single canonical registry in `internal/schema/interact/actions.go`, consumed by both schema enum generation and `describe_capabilities` mode specs.
+Interact action metadata now has a single canonical registry in `internal/tools/schema/interact/actions.go`, consumed by both schema enum generation and `describe_capabilities` mode specs.
 
 Extension-dispatched interact actions now use shared enqueue fail-fast handling: when queue capacity is saturated, responses return structured `queue_full` immediately rather than entering async wait mode.
 

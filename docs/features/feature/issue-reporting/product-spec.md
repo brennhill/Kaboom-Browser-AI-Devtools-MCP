@@ -27,7 +27,7 @@ Enable LLMs and users to file sanitized bug reports to GitHub Issues directly fr
 
 ## What `submit` Publishes
 
-Exactly these fields, and nothing else: `title` and `user_context` (both redaction-engine output), Kaboom version, OS/arch/Go version, uptime seconds, total call count, total error count, error rate, extension-connected flag, extension session id, and console/network/action buffer **counts**. No URLs, page content, log lines, or captured request/response bodies. `internal/issuereport.FormatIssueBody` is the single place that builds the outbound body, and its output is pinned character-for-character by `TestSubmitViaGHSendsExactlyTheDocumentedPayload`.
+Exactly these fields, and nothing else: `title` and `user_context` (both redaction-engine output), Kaboom version, OS/arch/Go version, uptime seconds, total call count, total error count, error rate, extension-connected flag, extension session id, and console/network/action buffer **counts**. No URLs, page content, log lines, or captured request/response bodies. `internal/tools/issuereport.FormatIssueBody` is the single place that builds the outbound body, and its output is pinned character-for-character by `TestSubmitViaGHSendsExactlyTheDocumentedPayload`.
 
 ## Templates
 

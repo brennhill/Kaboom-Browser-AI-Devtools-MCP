@@ -1,0 +1,14 @@
+{
+  "description": "ASPIRATIONAL U3 Discovery: engine should detect that the project has clear package layers (hook, capture, server, session)",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "internal/hooks/hook_policy.go", "new_string": "func helper() {}" }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["U3", "package layers", "separation"],
+    "max_latency_ms": 5000
+  }
+}

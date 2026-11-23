@@ -182,8 +182,8 @@ For WebSocket connections that consistently use the same binary format, the dete
 
 ## Implementation Status
 
-Shipped (detection only): `DetectBinaryFormat` in `internal/util/binary.go` classifies payloads as MessagePack, CBOR, Protobuf, or BSON using magic-byte and structural heuristics (no Content-Type signals, no entropy analysis). The telemetry store (`internal/capture/telemetrystore/store.go`, `setBinaryFormat`) runs it eagerly on ingest of network bodies (request body first, then response body) and WebSocket `message` events, recording the result in the server-only `binary_format` and `format_confidence` fields (`internal/types/network.go`), which `observe` responses surface.
+Shipped (detection only): `DetectBinaryFormat` in `internal/platform/util/binary.go` classifies payloads as MessagePack, CBOR, Protobuf, or BSON using magic-byte and structural heuristics (no Content-Type signals, no entropy analysis). The telemetry store (`internal/observation/store/telemetry/store.go`, `setBinaryFormat`) runs it eagerly on ingest of network bodies (request body first, then response body) and WebSocket `message` events, recording the result in the server-only `binary_format` and `format_confidence` fields (`internal/platform/types/network.go`), which `observe` responses surface.
 
-Tests: `internal/util/binary_test.go` and `internal/util/binary_protobuf_bson_test.go`.
+Tests: `internal/platform/util/binary_test.go` and `internal/platform/util/binary_protobuf_bson_test.go`.
 
 Not yet implemented: schemaless decoding (`decoded_content`), Content-Type and gRPC-Web framing signals, FlatBuffers/Avro/gzip/entropy classification, the per-connection format cache, and binary variants in `websocket_status` schemas.

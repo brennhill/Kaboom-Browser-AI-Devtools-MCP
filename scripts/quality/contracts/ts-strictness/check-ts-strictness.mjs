@@ -26,7 +26,7 @@ const SCAN_ROOT = join(REPO_ROOT, 'src')
 const BASELINE_PATH = join(REPO_ROOT, '.ts-strictness-baseline.json')
 
 const EXCLUDED_DIR_NAMES = new Set(['node_modules', 'dist', 'build', 'vendor', 'coverage', 'generated'])
-// Generated from internal/types/wire_*.go and scripts/build/generate-dom-primitives.js.
+// Generated from internal/platform/types/wire_*.go and scripts/build/generate-dom-primitives.js.
 const EXCLUDED_PATH_PREFIXES = [join('types', 'wire')]
 const GENERATED_BASENAMES = new Set([
   'dom-primitives-form.ts',

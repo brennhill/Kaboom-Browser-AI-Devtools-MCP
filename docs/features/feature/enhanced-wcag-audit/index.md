@@ -6,12 +6,12 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-07
 code_paths:
-  - internal/a11ysummary/summary.go
+  - internal/analysis/a11ysummary/summary.go
   - internal/tools/observe/page/page_state.go
   - src/types/capture/accessibility.ts
 test_paths:
-  - internal/a11ysummary/summary_test.go
-  - cmd/browser-agent/internal/asynccommand/handler_test.go
+  - internal/analysis/a11ysummary/summary_test.go
+  - internal/tools/asynccommand/handler_test.go
   - internal/tools/observe/page/page_state_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

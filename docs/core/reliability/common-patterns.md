@@ -6,24 +6,24 @@ Use this as a hard checklist during design, coding, and review.
 ## 0) 0.8 Helper Inventory (Use These First)
 
 - Server dispatch and mode resolution:
-  - `cmd/browser-agent/internal/toolrouting/routing.go`
-  - `cmd/browser-agent/internal/toolobserve/dispatcher.go`
+  - `internal/tools/routing/routing.go`
+  - `internal/tools/observe/handler/dispatcher.go`
   - `cmd/browser-agent/tools_configure.go`
 - Shared async query path:
-  - `cmd/browser-agent/internal/asynccommand/handler.go`
+  - `internal/tools/asynccommand/handler.go`
 - Interact response shaping:
   - `cmd/browser-agent/tools_interact_dispatch.go`
-  - `cmd/browser-agent/internal/toolinteract/action_owners.go`
+  - `internal/tools/interact/handler/action_owners.go`
 - Recording helper seams:
-  - `cmd/browser-agent/internal/toolrecording/helpers.go`
+  - `internal/tools/recording/helpers.go`
 - Extension command routing:
   - `src/background/commands/registry.ts`
   - `src/background/commands/helpers.ts`
 - Frame-target handling:
   - `src/background/exec/frame-targeting.ts`
 - Shared test helpers:
-  - `internal/pagination/test_helpers_test.go`
-  - `internal/capture/syncruntime/sync_test_helpers_test.go`
+  - `internal/observation/pagination/test_helpers_test.go`
+  - `internal/sync/runtime/sync_test_helpers_test.go`
 
 ## 1) Shared State Access
 
@@ -68,7 +68,7 @@ Use this as a hard checklist during design, coding, and review.
 ## 7) Tool Dispatch + Registry Pattern
 
 - Top-level tool entrypoints delegate to their canonical dispatcher owners.
-  Configure routes through `internal/toolconfigure.Dispatcher`; do not recreate
+  Configure routes through `internal/tools/configure/handler.Dispatcher`; do not recreate
   package-main mode registries or forwarding methods.
 - Mode/action registration belongs in the tool registry files (`tools_*_registry.go`), not ad-hoc `switch` blocks in entrypoint files.
 - Tool routing is canonical-only: every top-level tool call uses `what`, and
@@ -98,7 +98,7 @@ Use this as a hard checklist during design, coding, and review.
 ## 11) MCP Stdout Boundary
 
 - Reserve browser-agent stdout exclusively for MCP JSON-RPC payloads emitted through `writeMCPPayload(...)`.
-- Route help, stop/doctor status, CLI rendering, warnings, and diagnostics through the canonical `internal/diag` sink.
+- Route help, stop/doctor status, CLI rendering, warnings, and diagnostics through the canonical `internal/platform/diag` sink.
 - Do not write connect-mode responses directly to `os.Stdout`; use the shared MCP framing path.
 - Keep `stdout_protocol_boundary_test.go` green when adding new output.
 
@@ -140,7 +140,7 @@ Use this as a hard checklist during design, coding, and review.
 
 ## 15) Canonical Operational Incident Pattern
 
-- Report an operational failure once through `internal/incident`; derive Doctor
+- Report an operational failure once through `internal/lifecycle/doctor/incident`; derive Doctor
   presentation and privacy-safe analytics from that canonical incident.
 - Use only registry-owned incident codes. Feature callers provide correlation,
   numeric connection generation, and redacted local evidence; they do not author

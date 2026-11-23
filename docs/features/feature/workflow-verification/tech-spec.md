@@ -8,7 +8,7 @@ last_reviewed: 2026-08-04
 
 ## Ownership
 
-`internal/workflowverify/runner.go` owns definition validation, ordered execution, invariant evaluation, bounded diagnostic collection, primary-failure preservation, cleanup, and final verdict. `internal/verification` owns the reusable assertion and evidence contracts consumed by the runner.
+`internal/analysis/workflowverify/runner.go` owns definition validation, ordered execution, invariant evaluation, bounded diagnostic collection, primary-failure preservation, cleanup, and final verdict. `internal/analysis/verification` owns the reusable assertion and evidence contracts consumed by the runner.
 
 ## Execution Model
 

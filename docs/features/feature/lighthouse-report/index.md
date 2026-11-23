@@ -6,8 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-28
 code_paths:
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
-  - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go
+  - internal/tools/analyze/handler/analyzedispatch/dispatcher.go
+  - internal/tools/analyze/handler/combinedaudit/handler.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - src/background/dom/cdp/cdp-dispatch.ts
   - src/background/commands/analyze.ts
@@ -51,8 +51,8 @@ pipelines, and stakeholders reference before shipping.
 
 ## Related Code
 
-- Analyze dispatch registry: `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`
-- Existing heuristic audit (contrast): `cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go`
+- Analyze dispatch registry: `internal/tools/analyze/handler/analyzedispatch/dispatcher.go`
+- Existing heuristic audit (contrast): `internal/tools/analyze/handler/combinedaudit/handler.go`
 - Mode hints and parameter specs: `internal/tools/configure/capabilities/modespecs_analyze.go`
 - CDP attach/detach lifecycle: `src/background/dom/cdp/cdp-dispatch.ts`
 

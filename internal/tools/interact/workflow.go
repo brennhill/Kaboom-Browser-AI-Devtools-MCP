@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 // WorkflowStep records a single step's outcome within a workflow trace.

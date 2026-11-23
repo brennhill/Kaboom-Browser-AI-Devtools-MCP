@@ -88,7 +88,7 @@ tags: [testing, qa, audit]
 
 ### 4.1 Unit Tests
 
-Server source: `cmd/browser-agent/internal/toolanalyze/pageissues/handler.go`. Tests: `handler_test.go` and `summary_test.go` in that package.
+Server source: `internal/tools/analyze/handler/pageissues/handler.go`. Tests: `handler_test.go` and `summary_test.go` in that package.
 
 | # | Test Case | Input | Expected Output | Priority |
 |---|-----------|-------|-----------------|----------|
@@ -116,7 +116,7 @@ Server source: `cmd/browser-agent/internal/toolanalyze/pageissues/handler.go`. T
 | IT-5 | requestAudit trigger | popup and hover | Both call `requestAudit`; terminal opened first, then bridge sent | must |
 | IT-6 | Fallback nudge | PTY injection unavailable | `qa_scan` intent stored; next MCP response prepends `ACTION REQUIRED` | must |
 
-Extension tests: `tests/extension/reliability/request-audit.test.js`, `tests/extension/content/message-handlers.test.js`. Response-policy test: `cmd/browser-agent/internal/mcpresponse/owner_test.go`.
+Extension tests: `tests/extension/reliability/request-audit.test.js`, `tests/extension/content/message-handlers.test.js`. Response-policy test: `internal/tools/mcpserver/response/owner_test.go`.
 
 ### 4.3 Edge Case Tests
 

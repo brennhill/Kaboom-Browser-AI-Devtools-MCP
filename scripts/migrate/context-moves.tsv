@@ -1,0 +1,180 @@
+# context-moves.tsv — Draft old->new package map for kaboom-us7o (bounded-context layout). Prefix moves: a row moves the subtree; more specific rows win.
+# old	new	context	note
+internal/browsercommand	internal/browsercommand	Browser Command	
+internal/queries	internal/browsercommand/query	Browser Command	
+internal/commandcontract	internal/browsercommand/contract	Browser Command	
+internal/synctranscript	internal/browsercommand/transcript	Browser Command	
+internal/app/ports	internal/browsercommand/ports	Browser Command	consumer-neutral result sink; owned by the command owner
+internal/capture/syncruntime	internal/sync/runtime	Connection & Sync	
+internal/extclient	internal/sync/extclient	Connection & Sync	
+internal/capture/settingscache	internal/sync/settingscache	Connection & Sync	applied as drafted (revisit): settings intake arrives via /sync
+internal/capture/telemetrystore	internal/observation/store/telemetry	Observation Capture	
+internal/capture/logstore	internal/observation/store/logs	Observation Capture	
+internal/capture/perfstore	internal/observation/store/perf	Observation Capture	
+internal/capture/actionstore	internal/observation/store/actions	Observation Capture	
+internal/capture/bodystore	internal/observation/store/bodies	Observation Capture	
+internal/capture/waterfallstore	internal/observation/store/waterfall	Observation Capture	
+internal/capture/ringstore	internal/observation/store/ring	Observation Capture	
+internal/capture/wsconn	internal/observation/store/wsconn	Observation Capture	
+internal/capture/pressure	internal/observation/pressure	Observation Capture	
+internal/capture/clientstore	internal/observation/clientstore	Observation Capture	
+internal/capture/featureusage	internal/observation/featureusage	Observation Capture	
+internal/capture/healthreader	internal/observation/healthreader	Observation Capture	
+internal/capture/resetter	internal/observation/resetter	Observation Capture	
+internal/buffers	internal/observation/buffers	Observation Capture	
+internal/pagination	internal/observation/pagination	Observation Capture	
+internal/lifecycle	internal/observation/lifecycle	Observation Capture	
+internal/noise	internal/observation/noise	Observation Capture	
+cmd/browser-agent/internal/noiseautorun	internal/observation/noise/autorun	Observation Capture	
+internal/streaming	internal/observation/streaming	Observation Capture	
+internal/perftrace	internal/observation/perftrace	Observation Capture	
+internal/performance	internal/observation/performance	Observation Capture	
+internal/export/har	internal/observation/export/har	Observation Capture	
+cmd/browser-agent/internal/telemetryapi	internal/observation/adapters/telemetryapi	Observation Capture	
+cmd/browser-agent/internal/mcptelemetry	internal/observation/adapters/mcptelemetry	Observation Capture	
+internal/debuglog	internal/observation/debuglog	Observation Capture	applied as drafted (revisit): daemon debug ring, may be Platform
+internal/capture/pipelinetest	internal/observation/testsupport/pipeline	Observation Capture	
+internal/capture/websockettest	internal/observation/testsupport/websocket	Observation Capture	
+internal/capturefixture	internal/observation/testsupport/fixture	Observation Capture	
+internal/capture/httpingest	internal/ingestion/http	Extension Ingestion	
+internal/circuit	internal/ingestion/circuit	Extension Ingestion	
+cmd/browser-agent/internal/mediaapi	internal/ingestion/media	Extension Ingestion	applied as drafted (revisit): draw-mode ingest; could live under Annotation
+internal/recording	internal/recording	Event Recording	
+internal/reproduction	internal/recording/reproduction	Event Recording	
+cmd/browser-agent/internal/replay	internal/recording/replay	Event Recording	
+cmd/browser-agent/internal/sequencehandler	internal/recording/sequence	Event Recording	
+internal/capture/recordingtest	internal/recording/testsupport	Event Recording	
+cmd/browser-agent/internal/screenrec	internal/screenrec	Screen Recording	
+internal/app/screenshot	internal/page/app/screenshot	Page Inspection	
+internal/app/pageinfo	internal/page/app/pageinfo	Page Inspection	
+internal/app/pagestorage	internal/page/app/storage	Page Inspection	
+internal/screenshotframe	internal/page/screenshotframe	Page Inspection	
+internal/styleprobe	internal/page/styleprobe	Page Inspection	
+internal/menus	internal/page/menus	Page Inspection	
+internal/app/a11yaudit	internal/analysis/app/a11yaudit	Page Analysis	
+internal/a11ysummary	internal/analysis/a11ysummary	Page Analysis	
+internal/analysis/apicontract	internal/analysis/apicontract	Page Analysis	
+internal/analysis/thirdparty	internal/analysis/thirdparty	Page Analysis	
+internal/security	internal/analysis/security	Page Analysis	
+internal/export/sarif	internal/analysis/export/sarif	Page Analysis	
+internal/session	internal/analysis/snapshots	Page Analysis	snapshot diffs; session/clientreg split out below
+internal/verification	internal/analysis/verification	Page Analysis	
+internal/workflowverify	internal/analysis/workflowverify	Page Analysis	
+internal/flakerepro	internal/analysis/flakerepro	Page Analysis	
+internal/testgen	internal/testgen	Test Generation	
+internal/qafixture	internal/testgen/qafixture	Test Generation	
+internal/annotation	internal/annotation	Annotation	
+internal/pty	internal/terminal/pty	Terminal	
+cmd/browser-agent/internal/terminal	internal/terminal/adapters	Terminal	
+internal/hook	internal/hooks	Agent Hooks	
+internal/tracking	internal/hooks/tokensavings	Agent Hooks	token-savings endpoint fed by hook scripts
+internal/upload	internal/upload	File Upload	
+internal/push	internal/push	Push Delivery	
+cmd/browser-agent/internal/pushapi	internal/push/adapters/http	Push Delivery	
+internal/mcp	internal/tools/mcp	Tool Surface	
+internal/schema	internal/tools/schema	Tool Surface	
+internal/tools/observe	internal/tools/observe	Tool Surface	
+internal/tools/analyze	internal/tools/analyze	Tool Surface	
+internal/tools/configure	internal/tools/configure	Tool Surface	
+internal/tools/generate	internal/tools/generate	Tool Surface	
+internal/tools/interact	internal/tools/interact	Tool Surface	
+cmd/browser-agent/internal/toolobserve	internal/tools/observe/handler	Tool Surface	
+cmd/browser-agent/internal/toolanalyze	internal/tools/analyze/handler	Tool Surface	
+cmd/browser-agent/internal/toolconfigure	internal/tools/configure/handler	Tool Surface	
+cmd/browser-agent/internal/toolgenerate	internal/tools/generate/handler	Tool Surface	
+cmd/browser-agent/internal/toolinteract	internal/tools/interact/handler	Tool Surface	
+cmd/browser-agent/internal/toolrecording	internal/tools/recording	Tool Surface	
+cmd/browser-agent/internal/testgenhandler	internal/tools/generate/testgen	Tool Surface	
+cmd/browser-agent/internal/asynccommand	internal/tools/asynccommand	Tool Surface	
+cmd/browser-agent/internal/asyncresult	internal/tools/asyncresult	Tool Surface	
+cmd/browser-agent/internal/actioneffects	internal/tools/interact/effects	Tool Surface	
+cmd/browser-agent/internal/interactdispatch	internal/tools/interact/dispatch	Tool Surface	
+cmd/browser-agent/internal/playbooks	internal/tools/playbooks	Tool Surface	
+cmd/browser-agent/internal/toolguard	internal/tools/guard	Tool Surface	
+cmd/browser-agent/internal/toolresp	internal/tools/response	Tool Surface	
+cmd/browser-agent/internal/toolpostprocess	internal/tools/postprocess	Tool Surface	
+cmd/browser-agent/internal/toolusage	internal/tools/usage	Tool Surface	
+cmd/browser-agent/internal/summarypref	internal/tools/summarypref	Tool Surface	
+cmd/browser-agent/internal/toolcatalog	internal/tools/catalog	Tool Surface	
+cmd/browser-agent/internal/toolmodule	internal/tools/module	Tool Surface	
+cmd/browser-agent/internal/toolrouting	internal/tools/routing	Tool Surface	
+cmd/browser-agent/internal/mcpcall	internal/tools/mcpserver/call	Tool Surface	
+cmd/browser-agent/internal/mcpendpoint	internal/tools/mcpserver/endpoint	Tool Surface	
+cmd/browser-agent/internal/mcphttp	internal/tools/mcpserver/http	Tool Surface	
+cmd/browser-agent/internal/mcpprotocol	internal/tools/mcpserver/protocol	Tool Surface	
+cmd/browser-agent/internal/mcpresponse	internal/tools/mcpserver/response	Tool Surface	
+cmd/browser-agent/internal/mcprouter	internal/tools/mcpserver/router	Tool Surface	
+cmd/browser-agent/internal/health	internal/tools/commandhealth	Tool Surface	applied as drafted (revisit): async-command reliability assessment
+internal/audit	internal/tools/audit	Tool Surface	tool-call audit trail
+internal/session/clientreg	internal/tools/clientreg	Tool Surface	
+cmd/browser-agent/internal/clientapi	internal/tools/clientreg/http	Tool Surface	
+internal/issuereport	internal/tools/issuereport	Tool Surface	
+cmd/browser-agent/internal/cli	internal/tools/cli	Tool Surface	
+internal/bridge	internal/lifecycle/bridge/framing	Process Lifecycle	
+cmd/browser-agent/internal/bridge	internal/lifecycle/bridge	Process Lifecycle	
+cmd/browser-agent/internal/daemonlife	internal/lifecycle/daemon	Process Lifecycle	
+cmd/browser-agent/internal/daemonrecovery	internal/lifecycle/daemon/recovery	Process Lifecycle	
+cmd/browser-agent/internal/connectmode	internal/lifecycle/connectmode	Process Lifecycle	
+cmd/browser-agent/internal/launchmode	internal/lifecycle/launchmode	Process Lifecycle	
+cmd/browser-agent/internal/procctl	internal/lifecycle/procctl	Process Lifecycle	
+cmd/browser-agent/internal/runtimeconfig	internal/lifecycle/runtimeconfig	Process Lifecycle	
+cmd/browser-agent/internal/runtimeflags	internal/lifecycle/runtimeflags	Process Lifecycle	
+cmd/browser-agent/internal/startupconfig	internal/lifecycle/startupconfig	Process Lifecycle	
+cmd/browser-agent/internal/exitdiag	internal/lifecycle/exitdiag	Process Lifecycle	
+cmd/browser-agent/internal/binarywatch	internal/lifecycle/upgrade/binarywatch	Process Lifecycle	
+cmd/browser-agent/internal/versioncheck	internal/lifecycle/upgrade/versioncheck	Process Lifecycle	
+cmd/browser-agent/internal/nativeinstall	internal/lifecycle/install/native	Process Lifecycle	
+internal/configdiscovery	internal/lifecycle/install/configdiscovery	Process Lifecycle	
+internal/instancegov	internal/lifecycle/instance/gov	Process Lifecycle	
+internal/instancereg	internal/lifecycle/instance/registry	Process Lifecycle	
+internal/reaper	internal/lifecycle/instance/reaper	Process Lifecycle	
+cmd/browser-agent/internal/censuscmd	internal/lifecycle/instance/censuscmd	Process Lifecycle	
+internal/procidentity	internal/lifecycle/process/identity	Process Lifecycle	
+internal/proclock	internal/lifecycle/process/lock	Process Lifecycle	
+internal/procwatch	internal/lifecycle/process/watch	Process Lifecycle	
+internal/idlewatch	internal/lifecycle/idlewatch	Process Lifecycle	
+internal/listenport	internal/lifecycle/listenport	Process Lifecycle	
+internal/retention	internal/lifecycle/retention	Process Lifecycle	
+cmd/browser-agent/internal/retentionsweep	internal/lifecycle/retention/sweep	Process Lifecycle	
+internal/statediag	internal/lifecycle/doctor/statediag	Process Lifecycle	
+internal/incident	internal/lifecycle/doctor/incident	Process Lifecycle	
+cmd/browser-agent/internal/doctorsupport	internal/lifecycle/doctor/support	Process Lifecycle	
+internal/activecodebase	internal/lifecycle/activecodebase	Process Lifecycle	applied as drafted (revisit): workspace state; may belong to Terminal
+cmd/browser-agent/internal/testowner	internal/lifecycle/testsupport/testowner	Process Lifecycle	
+internal/telemetry	internal/telemetry	Product Telemetry	
+internal/types	internal/platform/types	Platform (shared kernel, no domain state)	
+internal/util	internal/platform/util	Platform (shared kernel, no domain state)	applied as drafted (revisit): split util by caller before moving
+internal/redaction	internal/platform/redaction	Platform (shared kernel, no domain state)	
+internal/wirecodec	internal/platform/wirecodec	Platform (shared kernel, no domain state)	
+internal/state	internal/platform/state/paths	Platform (shared kernel, no domain state)	
+internal/statefile	internal/platform/state/file	Platform (shared kernel, no domain state)	
+internal/statefault	internal/platform/state/fault	Platform (shared kernel, no domain state)	
+internal/persistence	internal/platform/state/persistence	Platform (shared kernel, no domain state)	
+internal/diag	internal/platform/diag	Platform (shared kernel, no domain state)	
+internal/semver	internal/platform/semver	Platform (shared kernel, no domain state)	
+internal/identity	internal/platform/identity	Platform (shared kernel, no domain state)	
+internal/serverdefaults	internal/platform/defaults	Platform (shared kernel, no domain state)	
+internal/warningqueue	internal/platform/warningqueue	Platform (shared kernel, no domain state)	
+internal/testsync	internal/platform/testsync	Platform (shared kernel, no domain state)	
+cmd/browser-agent/internal/wsframe	internal/platform/wsframe	Platform (shared kernel, no domain state)	
+cmd/browser-agent/internal/httpguard	internal/platform/httpguard	Platform (shared kernel, no domain state)	
+internal/capture	internal/composition/capture	Composition	whole-Capture root; children above move first
+internal/server	internal/composition/serverlog	Composition	applied as drafted (revisit): server log storage, maybe Observation
+cmd/browser-agent/internal/logstore	internal/composition/logstate	Composition	applied as drafted (revisit): duplicate of internal/server? merge candidate
+cmd/browser-agent/internal/toolruntime	internal/composition/toolruntime	Composition	
+cmd/browser-agent/internal/appruntime	internal/composition/appruntime	Composition	
+cmd/browser-agent/internal/daemonhttp	internal/composition/http/listener	Composition	
+cmd/browser-agent/internal/operationalapi	internal/composition/http/operational	Composition	
+cmd/browser-agent/internal/httpapi	internal/composition/http/openapi	Composition	
+cmd/browser-agent/internal/dashboard	internal/composition/http/dashboard	Composition	
+cmd/browser-agent/internal/testpages	internal/composition/http/testpages	Composition	
+cmd/browser-agent/internal/ciapi	internal/composition/http/ci	Composition	
+cmd/browser-agent/internal/insecureproxy	internal/composition/http/insecureproxy	Composition	
+cmd/browser-agent/internal/responsegate	internal/composition/responsegate	Composition	applied as drafted (revisit): test-only package (0 non-test files)
+cmd/browser-agent/internal/integrationtest	internal/composition/testsupport/integration	Composition	
+internal/tools/commandhealth	internal/browsercommand/health	BrowserCommand	revisit resolved: command reliability belongs to the command owner
+internal/ingestion/media	internal/annotation/adapters/http	Annotation	revisit resolved: persists annotation sessions
+internal/lifecycle/activecodebase	internal/terminal/activecodebase	Terminal	revisit resolved: consumed as terminal working folder
+internal/composition/logstate	internal/observation/daemonlog	Observation	revisit resolved: daemon's own log state
+internal/composition/responsegate	internal/composition/testsupport/responsegate	Composition	revisit resolved: test-only harness
+internal/browsercommand/health	internal/tools/commandhealth	Tools	reverted: imports composition/capture, which browsercommand may not depend on

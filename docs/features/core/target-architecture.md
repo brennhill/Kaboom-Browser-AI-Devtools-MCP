@@ -24,8 +24,8 @@ Canonical documents:
 
 Implementation anchors:
 - MCP handler: `cmd/browser-agent/handler.go`
-- Tool schemas: `internal/schema/schema.go`
+- Tool schemas: `internal/tools/schema/schema.go`
 - Tool dispatch: `cmd/browser-agent/tools_core.go`
-- Query lifecycle: `internal/capture/query_dispatcher.go`
-- Unified sync endpoint: `internal/capture/syncruntime/handler.go`
+- Query lifecycle: `internal/composition/capture/query_dispatcher.go`
+- Unified sync endpoint: `internal/sync/runtime/handler.go`
 - Extension sync executor: `src/background/sync/sync-client.ts`, `src/background/pending-queries.ts`

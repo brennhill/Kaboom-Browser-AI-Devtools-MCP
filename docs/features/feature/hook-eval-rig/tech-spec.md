@@ -8,10 +8,10 @@ links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
-  - internal/hook/eval/
+  - internal/hooks/eval/
   - cmd/hooks/main.go
 test_paths:
-  - internal/hook/eval/eval_test.go
+  - internal/hooks/eval/eval_test.go
 ---
 
 # Hook Eval Rig Tech Spec
@@ -30,7 +30,7 @@ test_paths:
 │                                                          │
 │  Tier 1: Unit Evals                                      │
 │  ┌─────────────────────────────────────────────────┐     │
-│  │  internal/hook/eval/                             │     │
+│  │  internal/hooks/eval/                             │     │
 │  │  - Synthetic hook inputs (JSON fixtures)         │     │
 │  │  - Expected outputs (golden files)               │     │
 │  │  - Latency benchmarks                            │     │
@@ -48,7 +48,7 @@ test_paths:
 │                                                          │
 │  Tier 3: Live Metrics                                    │
 │  ┌─────────────────────────────────────────────────┐     │
-│  │  internal/tracking/                              │     │
+│  │  internal/hooks/tokensavings/                              │     │
 │  │  - Per-hook invocation counters                  │     │
 │  │  - Latency histograms                            │     │
 │  │  - Token injection/savings aggregation           │     │
@@ -61,10 +61,10 @@ test_paths:
 
 ### Fixture format
 
-Each hook has a directory of test fixtures under `internal/hook/eval/testdata/`:
+Each hook has a directory of test fixtures under `internal/hooks/eval/testdata/`:
 
 ```
-internal/hook/eval/testdata/
+internal/hooks/eval/testdata/
   quality-gate/
     001-standards-injection.json      # input
     001-standards-injection.golden    # expected additionalContext output
@@ -203,11 +203,11 @@ scripts/eval/scenarios/kaboom-refactor-handler.jsonl
 Each line is a tool use event. The rig replays them in order, running all hooks after each step:
 
 ```jsonl
-{"tool_name":"Read","tool_input":{"file_path":"internal/hook/hook_policy.go"}}
-{"tool_name":"Read","tool_input":{"file_path":"internal/hook/hook_policy.go"}}
-{"tool_name":"Edit","tool_input":{"file_path":"internal/hook/hook_policy.go","new_string":"func RunQualityGate(input Input) *QualityGateResult {"}}
-{"tool_name":"Read","tool_input":{"file_path":"internal/hook/hook_policy.go"}}
-{"tool_name":"Bash","tool_input":{"command":"go test ./internal/hook/..."},"tool_response":{"stdout":"ok  \tinternal/hook\t0.5s\n"}}
+{"tool_name":"Read","tool_input":{"file_path":"internal/hooks/hook_policy.go"}}
+{"tool_name":"Read","tool_input":{"file_path":"internal/hooks/hook_policy.go"}}
+{"tool_name":"Edit","tool_input":{"file_path":"internal/hooks/hook_policy.go","new_string":"func RunQualityGate(input Input) *QualityGateResult {"}}
+{"tool_name":"Read","tool_input":{"file_path":"internal/hooks/hook_policy.go"}}
+{"tool_name":"Bash","tool_input":{"command":"go test ./internal/hooks/..."},"tool_response":{"stdout":"ok  \tinternal/hook\t0.5s\n"}}
 ```
 
 ### Eval runner
@@ -311,7 +311,7 @@ Roll up into `~/.kaboom/stats/lifetime.json` (extends existing token tracker):
 
 ```makefile
 eval:
-    go test ./internal/hook/eval/ -v -count=1
+    go test ./internal/hooks/eval/ -v -count=1
     ./scripts/eval/run.sh --all --ci
 ```
 
@@ -345,7 +345,7 @@ The full eval suite must complete in < 60 seconds:
 ## File Structure
 
 ```
-internal/hook/eval/
+internal/hooks/eval/
   eval.go              # Eval runner library
   eval_test.go         # Tier 1 unit eval runner
   testdata/

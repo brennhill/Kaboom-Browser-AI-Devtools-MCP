@@ -241,4 +241,4 @@ These are non-negotiable safety rules:
 
 ## File Location
 
-Implementation lives in `internal/noise/*.go` and tool integration is in `cmd/browser-agent/internal/toolconfigure/noise_actions.go` (`HandleNoise`) with tests in `internal/noise/*_test.go` and `cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go`.
+Implementation lives in `internal/observation/noise/*.go` and tool integration is in `internal/tools/configure/handler/noise_actions.go` (`HandleNoise`) with tests in `internal/observation/noise/*_test.go` and `internal/tools/configure/handler/handlers_coverage_test.go`.

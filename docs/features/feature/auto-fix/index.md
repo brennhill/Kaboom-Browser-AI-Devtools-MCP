@@ -6,16 +6,16 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolanalyze/deps.go
-  - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
-  - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
-  - cmd/browser-agent/internal/mcpendpoint/handler.go
-  - cmd/browser-agent/internal/mcpresponse/owner.go
-  - cmd/browser-agent/internal/terminal/intent/store.go
-  - cmd/browser-agent/internal/terminal/intent/handlers.go
-  - internal/schema/analyze.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/tools/analyze/handler/deps.go
+  - internal/tools/analyze/handler/pageissues/handler.go
+  - internal/tools/analyze/handler/page_issues_summary.go
+  - internal/tools/analyze/handler/analyzedispatch/dispatcher.go
+  - internal/tools/mcpserver/endpoint/handler.go
+  - internal/tools/mcpserver/response/owner.go
+  - internal/terminal/adapters/intent/store.go
+  - internal/terminal/adapters/intent/handlers.go
+  - internal/tools/schema/analyze.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - plugin/kaboom-workflows/commands/audit.md
   - npm/kaboom-agentic-browser/skills/audit/SKILL.md
@@ -28,13 +28,13 @@ code_paths:
   - src/types/runtime-messages.ts
 test_paths:
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
-  - cmd/browser-agent/internal/mcpresponse/owner_test.go
-  - cmd/browser-agent/internal/mcpendpoint/handler_test.go
-  - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
-  - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
-  - cmd/browser-agent/internal/terminal/intent/store_test.go
-  - cmd/browser-agent/internal/terminal/intent/handlers_test.go
+  - internal/tools/analyze/handler/handlers_coverage_test.go
+  - internal/tools/mcpserver/response/owner_test.go
+  - internal/tools/mcpserver/endpoint/handler_test.go
+  - internal/tools/analyze/handler/pageissues/handler_test.go
+  - internal/tools/analyze/handler/pageissues/summary_test.go
+  - internal/terminal/adapters/intent/store_test.go
+  - internal/terminal/adapters/intent/handlers_test.go
   - tests/extension/reliability/request-audit.test.js
   - tests/extension/content/message-handlers.test.js
   - tests/extension/contracts/background-boundaries.test.js

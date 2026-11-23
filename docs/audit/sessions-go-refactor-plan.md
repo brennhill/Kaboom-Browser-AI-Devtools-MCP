@@ -9,7 +9,7 @@ last-verified: 2026-02-08
 
 # sessions.go Refactoring Plan (694 LOC → ~400 LOC)
 
-**File:** [`internal/session/types.go`](internal/session/types.go) (694 lines)
+**File:** [`internal/analysis/snapshots/types.go`](internal/analysis/snapshots/types.go) (694 lines)
 
 **Goal:** Split into focused files by domain/concern.
 
@@ -58,7 +58,7 @@ last-verified: 2026-02-08
 
 ## Proposed File Structure
 
-### 1. `internal/session/constants.go` (~30 LOC)
+### 1. `internal/analysis/snapshots/constants.go` (~30 LOC)
 **Purpose:** Session comparison constants
 
 **Contents:**
@@ -72,7 +72,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 2. `internal/session/types.go` (~50 LOC)
+### 2. `internal/analysis/snapshots/types.go` (~50 LOC)
 **Purpose:** Session comparison types
 
 **Contents:**
@@ -94,7 +94,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 3. `internal/session/diff-types.go` (~100 LOC)
+### 3. `internal/analysis/snapshots/diff-types.go` (~100 LOC)
 **Purpose:** Diff computation types
 
 **Contents:**
@@ -108,7 +108,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 4. `internal/session/comparison.go` (~100 LOC)
+### 4. `internal/analysis/snapshots/comparison.go` (~100 LOC)
 **Purpose:** Main comparison logic
 
 **Contents:**
@@ -119,7 +119,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 5. `internal/session/network-diff.go` (~100 LOC)
+### 5. `internal/analysis/snapshots/network-diff.go` (~100 LOC)
 **Purpose:** Network diff computation
 
 **Contents:**
@@ -130,7 +130,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 6. `internal/session/actions-diff.go` (~80 LOC)
+### 6. `internal/analysis/snapshots/actions-diff.go` (~80 LOC)
 **Purpose:** Actions diff computation
 
 **Contents:**
@@ -141,7 +141,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 7. `internal/session/performance-diff.go` (~100 LOC)
+### 7. `internal/analysis/snapshots/performance-diff.go` (~100 LOC)
 **Purpose:** Performance diff computation
 
 **Contents:**
@@ -152,7 +152,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 8. `internal/session/dom-diff.go` (~80 LOC)
+### 8. `internal/analysis/snapshots/dom-diff.go` (~80 LOC)
 **Purpose:** DOM diff computation
 
 **Contents:**
@@ -163,7 +163,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 9. `internal/session/fragile-selectors.go` (~80 LOC)
+### 9. `internal/analysis/snapshots/fragile-selectors.go` (~80 LOC)
 **Purpose:** Fragile selector detection
 
 **Contents:**
@@ -174,7 +174,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 10. `internal/session/playback.go` (~100 LOC)
+### 10. `internal/analysis/snapshots/playback.go` (~100 LOC)
 **Purpose:** Playback session management
 
 **Contents:**
@@ -186,7 +186,7 @@ last-verified: 2026-02-08
 
 ---
 
-### 11. `internal/session/types.go` (~200 LOC)
+### 11. `internal/analysis/snapshots/types.go` (~200 LOC)
 **Purpose:** SessionManager struct and main exports
 
 **Contents:**
@@ -221,7 +221,7 @@ last-verified: 2026-02-08
 
 ### Phase 3: Test
 
-1. Run `go test ./internal/session/...` to ensure no regressions
+1. Run `go test ./internal/analysis/snapshots/...` to ensure no regressions
 2. Run full test suite to verify overall functionality
 
 ### Phase 4: Remove Old Code
@@ -236,15 +236,15 @@ last-verified: 2026-02-08
 ### Phase 5: Final Verification
 
 1. Run full test suite
-2. Run `go build ./internal/session/`
-3. Run `go test ./internal/session/...`
+2. Run `go build ./internal/analysis/snapshots/`
+3. Run `go test ./internal/analysis/snapshots/...`
 4. Update documentation if needed
 
 ---
 
 ## Import Structure After Refactoring
 
-### In `internal/session/types.go`:
+### In `internal/analysis/snapshots/types.go`:
 ```go
 import (
 	"encoding/json"
@@ -286,9 +286,9 @@ For each new file:
 - [ ] Add package declaration (`package session`)
 - [ ] Add necessary imports
 - [ ] Verify no circular dependencies
-- [ ] Run `go test ./internal/session/[new-file].go`
+- [ ] Run `go test ./internal/analysis/snapshots/[new-file].go`
 - [ ] Update imports in `sessions.go`
-- [ ] Run `go build ./internal/session/`
+- [ ] Run `go build ./internal/analysis/snapshots/`
 - [ ] Run full test suite
 - [ ] Remove moved code from `sessions.go`
 - [ ] Update documentation if needed

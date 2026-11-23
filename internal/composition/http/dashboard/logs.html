@@ -1,0 +1,265 @@
+<!doctype html>
+<!-- Embedded by internal/composition/http/dashboard. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logs - Kaboom MCP Server</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4Ij4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZmxhbWUiIHgxPSIwJSIgeTE9IjEwMCUiIHgyPSIwJSIgeTI9IjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2Y5NzMxNiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3R5bGU9InN0b3AtY29sb3I6I2ZiOTIzYyIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNmYmJmMjQiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImlubmVyRmxhbWUiIHgxPSIwJSIgeTE9IjEwMCUiIHgyPSIwJSIgeTI9IjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2ZiYmYyNCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNmZWYzYzciLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjY0IiBjeT0iNjQiIHI9IjYwIiBmaWxsPSIjMWExYTFhIi8+CiAgPHBhdGggZD0iTTY0IDE2IEM0MCA0MCwgMjggNjAsIDI4IDgwIEMyOCAxMDAsIDQ0IDExNiwgNjQgMTE2IEM4NCAxMTYsIDEwMCAxMDAsIDEwMCA4MCBDMTAwIDYwLCA4OCA0MCwgNjQgMTYgWiIgZmlsbD0idXJsKCNmbGFtZSkiLz4KICA8cGF0aCBkPSJNNjQgNDggQzUyIDYwLCA0NCA3MiwgNDQgODQgQzQ0IDk2LCA1MiAxMDQsIDY0IDEwNCBDNzYgMTA0LCA4NCA5NiwgODQgODQgQzg0IDcyLCA3NiA2MCwgNjQgNDggWiIgZmlsbD0idXJsKCNpbm5lckZsYW1lKSIvPgo8L3N2Zz4K">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #111;
+  color: #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+a { color: #7ab3ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+header .logo { width: 24px; height: 24px; flex-shrink: 0; }
+header h1 { font-size: 18px; font-weight: 600; color: #fff; }
+header .count { color: #888; font-size: 13px; }
+header .nav { margin-left: auto; font-size: 13px; }
+header .nav a { margin-left: 16px; }
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+.toolbar input {
+  flex: 1;
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: #e0e0e0;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+.toolbar input:focus { border-color: #555; }
+.toolbar input::placeholder { color: #555; }
+.filter-btn {
+  padding: 4px 10px;
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.filter-btn:hover { border-color: #555; color: #ccc; }
+.filter-btn.active { border-color: #555; color: #fff; background: #2a2a2a; }
+.filter-btn.error.active { color: #ef4444; border-color: #ef4444; }
+.filter-btn.warn.active { color: #eab308; border-color: #eab308; }
+.filter-btn.info.active { color: #3b82f6; border-color: #3b82f6; }
+.filter-btn.debug.active { color: #888; border-color: #666; }
+.auto-scroll-btn {
+  padding: 4px 10px;
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+}
+.auto-scroll-btn.active { color: #22c55e; border-color: #22c55e; }
+#log-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.log-entry {
+  display: flex;
+  padding: 2px 20px;
+  border-bottom: 1px solid #1a1a1a;
+}
+.log-entry:hover { background: #1a1a1a; }
+.log-entry .ts { color: #555; width: 85px; flex-shrink: 0; }
+.log-entry .level {
+  width: 50px;
+  flex-shrink: 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  padding-top: 1px;
+}
+.log-entry .msg { flex: 1; word-break: break-word; white-space: pre-wrap; }
+.log-entry .src { color: #555; width: 80px; flex-shrink: 0; text-align: right; font-size: 11px; }
+.level-error { color: #ef4444; }
+.level-warn { color: #eab308; }
+.level-info { color: #3b82f6; }
+.level-debug { color: #666; }
+.level-log { color: #aaa; }
+.empty { color: #555; font-style: italic; padding: 40px 20px; text-align: center; font-family: inherit; }
+.highlight { background: #854d0e44; border-radius: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <svg class="logo" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="flame" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" style="stop-color:#f97316"/><stop offset="50%" style="stop-color:#fb923c"/><stop offset="100%" style="stop-color:#fbbf24"/>
+      </linearGradient>
+      <linearGradient id="innerFlame" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" style="stop-color:#fbbf24"/><stop offset="100%" style="stop-color:#fef3c7"/>
+      </linearGradient>
+    </defs>
+    <circle cx="64" cy="64" r="60" fill="#1a1a1a"/>
+    <path d="M64 16 C40 40, 28 60, 28 80 C28 100, 44 116, 64 116 C84 116, 100 100, 100 80 C100 60, 88 40, 64 16 Z" fill="url(#flame)"/>
+    <path d="M64 48 C52 60, 44 72, 44 84 C44 96, 52 104, 64 104 C76 104, 84 96, 84 84 C84 72, 76 60, 64 48 Z" fill="url(#innerFlame)"/>
+  </svg>
+  <h1>Console Logs</h1>
+  <span class="count" id="count"></span>
+  <nav class="nav">
+    <a href="/">Dashboard</a>
+  </nav>
+</header>
+
+<div class="toolbar">
+  <input type="text" id="search" placeholder="Filter logs..." autocomplete="off">
+  <button class="filter-btn error active" data-level="error">Error</button>
+  <button class="filter-btn warn active" data-level="warn">Warn</button>
+  <button class="filter-btn info active" data-level="info">Info</button>
+  <button class="filter-btn debug active" data-level="debug">Debug</button>
+  <button class="filter-btn active" data-level="log">Log</button>
+  <button class="auto-scroll-btn active" id="auto-scroll">Auto-scroll</button>
+</div>
+
+<div id="log-container"></div>
+
+<script>
+var activeLevels = {error:true, warn:true, info:true, debug:true, log:true};
+var searchTerm = '';
+var autoScroll = true;
+var allEntries = [];
+var lastCount = 0;
+
+document.querySelectorAll('.filter-btn[data-level]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var lv = btn.dataset.level;
+    activeLevels[lv] = !activeLevels[lv];
+    btn.classList.toggle('active');
+    renderAll();
+  });
+});
+
+document.getElementById('search').addEventListener('input', function(e) {
+  searchTerm = e.target.value.toLowerCase();
+  renderAll();
+});
+
+document.getElementById('auto-scroll').addEventListener('click', function() {
+  autoScroll = !autoScroll;
+  this.classList.toggle('active');
+  if (autoScroll) scrollToBottom();
+});
+
+var container = document.getElementById('log-container');
+container.addEventListener('scroll', function() {
+  var atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 40;
+  if (!atBottom && autoScroll) {
+    autoScroll = false;
+    document.getElementById('auto-scroll').classList.remove('active');
+  }
+});
+
+function scrollToBottom() {
+  container.scrollTop = container.scrollHeight;
+}
+
+function esc(s) {
+  var d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function fmtTime(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString('en-US', {hour12: false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+
+function getMsg(entry) {
+  if (entry.message) return String(entry.message);
+  var args = entry.args;
+  if (Array.isArray(args)) return args.map(function(a) { return typeof a === 'string' ? a : JSON.stringify(a); }).join(' ');
+  if (args !== undefined) return String(args);
+  return JSON.stringify(entry);
+}
+
+function matchesFilter(entry) {
+  var level = (entry.level || 'log').toLowerCase();
+  if (!activeLevels[level]) return false;
+  if (searchTerm) {
+    var msg = getMsg(entry).toLowerCase();
+    var src = (entry.source || '').toLowerCase();
+    if (msg.indexOf(searchTerm) === -1 && src.indexOf(searchTerm) === -1 && level.indexOf(searchTerm) === -1) return false;
+  }
+  return true;
+}
+
+function renderEntry(entry) {
+  var level = (entry.level || 'log').toLowerCase();
+  var msg = esc(getMsg(entry));
+  if (searchTerm && msg.toLowerCase().indexOf(searchTerm) !== -1) {
+    var re = new RegExp('(' + searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    msg = msg.replace(re, '<span class="highlight">$1</span>');
+  }
+  return '<div class="log-entry">' +
+    '<span class="ts">' + fmtTime(entry.ts || entry.timestamp) + '</span>' +
+    '<span class="level level-' + level + '">' + level + '</span>' +
+    '<span class="msg">' + msg + '</span>' +
+    '<span class="src">' + esc(entry.source || '') + '</span></div>';
+}
+
+function renderAll() {
+  var filtered = allEntries.filter(matchesFilter);
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty">No log entries' + (searchTerm ? ' matching "' + esc(searchTerm) + '"' : '') + '</div>';
+  } else {
+    container.innerHTML = filtered.map(renderEntry).join('');
+  }
+  if (autoScroll) scrollToBottom();
+}
+
+async function refresh() {
+  try {
+    var r = await fetch('/telemetry?type=logs');
+    if (!r.ok) return;
+    var d = await r.json();
+    var items = d.items || [];
+    if (items.length !== lastCount) {
+      allEntries = items;
+      lastCount = items.length;
+      document.getElementById('count').textContent = d.count + ' entries';
+      renderAll();
+    }
+  } catch (e) { /* silent */ }
+}
+
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>

@@ -25,7 +25,7 @@ fi
 
 # 2. Integration tests
 echo "2️⃣  Running integration tests..."
-if go test ./internal/capture -run TestAsyncQueueIntegration -timeout 10s > /dev/null 2>&1; then
+if go test ./internal/composition/capture -run TestAsyncQueueIntegration -timeout 10s > /dev/null 2>&1; then
     echo "   ✅ Integration tests pass"
 else
     echo "   ❌ INTEGRATION TESTS FAILED"
@@ -44,9 +44,9 @@ fi
 # 4. Critical files exist
 echo "4️⃣  Checking critical files..."
 CRITICAL_FILES=(
-    "internal/queries/dispatcher_queries.go"
-    "internal/capture/query_dispatcher.go"
-    "internal/capture/httpingest/handlers.go"
+    "internal/browsercommand/query/dispatcher_queries.go"
+    "internal/composition/capture/query_dispatcher.go"
+    "internal/ingestion/http/handlers.go"
     "$CMD_DIR/tools_observe.go"
     "$CMD_DIR/tools_core.go"
 )
@@ -64,7 +64,7 @@ fi
 
 # 5. No stub implementations
 echo "5️⃣  Checking for stubs..."
-if grep -q 'queries.*\[\]interface{}{}' internal/capture/httpingest/handlers.go 2>/dev/null; then
+if grep -q 'queries.*\[\]interface{}{}' internal/ingestion/http/handlers.go 2>/dev/null; then
     echo "   ❌ STUB in handlers.go"
     ERRORS="$((ERRORS + 1))"
 elif ! grep -q 'GetCommandResult' "$CMD_DIR/tools_observe_analysis.go" 2>/dev/null; then

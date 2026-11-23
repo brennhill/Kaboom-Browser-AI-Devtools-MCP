@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 # Technical Specification: Cursor-Based Pagination
 
 **Status:** SHIPPED in v5.3
-**Canonical Reference:** Codebase (`internal/pagination/pagination.go`, `internal/tools/observe/logs/logs.go`)
+**Canonical Reference:** Codebase (`internal/observation/pagination/pagination.go`, `internal/tools/observe/logs/logs.go`)
 **Last Verified:** 2026-01-30
 
 ---
@@ -28,14 +28,14 @@ Cursor-based pagination was implemented in v5.3 to solve token limit problems. T
 ### Core Implementation Details
 
 #### Where it lives:
-- Pagination engine: `internal/pagination/pagination.go` (`ApplyCursorPagination`, `ParseCursor`, `BuildCursor`, eviction handling) and `internal/pagination/entries.go` (per-stream sequence enrichment and wrappers)
+- Pagination engine: `internal/observation/pagination/pagination.go` (`ApplyCursorPagination`, `ParseCursor`, `BuildCursor`, eviction handling) and `internal/observation/pagination/entries.go` (per-stream sequence enrichment and wrappers)
 - Observe handler wired to it: `GetBrowserLogs` in `internal/tools/observe/logs/logs.go`
 - Response metadata (`cursor`, `cursor_restarted`, `original_cursor`): `internal/tools/observe/core/metadata.go`
-- Tests: `internal/pagination/pagination_test.go`, `internal/pagination/cursor_test.go`, `internal/tools/observe/logs/logs_edge_test.go`
+- Tests: `internal/observation/pagination/pagination_test.go`, `internal/observation/pagination/cursor_test.go`, `internal/tools/observe/logs/logs_edge_test.go`
 
 #### Supported data streams:
 - `logs` — fully wired: cursor params are parsed and applied at runtime.
-- `network_waterfall`, `network_bodies`, `websocket_events`, `actions` — the mode specs (`internal/tools/configure/capabilities/modespecs_observe.go`) advertise `after_cursor` / `before_cursor` / `since_cursor` / `restart_on_eviction`, and `internal/pagination/entries.go` has WebSocket and action helpers (`ApplyWebSocketCursorPagination`, `ApplyActionCursorPagination`), but the handlers in `internal/tools/observe/network/network.go` and `internal/tools/observe/session/session.go` do not currently apply them; these modes honor `limit` only.
+- `network_waterfall`, `network_bodies`, `websocket_events`, `actions` — the mode specs (`internal/tools/configure/capabilities/modespecs_observe.go`) advertise `after_cursor` / `before_cursor` / `since_cursor` / `restart_on_eviction`, and `internal/observation/pagination/entries.go` has WebSocket and action helpers (`ApplyWebSocketCursorPagination`, `ApplyActionCursorPagination`), but the handlers in `internal/tools/observe/network/network.go` and `internal/tools/observe/session/session.go` do not currently apply them; these modes honor `limit` only.
 - `errors` — not paginated (limit only).
 
 ### Key Parameters
@@ -87,13 +87,13 @@ If more than one cursor is supplied, precedence is `after` > `before` > `since`.
 
 ### Buffer Management
 
-Each data stream has its own bounded ring buffer (the log buffer defaults to `MaxLogEntries` = 1000 in `internal/serverdefaults/defaults.go`). Entries carry a monotonically increasing sequence derived from the buffer's total-added counter. When the buffer is full, the oldest entries are evicted; a cursor whose sequence is older than the oldest retained entry is expired and returns an error unless `restart_on_eviction=true`, in which case pagination restarts from the oldest entry and the metadata carries a warning with the lost sequence range.
+Each data stream has its own bounded ring buffer (the log buffer defaults to `MaxLogEntries` = 1000 in `internal/platform/defaults/defaults.go`). Entries carry a monotonically increasing sequence derived from the buffer's total-added counter. When the buffer is full, the oldest entries are evicted; a cursor whose sequence is older than the oldest retained entry is expired and returns an error unless `restart_on_eviction=true`, in which case pagination restarts from the oldest entry and the metadata carries a warning with the lost sequence range.
 
 ### Performance Characteristics
 
 - Pagination: O(n) over the filtered buffer — `filterByCursor` is a linear scan comparing each entry's timestamp/sequence to the cursor, then the limit is applied
 - Cursors are stateless strings; the server stores no per-cursor state
-- Benchmarks: `internal/pagination/pagination_bench_test.go`
+- Benchmarks: `internal/observation/pagination/pagination_bench_test.go`
 
 ---
 
@@ -108,7 +108,7 @@ Each data stream has its own bounded ring buffer (the log buffer defaults to `Ma
 ## Testing
 
 All pagination scenarios are covered in:
-- **Core tests:** `internal/pagination/pagination_test.go`, `internal/pagination/cursor_test.go`, `internal/pagination/pagination_bench_test.go`
+- **Core tests:** `internal/observation/pagination/pagination_test.go`, `internal/observation/pagination/cursor_test.go`, `internal/observation/pagination/pagination_bench_test.go`
 - **Handler tests:** `internal/tools/observe/logs/logs_edge_test.go`
 - **UAT scenarios:** the v5.3 UAT checklist was retired; see `docs/core/quality/comprehensive-uat-plan.md`
 

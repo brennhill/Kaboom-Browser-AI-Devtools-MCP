@@ -86,7 +86,7 @@ tags: [testing, qa, hooks]
 
 ### 4.1 Unit Tests
 
-Source under test: `internal/hook/hook_policy.go`. Tests live in `internal/hook/hook_policy_test.go`.
+Source under test: `internal/hooks/hook_policy.go`. Tests live in `internal/hooks/hook_policy_test.go`.
 
 | # | Test Case | Input | Expected Output | Priority |
 |---|-----------|-------|-----------------|----------|
@@ -112,7 +112,7 @@ Source under test: `internal/hook/hook_policy.go`. Tests live in `internal/hook/
 | IT-1 | End-to-end via binary | `cmd/hooks/main.go:runDecisionGuard` reading stdin, writing stdout | Valid hook JSON envelope emitted on match | must |
 | IT-2 | Project root discovery | `FindProjectRoot` walks up from edited file for `.kaboom.json` | Decisions loaded from the correct root | must |
 | IT-3 | Agent-aware output | `WriteOutput` adapts envelope for Claude vs Gemini | Claude gets flat `additionalContext`; Gemini gets nested `hookSpecificOutput` | should |
-| IT-4 | Eval fixtures | `internal/hook/eval/testdata/decision-guard/` (10 fixtures) | Regression fixtures pass; aspirational fixtures documented | must |
+| IT-4 | Eval fixtures | `internal/hooks/eval/testdata/decision-guard/` (10 fixtures) | Regression fixtures pass; aspirational fixtures documented | must |
 
 ### 4.3 Edge Case Tests
 

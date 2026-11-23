@@ -1,0 +1,758 @@
+// tools_core.go — Defines shared five-tool dispatch state and runtime composition.
+// Docs: docs/features/feature/mcp-persistent-server/index.md
+package toolruntime
+
+import (
+	"context"
+	"encoding/json"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
+	apicontractruntime "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/apicontract/runtime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/security/scan"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/snapshots"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/noise"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/noise/autorun"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/performance"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/telemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/streaming/alertbuf"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/redaction"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/persistence"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/actionlog"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/sequence"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/screenrec"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/sync/runtime"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry/usagecallback"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze/handler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze/handler/analyzedispatch"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze/handler/annotationanalysis"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze/handler/combinedaudit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze/handler/designdrift"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze/handler/inspect"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/asynccommand"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/audit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/catalog"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/commandhealth"
+	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure/handler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure/handler/netrecord"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure/handler/tutorial"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/generate/handler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/generate/testgen"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/guard"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact/dispatch"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact/handler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact/handler/interactbatch"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact/handler/interactstate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact/handler/interactupload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/issuereport"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcpserver/call"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcpserver/endpoint"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/module"
+	observecore "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/handler"
+	observepage "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/page"
+	observesession "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/session"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/postprocess"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/recording"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/response"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/schema"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/summarypref"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/usage"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
+)
+
+// ============================================
+// ToolHandler Definition
+// ============================================
+
+// ToolHandler owns the composite five-tool runtime and its MCP endpoint.
+type ToolHandler struct {
+	*mcpendpoint.Handler
+	state   ServerState
+	capture *capture.Capture
+
+	// shutdownCtx lets readiness gates abort promptly when the handler closes,
+	// while fixture recovery runs through the bounded pre-cancellation owner.
+	shutdownCtx     context.Context
+	shutdownCancel  context.CancelFunc
+	closeOnce       sync.Once
+	replayMu        sync.Mutex
+	fixtureRecovery fixtureRecoveryRunner
+
+	// Health metrics for MCP get_health tool
+	healthMetrics *health.Metrics
+
+	// Redaction engine for scrubbing sensitive data from tool responses
+	redactionEngine *redaction.RedactionEngine
+
+	// Rate limiter for MCP tool calls (sliding window)
+	toolCallLimiter *toolresp.ToolCallLimiter
+	*toolguard.Guards
+
+	// Alert system + context streaming (delegates to internal/observation/streaming)
+	alertBuffer *alertbuf.AlertBuffer
+
+	// Concrete implementations (interface signatures differ from types package)
+	// These are used directly by tool handlers rather than through the interface fields above.
+	noiseConfig           *noise.NoiseConfig
+	sessionStoreImpl      *persistence.SessionStore
+	securityScannerImpl   *scan.Scanner
+	thirdPartyAuditorImpl *thirdparty.ThirdPartyAuditor
+	sessionManager        *session.SessionManager
+	auditTrail            *audit.AuditTrail
+	auditRecorder         *audit.Recorder
+
+	// Draw mode annotation store (in-memory, TTL-based)
+	annotationStore *annotation.Store
+
+	// API contract validation state (incremental over captured network bodies).
+	apiContractRuntime *apicontractruntime.Runtime
+
+	// Upload security config (folder-scoped permissions + denylist)
+	uploadSecurity *uploadsec.Security
+
+	// Cold-start readiness gate timeout: how long requireExtension waits
+	// for the extension to connect before failing. MaybeWaitForCommand only
+	// does an instant check (P1-2: no double wait).
+	// Default: 5s. Set to 0 in tests to restore instant-fail behavior.
+	coldStartTimeout time.Duration
+
+	interactRuntime    *toolinteract.ActionRuntime
+	interactDispatcher *interactdispatch.Handler
+	domActions         *toolinteract.DOMActions
+	browserActions     *toolinteract.BrowserActions
+	pageActions        *toolinteract.PageActions
+	workflowActions    *toolinteract.WorkflowActions
+	storageActions     *toolinteract.StorageActions
+	batchActions       *interactbatch.Handler
+
+	recordingInteractHandler *screenrec.InteractHandler
+	recordingHandler         *toolrecording.Handler
+	uploadInteractHandler    *interactupload.Handler
+	testGenHandler           *testgenhandler.Handler
+	generateDispatcher       *toolgenerate.Dispatcher
+	observeDispatcher        *toolobserve.Dispatcher
+	stateInteractHandler     *interactstate.Handler
+	configureLocalDeps       toolconfigure.Deps
+	configureDispatcher      *toolconfigure.Dispatcher
+	tutorialDeps             *tutorial.Deps
+	issueReportDeps          issuereport.HandlerDeps
+	configureSessions        *toolconfigure.SessionHandler
+	testBoundaries           *cfg.BoundaryHandler
+	sequences                *sequencehandler.Handler
+	annotationAnalysis       *annotationanalysis.Handler
+	analyzeDispatcher        *analyzedispatch.Dispatcher
+	asyncCommands            *asynccommand.Handler
+	actionRecorder           *actionlog.Recorder
+
+	// Passive network traffic recording state (start/stop capture).
+	networkRecording *netrecord.NetworkRecordingState
+
+	// Immutable executable modules, examples, and validation schemas.
+	toolCatalog *toolcatalog.Catalog
+
+	// Session-level response-mode preference.
+	summaryPrefs  *summarypref.Cache
+	stateRecovery StateDiagnostics
+
+	// noiseFirstConnectFn overrides the noise auto-detect function for first-connection.
+	// When nil, the canonical noiseautorun detector is used.
+	noiseFirstConnectFn func()
+
+	// issueCommandRunner overrides the exec runner for issue submission.
+	// When nil, issuereport.ExecRunner{} is used. Set in tests to inject a fake.
+	issueCommandRunner issuereport.CommandRunner
+
+	// usageCounter tracks tool:action call counts for periodic usage beacons.
+	// When nil, usage counting is disabled (backwards compatible).
+	usageTracker *telemetry.UsageTracker
+}
+
+// handleToolCall dispatches composite tool calls by mode parameter.
+func (h *ToolHandler) HandleToolCall(req mcp.JSONRPCRequest, name string, args json.RawMessage) (mcp.JSONRPCResponse, bool) {
+	start := time.Now()
+
+	resp, handled := h.toolCatalog.Dispatch(req, name, args)
+	if !handled {
+		return mcp.JSONRPCResponse{}, false
+	}
+
+	resp, resultIsError := toolpostprocess.Apply(resp, args, h.toolCatalog.Schema(name))
+
+	// Health metrics: local-only monotonic counters for the MCP health dashboard.
+	// Never beaconed — survives counter resets. Exposed via configure(what='health').
+	if h.healthMetrics != nil {
+		h.healthMetrics.IncrementRequest(name)
+		if resp.Error != nil || resultIsError {
+			h.healthMetrics.IncrementError(name)
+		}
+	}
+
+	// Piggyback push inbox hint if events are pending
+	resp = toolobserve.AppendPushPiggyback(buildObserveLocalDeps(h), resp)
+
+	h.auditRecorder.Record(req, name, args, resp, start)
+
+	// Usage tracker: per-call telemetry beaconed immediately + aggregated every 5 min.
+	// Separate from healthMetrics — different lifecycle and purpose.
+	if h.usageTracker != nil {
+		key := toolusage.Key(args)
+		if key == "" {
+			key = "unknown"
+		}
+		h.usageTracker.RecordToolCall(name+":"+key, time.Since(start), resp.Error != nil || resultIsError)
+	}
+
+	return resp, true
+}
+
+func buildToolCatalog(h *ToolHandler) *toolcatalog.Catalog {
+	return toolcatalog.New(
+		[]toolmodule.Spec{
+			toolmodule.Spec{Name: "observe", Summary: "Read captured browser state: logs, network, screenshots, and async results",
+				Examples: []json.RawMessage{json.RawMessage(`{"what":"logs"}`), json.RawMessage(`{"what":"screenshot"}`)}, Handle: h.observeDispatcher.Handle},
+			toolmodule.Spec{Name: "analyze", Summary: "Run analysis checks over DOM, links, accessibility, and audits",
+				Examples: []json.RawMessage{json.RawMessage(`{"what":"dom","selector":"body","background":true}`)}, Handle: h.analyzeDispatcher.Handle},
+			toolmodule.Spec{Name: "generate", Summary: "Generate artifacts (reproduction, csp, sarif, tests) from captured context",
+				Examples: []json.RawMessage{json.RawMessage(`{"what":"reproduction","last_n":20}`)}, Handle: h.generateDispatcher.Handle},
+			toolmodule.Spec{Name: "configure", Summary: "Session settings, diagnostics, and recording utilities",
+				Examples: []json.RawMessage{json.RawMessage(`{"what":"health"}`), json.RawMessage(`{"what":"clear","buffer":"logs"}`)}, Handle: h.configureDispatcher.Handle},
+			toolmodule.Spec{Name: "interact", Summary: "Browser automation: navigate, click, type, fill forms, take screenshots, and control any web page",
+				Examples: []json.RawMessage{json.RawMessage(`{"what":"navigate","url":"https://example.com"}`), json.RawMessage(`{"what":"click","selector":"button.submit"}`), json.RawMessage(`{"what":"type","selector":"input[name=search]","text":"hello"}`)}, Handle: h.toolInteract},
+		},
+		schema.AllTools(),
+	)
+}
+
+// Close cancels readiness gates and other in-flight work owned by this handler.
+func (h *ToolHandler) Close() {
+	h.closeOnce.Do(h.closeWithFixtureRecovery)
+}
+
+const (
+	defaultColdStartTimeout       = 5 * time.Second
+	testExtensionReadinessTimeout = time.Millisecond
+)
+
+func defaultExtensionReadinessTimeout() time.Duration {
+	if strings.HasSuffix(os.Args[0], ".test") {
+		return testExtensionReadinessTimeout
+	}
+	return toolguard.DefaultExtensionReadinessTimeout
+}
+
+func sessionStoreGuard(store *persistence.SessionStore, req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
+	if store != nil {
+		return mcp.JSONRPCResponse{}, false
+	}
+	return mcp.Fail(req, mcp.ErrNotInitialized, "Session store not initialized", "Internal error — do not retry"), true
+}
+
+// NewToolHandler constructs the composite five-tool backend and its MCP adapter.
+func NewToolHandler(state ServerState, captureStore *capture.Capture) *ToolHandler {
+	endpointConfig := mcpendpoint.Config{
+		Version: state.Version, Runtime: state.Runtime,
+		ErrorTotal: state.Logs.ErrorTotalAdded, TelemetryMode: state.Logs.TelemetryMode,
+		AddWarning: state.Warnings.Add, DrainWarnings: state.Warnings.Drain,
+		PendingAudit: func() bool {
+			return state.IntentStore != nil && state.IntentStore.NudgeAndClean()
+		},
+	}
+	handler := initToolHandlerCore(state, captureStore)
+	initAsyncCommandRuntime(handler)
+	initAnnotationAnalysis(handler)
+	initNoiseAutoDetection(handler)
+	initSessionAndAuditState(handler)
+	observeDeps := initAnalyzeAndGenerateDispatchers(handler)
+	initInteractAndObserveDispatchers(handler, observeDeps)
+	initSessionConfigHandlers(handler)
+	handler.toolCatalog = buildToolCatalog(handler)
+	handler.Handler = mcpendpoint.New(endpointConfig, buildMCPToolBackend(handler))
+	return handler
+}
+
+// initToolHandlerCore builds the ToolHandler shell plus its stateful core:
+// guards, recording, usage tracking, session/noise preferences, and redaction.
+func initToolHandlerCore(state ServerState, captureStore *capture.Capture) *ToolHandler {
+	shutdownContext, shutdownCancel := context.WithCancel(context.Background())
+	handler := &ToolHandler{
+		state:            state,
+		capture:          captureStore,
+		shutdownCtx:      shutdownContext,
+		shutdownCancel:   shutdownCancel,
+		coldStartTimeout: defaultColdStartTimeout,
+		networkRecording: &netrecord.NetworkRecordingState{},
+		testBoundaries:   cfg.NewBoundaryHandler(),
+	}
+	handler.Guards = toolguard.New(extensionOf(handler), shutdownContext, defaultExtensionReadinessTimeout())
+	var recordingStore toolrecording.Store
+	if captureStore != nil {
+		recordingStore = captureStore.Recordings()
+	}
+	handler.recordingHandler = toolrecording.NewHandler(recordingStore, func(entry types.LogEntry) {
+		handler.state.Logs.AddEntries([]types.LogEntry{entry})
+	})
+	handler.usageTracker = telemetry.NewUsageTracker()
+	if captureStore != nil {
+		captureStore.FeatureUsage().SetCallback(usagecallback.New(handler.usageTracker))
+	}
+
+	handler.healthMetrics = health.NewMetrics()
+	handler.toolCallLimiter = toolresp.NewToolCallLimiter(500, time.Minute)
+	handler.alertBuffer = alertbuf.NewAlertBuffer()
+	handler.stateRecovery = state.StateRecovery
+	if captureStore != nil {
+		captureStore.Recordings().SetDiagnostics(handler.stateRecovery)
+	}
+
+	if store, storeErr := persistence.NewSessionStore(state.SessionProjectPath, handler.stateRecovery); storeErr == nil {
+		handler.sessionStoreImpl = store
+	}
+	handler.summaryPrefs = summarypref.New(func() ([]byte, error) {
+		if handler.sessionStoreImpl == nil {
+			return nil, nil
+		}
+		return handler.sessionStoreImpl.Load("session", "response_mode")
+	}, handler.stateRecovery)
+	if handler.sessionStoreImpl != nil {
+		handler.noiseConfig = noise.NewNoiseConfigWithStore(handler.sessionStoreImpl, handler.stateRecovery)
+	} else {
+		handler.noiseConfig = noise.NewNoiseConfig()
+	}
+	handler.redactionEngine = redaction.NewRedactionEngine("")
+	var actionTelemetry *telemetrystore.Store
+	if captureStore != nil {
+		actionTelemetry = captureStore.Telemetry()
+	}
+	handler.actionRecorder = actionlog.New(actionTelemetry)
+	return handler
+}
+
+// initAsyncCommandRuntime wires the pending-query/async-result engine.
+func initAsyncCommandRuntime(handler *ToolHandler) {
+	asyncDeps := asynccommand.Deps{
+		Context:              handler.shutdownCtx,
+		DiagnosticHint:       handler.Guards.DiagnosticHint(),
+		DiagnosticHintString: handler.Guards.DiagnosticHintString,
+		AttachEvidence: func(correlationID string, responseData map[string]any) {
+			handler.interactRuntime.AttachEvidencePayload(correlationID, responseData)
+		},
+		AttachRetryContext: func(correlationID string, responseData map[string]any, status, reason string) {
+			handler.interactRuntime.AttachRetryContext(correlationID, responseData, status, reason)
+		},
+		SummaryEnabled:     handler.summaryPrefs.Enabled,
+		RecordAsyncOutcome: handler.usageTracker.RecordAsyncOutcome,
+	}
+	if handler.capture != nil {
+		asyncDeps.Commands, asyncDeps.Extension = handler.capture.Commands(), handler.capture.Extension()
+		asyncDeps.Performance, asyncDeps.Telemetry = handler.capture.Performance(), handler.capture.Telemetry()
+	}
+	handler.asyncCommands = asynccommand.New(asyncDeps)
+}
+
+// initAnnotationAnalysis wires the draw-mode annotation store and analyzers.
+func initAnnotationAnalysis(handler *ToolHandler) {
+	handler.annotationStore = handler.state.AnnotationRuntime.Store()
+	var annotationCommands annotationanalysis.Commands
+	if handler.capture != nil {
+		annotationCommands = handler.capture.Commands()
+	}
+	handler.annotationAnalysis = annotationanalysis.New(
+		handler.annotationStore,
+		annotationCommands,
+		handler.asyncCommands.FormatCommandResult,
+		handler.state.Logs.Entries,
+	)
+	if handler.capture != nil {
+		handler.annotationStore.SetCommandCompleter(func(correlationID string, result json.RawMessage) {
+			outcome := handler.capture.Commands().SubmitResult(browsercommand.Result{
+				Source: browsercommand.SourceDaemon, CorrelationID: correlationID, Status: "complete", Payload: result,
+			})
+			if outcome != browsercommand.OutcomeApplied {
+				handler.stateRecovery.Report(statediag.Diagnostic{
+					Name: "annotation_command_completion", CorrelationID: correlationID,
+					Detail: "annotation completion was rejected by the browser-command owner: " + string(outcome),
+					Fix:    "Retry analyze({what:'annotations'}) after the user finishes drawing.",
+				})
+			}
+		})
+	}
+}
+
+// initNoiseAutoDetection wires noise auto-detect to navigation and the first
+// extension connection.
+func initNoiseAutoDetection(handler *ToolHandler) {
+	detectNoise := func() {
+		noiseautorun.Detect(handler.noiseConfig, telemetryOf(handler), handler.state.Logs.Entries())
+	}
+	if handler.capture != nil {
+		noiseautorun.WireNavigation(handler.capture.Telemetry(), detectNoise)
+		noiseautorun.WireFirstConnect(handler.capture.Lifecycle(), handler.shutdownCtx.Done(), func() {
+			if handler.noiseFirstConnectFn != nil {
+				handler.noiseFirstConnectFn()
+				return
+			}
+			detectNoise()
+			diag.Printf("[Kaboom] noise auto-detect: ran on first extension connection\n")
+		})
+	}
+}
+
+// initSessionAndAuditState wires session observation, audit trails, upload
+// security, and the screen-recording interact handler.
+func initSessionAndAuditState(handler *ToolHandler) {
+	handler.securityScannerImpl = scan.NewScanner()
+	handler.thirdPartyAuditorImpl = thirdparty.NewThirdPartyAuditor()
+	handler.apiContractRuntime = apicontractruntime.NewRuntime()
+	var performanceEntries func() []performance.PerformanceSnapshot
+	var captureReader session.RuntimeCaptureReader
+	if handler.capture != nil {
+		performanceEntries = handler.capture.Performance().Samples
+		captureReader = handler.capture
+	}
+	handler.sessionManager = session.NewSessionManager(
+		10,
+		session.NewRuntimeStateReader(
+			handler.state.Logs.Entries,
+			performanceEntries,
+			captureReader,
+		),
+	)
+	handler.auditTrail = audit.NewAuditTrail(audit.AuditConfig{
+		MaxEntries:   10000,
+		Enabled:      true,
+		RedactParams: true,
+	})
+	handler.auditRecorder = audit.NewRecorder(handler.auditTrail)
+
+	handler.uploadSecurity = handler.state.UploadSecurity
+	handler.recordingInteractHandler = screenrec.NewInteractHandler(buildScreenrecDeps(handler))
+}
+
+// initAnalyzeAndGenerateDispatchers wires the analyze and generate tool
+// dispatchers, returning the shared observe deps built along the way.
+func initAnalyzeAndGenerateDispatchers(handler *ToolHandler) observecore.Deps {
+	analyzeDeps := buildAnalyzeDeps(handler)
+	observeDeps := buildObserveReadDeps(handler)
+	handler.analyzeDispatcher = analyzedispatch.NewDispatcher(analyzedispatch.Config{
+		Analyze: analyzeDeps,
+		Inspect: buildInspectDeps(handler),
+		Observe: observeDeps,
+		Audit: combinedaudit.Deps{
+			Analyze: analyzeDeps,
+			Performance: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+				return observesession.CheckPerformance(observeDeps, req, args)
+			},
+			Accessibility: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+				return observepage.RunA11yAudit(observeDeps, req, args)
+			},
+		},
+		Version: handler.state.Version, AnnotationStore: handler.annotationStore, Visual: visualAnalyzeDeps{h: handler},
+		DesignDrift: designdrift.Deps{
+			ProbeStyles: handler.asyncCommands.ExecuteStyleProbe,
+			TrackingStatus: func() (bool, string) {
+				enabled, _, tabURL := analyzeDeps.GetTrackingStatus()
+				return enabled, tabURL
+			},
+		},
+		ValidateAPI: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.apiContractRuntime.Handle(req, args, handler.capture.Telemetry().NetworkBodies().Snapshot().Bodies)
+		},
+		PageSummary: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.pageActions.HandleContentExtraction(req, args, "page_summary", "page_summary")
+		},
+		Annotations: handler.annotationAnalysis.GetAnnotations, AnnotationDetail: handler.annotationAnalysis.GetAnnotationDetail,
+		FeatureGates: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.pageActions.HandleContentExtraction(req, args, "feature_gates", "feature_gates")
+		},
+	})
+	handler.testGenHandler = testgenhandler.New(buildTestGenerationDeps(handler))
+	handler.generateDispatcher = toolgenerate.NewDispatcher(buildGenerateDeps(handler), handler.testGenHandler)
+	return observeDeps
+}
+
+// initInteractAndObserveDispatchers wires the interact action owners plus the
+// observe dispatcher.
+func initInteractAndObserveDispatchers(handler *ToolHandler, observeDeps observecore.Deps) {
+	initializeInteractActionOwners(handler)
+	handler.configureLocalDeps = buildConfigureLocalDeps(handler)
+	handler.tutorialDeps = buildTutorialDeps(handler)
+	handler.issueReportDeps = buildIssueReportDeps(handler)
+	handler.uploadInteractHandler = interactupload.New(&interactupload.Deps{
+		RequirePilot: handler.Guards.RequirePilot, RequireExtension: handler.Guards.RequireExtension,
+		RequireTabTracking:  handler.Guards.RequireTabTracking,
+		EnqueuePendingQuery: handler.asyncCommands.EnqueuePendingQuery, RecordAIAction: handler.actionRecorder.Record,
+	}, handler.interactRuntime)
+	var queryStore toolobserve.CommandStore
+	var inProgress func() []syncruntime.SyncInProgress
+	if handler.capture != nil {
+		queryStore = handler.capture.Commands()
+		inProgress = handler.capture.Extension().GetInProgressCommands
+	}
+	handler.observeDispatcher = toolobserve.NewDispatcher(toolobserve.Config{
+		Observe: observeDeps, Local: buildObserveLocalDeps(handler),
+		IsExtensionConnected: func() bool { return handler.capture.Extension().IsExtensionConnected() },
+		Commands:             queryStore, InProgress: inProgress,
+		AnnotationStore: handler.annotationStore,
+		Annotations: func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.annotationAnalysis.GetAnnotations(req, args)
+		},
+		AnnotationDetail: func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.annotationAnalysis.GetAnnotationDetail(req, args)
+		},
+		Recordings: func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.recordingHandler.Recordings(req, args)
+		},
+		RecordingActions: func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.recordingHandler.RecordingActions(req, args)
+		},
+		PlaybackResults: func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.recordingHandler.PlaybackResults(req, args)
+		},
+		LogDiffReport: func(_ observecore.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.recordingHandler.LogDiffReport(req, args)
+		},
+		FormatCommand: handler.asyncCommands.FormatCommandResult, InjectSummary: handler.summaryPrefs.Inject,
+		DrainAlerts: handler.alertBuffer.DrainAlerts, DiagnosticHint: handler.Guards.DiagnosticHint(),
+		StateDiagnostics: handler.stateRecovery,
+	})
+}
+
+// initSessionConfigHandlers wires stateful interact handling, sequences, and
+// the configure dispatcher.
+func initSessionConfigHandlers(handler *ToolHandler) {
+	handler.stateInteractHandler = interactstate.New(&interactstate.Deps{
+		IsPilotActionAllowed: func() bool {
+			return handler.capture != nil && handler.capture.Extension().IsPilotActionAllowed()
+		},
+		IsExtensionConnected: func() bool {
+			return handler.capture != nil && handler.capture.Extension().IsExtensionConnected()
+		},
+		GetTrackingStatus: func() (bool, int, string) {
+			if handler.capture == nil {
+				return false, 0, ""
+			}
+			return handler.capture.Extension().GetTrackingStatus()
+		},
+		GetTrackedTabTitle: func() string {
+			if handler.capture == nil {
+				return ""
+			}
+			return handler.capture.Extension().GetTrackedTabTitle()
+		},
+		WaitForCommand: func(correlationID string, timeout time.Duration) (*queries.CommandResult, bool) {
+			if handler.capture == nil {
+				return nil, false
+			}
+			return handler.capture.Commands().WaitCommand(correlationID, timeout)
+		},
+		EnqueuePendingQuery: handler.asyncCommands.EnqueuePendingQuery,
+		RecordAIAction:      handler.actionRecorder.Record,
+		RequireSessionStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
+			return sessionStoreGuard(handler.sessionStoreImpl, req)
+		},
+		DiagnosticHint:   handler.Guards.DiagnosticHint,
+		StateDiagnostics: handler.stateRecovery,
+		Redact: func(data map[string]any) map[string]any {
+			if handler.redactionEngine == nil {
+				return data
+			}
+			return handler.redactionEngine.RedactMapValues(data)
+		},
+	}, handler.sessionStoreImpl)
+	handler.interactDispatcher = buildInteractDispatcher(handler)
+	handler.configureSessions = toolconfigure.NewSessionHandler(toolconfigure.SessionDeps{
+		RequireStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
+			return sessionStoreGuard(handler.sessionStoreImpl, req)
+		},
+		InvalidateSummary: handler.summaryPrefs.Invalidate,
+		SetActiveCodebase: handler.state.ActiveCodebase.SetActiveCodebase,
+	},
+		handler.sessionStoreImpl,
+		handler.sessionManager,
+	)
+	var waitForSequenceCommand func(string, time.Duration) (*queries.CommandResult, bool)
+	if handler.capture != nil {
+		waitForSequenceCommand = handler.capture.Commands().WaitCommand
+	}
+	handler.sequences = sequencehandler.New(sequencehandler.Deps{
+		Store:          handler.sessionStoreImpl,
+		ReplayMu:       &handler.replayMu,
+		Interact:       handler.toolInteract,
+		WaitForCommand: waitForSequenceCommand,
+		RecordAction:   handler.actionRecorder.Record,
+		Diagnostics:    handler.stateRecovery,
+	})
+	handler.configureDispatcher = buildConfigureDispatcher(handler)
+}
+
+type visualAnalyzeDeps struct{ h *ToolHandler }
+
+func buildMCPToolBackend(handler *ToolHandler) mcpcall.Backend {
+	return mcpcall.Backend{
+		Executor: handler, Extension: extensionOf(handler), Telemetry: telemetryOf(handler),
+		Limiter: handler.toolCallLimiter, Redactor: handler.redactionEngine,
+		Schemas: schema.AllTools(), UsageTracker: handler.usageTracker,
+	}
+}
+
+func (d visualAnalyzeDeps) GetTrackingStatus() (bool, int, string) {
+	return d.h.capture.Extension().GetTrackingStatus()
+}
+
+func (d visualAnalyzeDeps) HasSessionStore() bool { return d.h.sessionStoreImpl != nil }
+
+func (d visualAnalyzeDeps) HandleSessionStore(args persistence.SessionStoreArgs) (json.RawMessage, error) {
+	return d.h.sessionStoreImpl.HandleSessionStore(args)
+}
+
+func buildGenerateDeps(h *ToolHandler) toolgenerate.Deps {
+	deps := toolgenerate.Deps{
+		AnnotationStore:  h.annotationStore,
+		Version:          h.state.Version,
+		ExecuteA11yQuery: h.asyncCommands.ExecuteA11yQuery,
+		IsExtensionConnected: func() bool {
+			return h.capture.Extension().IsExtensionConnected()
+		},
+	}
+	if h.capture != nil {
+		deps.Telemetry, deps.ExtensionLogs = h.capture.Telemetry(), h.capture.ExtensionLogs()
+		deps.CommandHistory = h.capture.Commands()
+		deps.TrackingStatus = h.capture.Extension().GetTrackingStatus
+	}
+	return deps
+}
+
+func buildTestGenerationDeps(h *ToolHandler) testgenhandler.Deps {
+	return testgenhandler.Deps{
+		LogEntries: func() []types.LogEntry {
+			entries, _ := h.state.Logs.EntriesWithAddedAt()
+			return entries
+		},
+		EnhancedActions: func() []types.EnhancedAction {
+			if h.capture == nil {
+				return nil
+			}
+			return h.capture.Telemetry().Actions().Snapshot().Actions
+		},
+		NetworkBodies: func() []types.NetworkBody {
+			if h.capture == nil {
+				return nil
+			}
+			return h.capture.Telemetry().NetworkBodies().Snapshot().Bodies
+		},
+	}
+}
+
+func buildAnalyzeDeps(h *ToolHandler) toolanalyze.Deps {
+	return toolanalyze.Deps{
+		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery,
+		MaybeWaitForCommand: h.asyncCommands.MaybeWaitForCommand,
+		GetTrackingStatus: func() (bool, int, string) {
+			if h.capture == nil {
+				return false, 0, ""
+			}
+			return h.capture.Extension().GetTrackingStatus()
+		},
+		NetworkBodies: func() []types.NetworkBody {
+			if h.capture == nil {
+				return nil
+			}
+			return h.capture.Telemetry().NetworkBodies().Snapshot().Bodies
+		},
+		NetworkWaterfallEntries: func() []types.NetworkWaterfallEntry {
+			if h.capture == nil {
+				return nil
+			}
+			return h.capture.Telemetry().NetworkWaterfall().Entries()
+		},
+		ConsoleSecurityEntries: func() []types.LogEntry {
+			snapshot := h.state.Logs.Entries()
+			entries := make([]types.LogEntry, len(snapshot))
+			for index, entry := range snapshot {
+				entries[index] = types.LogEntry(entry)
+			}
+			return entries
+		},
+		SecurityScanner: func() toolanalyze.SecurityScannerInterface {
+			if h.securityScannerImpl == nil {
+				return nil
+			}
+			return h.securityScannerImpl
+		},
+		LogEntries: func() []types.LogEntry {
+			entries, _ := h.state.Logs.EntriesWithAddedAt()
+			return entries
+		},
+		ExecuteA11yQuery: h.asyncCommands.ExecuteA11yQuery,
+	}
+}
+
+func buildInspectDeps(h *ToolHandler) inspect.Deps {
+	return inspect.Deps{
+		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery,
+		MaybeWaitForCommand: h.asyncCommands.MaybeWaitForCommand,
+	}
+}
+
+func buildObserveLocalDeps(h *ToolHandler) toolobserve.Deps {
+	return toolobserve.Deps{
+		Inbox:               h.state.PushInbox,
+		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery,
+		MaybeWaitForCommand: h.asyncCommands.MaybeWaitForCommand,
+	}
+}
+
+func buildObserveReadDeps(h *ToolHandler) observecore.Deps {
+	deps := observecore.Deps{
+		Commands: queryRunner(h), Screenshots: newScreenshotService(h), PageInfo: newPageInfoService(h),
+		Storage: newStorageService(h), A11y: newA11yService(h),
+		LogEntries: func() ([]types.LogEntry, []time.Time) {
+			return h.state.Logs.EntriesWithAddedAt()
+		},
+		LogTotalAdded: h.state.Logs.TotalAdded,
+		IsConsoleNoise: func(entry types.LogEntry) bool {
+			if h.noiseConfig == nil {
+				return false
+			}
+			return h.noiseConfig.IsConsoleNoise(entry)
+		},
+		DiagnosticHintString: h.Guards.DiagnosticHintString,
+	}
+	if h.capture != nil {
+		deps.Extension, deps.Telemetry = h.capture.Extension(), h.capture.Telemetry()
+		deps.Performance, deps.ExtensionLogs = h.capture.Performance(), h.capture.ExtensionLogs()
+	}
+	return deps
+}
+
+func buildScreenrecDeps(h *ToolHandler) screenrec.Deps {
+	if h.Guards == nil {
+		h.Guards = toolguard.New(extensionOf(h), h.shutdownCtx, defaultExtensionReadinessTimeout())
+	}
+	getCommandResult := func(string) (*queries.CommandResult, bool) { return nil, false }
+	if h.capture != nil {
+		getCommandResult = h.capture.Commands().Command
+	}
+	return screenrec.Deps{
+		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery,
+		RequirePilot:        h.Guards.RequirePilot,
+		RequireExtension:    h.Guards.RequireExtension,
+		RecordAIAction:      h.actionRecorder.Record,
+		DiagnosticHint:      h.Guards.DiagnosticHint,
+		GetCommandResult:    getCommandResult,
+	}
+}

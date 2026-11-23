@@ -1,0 +1,381 @@
+<!doctype html>
+<!-- Embedded by internal/composition/http/dashboard. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaboom MCP Server</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4Ij4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZmxhbWUiIHgxPSIwJSIgeTE9IjEwMCUiIHgyPSIwJSIgeTI9IjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2Y5NzMxNiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3R5bGU9InN0b3AtY29sb3I6I2ZiOTIzYyIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNmYmJmMjQiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImlubmVyRmxhbWUiIHgxPSIwJSIgeTE9IjEwMCUiIHgyPSIwJSIgeTI9IjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2ZiYmYyNCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNmZWYzYzciLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjY0IiBjeT0iNjQiIHI9IjYwIiBmaWxsPSIjMWExYTFhIi8+CiAgPHBhdGggZD0iTTY0IDE2IEM0MCA0MCwgMjggNjAsIDI4IDgwIEMyOCAxMDAsIDQ0IDExNiwgNjQgMTE2IEM4NCAxMTYsIDEwMCAxMDAsIDEwMCA4MCBDMTAwIDYwLCA4OCA0MCwgNjQgMTYgWiIgZmlsbD0idXJsKCNmbGFtZSkiLz4KICA8cGF0aCBkPSJNNjQgNDggQzUyIDYwLCA0NCA3MiwgNDQgODQgQzQ0IDk2LCA1MiAxMDQsIDY0IDEwNCBDNzYgMTA0LCA4NCA5NiwgODQgODQgQzg0IDcyLCA3NiA2MCwgNjQgNDggWiIgZmlsbD0idXJsKCNpbm5lckZsYW1lKSIvPgo8L3N2Zz4K">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #111;
+  color: #e0e0e0;
+  padding: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+a { color: #7ab3ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #333;
+}
+header .logo { width: 28px; height: 28px; flex-shrink: 0; }
+header h1 { font-size: 22px; font-weight: 600; color: #fff; }
+header .version { color: #888; font-size: 14px; }
+header .uptime { color: #888; font-size: 14px; margin-left: auto; }
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+.card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 16px;
+}
+.card h2 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  margin-bottom: 12px;
+}
+.card.wide { grid-column: 1 / -1; }
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.status-row:last-child { margin-bottom: 0; }
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot.green { background: #22c55e; box-shadow: 0 0 6px #22c55e66; }
+.dot.red { background: #ef4444; box-shadow: 0 0 6px #ef444466; }
+.dot.yellow { background: #eab308; box-shadow: 0 0 6px #eab30866; }
+.dot.gray { background: #666; }
+.label { color: #aaa; font-size: 13px; }
+.value { color: #fff; font-size: 13px; font-weight: 500; margin-left: auto; }
+.buffer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.buffer-row:last-child { margin-bottom: 0; }
+.buffer-name { width: 90px; color: #aaa; flex-shrink: 0; }
+.buffer-bar {
+  flex: 1;
+  height: 6px;
+  background: #2a2a2a;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.buffer-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: #3b82f6;
+  transition: width 0.3s;
+}
+.buffer-fill.warn { background: #eab308; }
+.buffer-fill.crit { background: #ef4444; }
+.buffer-count { width: 80px; text-align: right; color: #888; font-size: 12px; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th {
+  text-align: left;
+  color: #666;
+  font-weight: 500;
+  padding: 4px 8px 8px;
+  border-bottom: 1px solid #2a2a2a;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #1f1f1f;
+  color: #ccc;
+}
+tr:last-child td { border-bottom: none; }
+.mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
+.status-ok { color: #22c55e; }
+.status-err { color: #ef4444; }
+.empty { color: #555; font-style: italic; padding: 12px 8px; }
+.links {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.links a {
+  display: inline-block;
+  padding: 6px 14px;
+  background: #1f1f1f;
+  border: 1px solid #333;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #ccc;
+  transition: border-color 0.2s;
+}
+.links a:hover { border-color: #555; text-decoration: none; color: #fff; }
+.refresh-note {
+  text-align: center;
+  color: #444;
+  font-size: 11px;
+  margin-top: 24px;
+}
+</style>
+</head>
+<body>
+<header>
+  <svg class="logo" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="flame" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" style="stop-color:#f97316"/><stop offset="50%" style="stop-color:#fb923c"/><stop offset="100%" style="stop-color:#fbbf24"/>
+      </linearGradient>
+      <linearGradient id="innerFlame" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" style="stop-color:#fbbf24"/><stop offset="100%" style="stop-color:#fef3c7"/>
+      </linearGradient>
+    </defs>
+    <circle cx="64" cy="64" r="60" fill="#1a1a1a"/>
+    <path d="M64 16 C40 40, 28 60, 28 80 C28 100, 44 116, 64 116 C84 116, 100 100, 100 80 C100 60, 88 40, 64 16 Z" fill="url(#flame)"/>
+    <path d="M64 48 C52 60, 44 72, 44 84 C44 96, 52 104, 64 104 C76 104, 84 96, 84 84 C84 72, 76 60, 64 48 Z" fill="url(#innerFlame)"/>
+  </svg>
+  <h1>Kaboom MCP Server</h1>
+  <span class="version" id="version"></span>
+  <span class="uptime" id="uptime"></span>
+</header>
+
+<div class="grid">
+  <div class="card" id="status-card">
+    <h2>Status</h2>
+    <div class="status-row">
+      <span class="dot" id="ext-dot"></span>
+      <span class="label">Browser extension</span>
+      <span class="value" id="ext-status"></span>
+    </div>
+    <div class="status-row">
+      <span class="dot" id="pilot-dot"></span>
+      <span class="label">Web Pilot</span>
+      <span class="value" id="pilot-status"></span>
+    </div>
+    <div class="status-row">
+      <span class="dot gray"></span>
+      <span class="label">Last browser ping</span>
+      <span class="value" id="last-ping"></span>
+    </div>
+    <div class="status-row">
+      <span class="dot gray"></span>
+      <span class="label">MCP tool calls</span>
+      <span class="value" id="total-calls"></span>
+    </div>
+  </div>
+
+  <div class="card" id="ports-card">
+    <h2>Ports &amp; Terminal</h2>
+    <div class="status-row">
+      <span class="dot gray"></span>
+      <span class="label">Main server</span>
+      <span class="value" id="main-port"></span>
+    </div>
+    <div class="status-row">
+      <span class="dot" id="term-dot"></span>
+      <span class="label">Terminal server</span>
+      <span class="value" id="term-port"></span>
+    </div>
+    <div class="status-row">
+      <span class="dot" id="term-session-dot"></span>
+      <span class="label">Terminal session</span>
+      <span class="value" id="term-session"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Buffers</h2>
+    <div id="buffers"></div>
+  </div>
+
+  <div class="card wide">
+    <h2>Recent MCP Commands</h2>
+    <div id="commands"></div>
+  </div>
+
+  <div class="card wide">
+    <h2>Links</h2>
+    <div class="links">
+      <a href="/logs.html">Console Logs</a>
+      <a href="/setup">Setup</a>
+      <a href="/docs">API Docs</a>
+      <a href="/diagnostics">Diagnostics</a>
+      <a href="/health">Health JSON</a>
+    </div>
+  </div>
+</div>
+
+<div class="refresh-note">Auto-refreshes every 3s</div>
+
+<script>
+function ago(ts) {
+  if (!ts) return 'never';
+  const ms = Date.now() - new Date(ts).getTime();
+  if (ms < 0) return 'just now';
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return s + 's ago';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + 'm ' + (s % 60) + 's ago';
+  const h = Math.floor(m / 60);
+  return h + 'h ' + (m % 60) + 'm ago';
+}
+
+function fmtUptime(sec) {
+  if (!sec && sec !== 0) return '';
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
+  if (m > 0) return m + 'm ' + s + 's';
+  return s + 's';
+}
+
+function bufferBar(name, entries, capacity) {
+  const pct = capacity > 0 ? (entries / capacity * 100) : 0;
+  let cls = '';
+  if (pct > 80) cls = 'crit';
+  else if (pct > 50) cls = 'warn';
+  return '<div class="buffer-row">' +
+    '<span class="buffer-name">' + name + '</span>' +
+    '<div class="buffer-bar"><div class="buffer-fill ' + cls + '" style="width:' + Math.min(pct, 100) + '%"></div></div>' +
+    '<span class="buffer-count">' + entries + ' / ' + capacity + '</span></div>';
+}
+
+function render(d) {
+  document.getElementById('version').textContent = 'v' + (d.version || '?');
+  document.getElementById('uptime').textContent = 'up ' + fmtUptime(d.uptime_seconds);
+
+  const extDot = document.getElementById('ext-dot');
+  const extStatus = document.getElementById('ext-status');
+  if (d.extension_connected) {
+    extDot.className = 'dot green';
+    extStatus.textContent = 'connected';
+  } else {
+    extDot.className = 'dot red';
+    extStatus.textContent = 'disconnected';
+  }
+
+  const pilotDot = document.getElementById('pilot-dot');
+  const pilotStatus = document.getElementById('pilot-status');
+  if (d.pilot_enabled) {
+    pilotDot.className = 'dot green';
+    pilotStatus.textContent = 'enabled';
+  } else {
+    pilotDot.className = 'dot gray';
+    pilotStatus.textContent = 'disabled';
+  }
+
+  document.getElementById('last-ping').textContent = ago(d.last_poll_at);
+  document.getElementById('total-calls').textContent = (d.audit && d.audit.total_calls) || 0;
+
+  // Ports & Terminal
+  document.getElementById('main-port').textContent = ':' + (d.listen_port || '?');
+
+  var term = d.terminal || {};
+  var termDot = document.getElementById('term-dot');
+  var termPort = document.getElementById('term-port');
+  if (term.running) {
+    termDot.className = 'dot green';
+    termPort.textContent = ':' + term.port;
+  } else {
+    termDot.className = 'dot red';
+    termPort.textContent = 'not running';
+  }
+
+  var termSessionDot = document.getElementById('term-session-dot');
+  var termSession = document.getElementById('term-session');
+  var sessions = term.sessions || 0;
+  var sessionIds = term.session_ids || [];
+  if (sessions > 0) {
+    termSessionDot.className = 'dot green';
+    termSession.textContent = sessions + ' active (' + sessionIds.join(', ') + ')';
+  } else {
+    termSessionDot.className = 'dot gray';
+    termSession.textContent = 'none';
+  }
+
+  const b = d.buffers || {};
+  document.getElementById('buffers').innerHTML =
+    bufferBar('Console', b.console_entries || 0, b.console_capacity || 0) +
+    bufferBar('Network', b.network_entries || 0, b.network_capacity || 0) +
+    bufferBar('WebSocket', b.websocket_entries || 0, b.websocket_capacity || 0) +
+    bufferBar('Actions', b.action_entries || 0, b.action_capacity || 0);
+
+  const cmds = d.recent_commands || [];
+  if (cmds.length === 0) {
+    document.getElementById('commands').innerHTML = '<div class="empty">No MCP commands yet</div>';
+  } else {
+    let html = '<table><tr><th>Time</th><th>Tool</th><th>Parameters</th><th>Status</th><th>Duration</th></tr>';
+    for (const c of cmds) {
+      const statusCls = c.status < 400 ? 'status-ok' : 'status-err';
+      html += '<tr><td>' + ago(c.timestamp) + '</td>' +
+        '<td class="mono">' + esc(c.tool) + '</td>' +
+        '<td class="mono">' + esc(c.params) + '</td>' +
+        '<td class="' + statusCls + '">' + c.status + '</td>' +
+        '<td class="mono">' + (c.duration_ms || 0) + 'ms</td></tr>';
+    }
+    html += '</table>';
+    document.getElementById('commands').innerHTML = html;
+  }
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+let uptimeSec = null;
+let lastFetch = 0;
+
+async function refresh() {
+  try {
+    const r = await fetch('/api/status');
+    if (r.ok) {
+      const d = await r.json();
+      uptimeSec = d.uptime_seconds;
+      lastFetch = Date.now();
+      render(d);
+    }
+  } catch (e) { /* silent */ }
+}
+
+setInterval(function() {
+  if (uptimeSec !== null) {
+    const elapsed = (Date.now() - lastFetch) / 1000;
+    document.getElementById('uptime').textContent = 'up ' + fmtUptime(uptimeSec + elapsed);
+  }
+}, 1000);
+
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>

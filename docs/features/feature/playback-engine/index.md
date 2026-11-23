@@ -9,8 +9,8 @@ code_paths:
   - internal/recording/types.go
   - internal/recording/manager.go
   - internal/recording/manager_store.go
-  - internal/statefile/statefile.go
-  - internal/statediag/collector.go
+  - internal/platform/state/file/statefile.go
+  - internal/lifecycle/doctor/statediag/collector.go
   - internal/recording/manager_storage.go
   - internal/recording/playback/types.go
   - internal/recording/playback/session.go
@@ -20,33 +20,33 @@ code_paths:
   - internal/recording/logdiff/compare.go
   - internal/recording/logdiff/helpers.go
   - internal/recording/logdiff/report.go
-  - internal/capture/capture.go
-  - internal/capture/httpingest/handlers.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - cmd/browser-agent/internal/toolobserve/dispatcher.go
-  - cmd/browser-agent/internal/toolobserve/deps.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
-  - cmd/browser-agent/internal/toolrecording/handler.go
-  - cmd/browser-agent/internal/toolrecording/helpers.go
+  - internal/composition/capture/capture.go
+  - internal/ingestion/http/handlers.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/tools/configure/handler/dispatcher.go
+  - internal/tools/observe/handler/dispatcher.go
+  - internal/tools/observe/handler/deps.go
+  - internal/composition/toolruntime/tools_core.go
+  - internal/tools/recording/handler.go
+  - internal/tools/recording/helpers.go
 test_paths:
-  - internal/capture/httpingest/handlers_test.go
+  - internal/ingestion/http/handlers_test.go
   - tests/architecture/user-state-loaders.test.cjs
-  - internal/capture/testhelpers_test.go
-  - internal/capture/recordingtest/recording_playback_integration_test.go
-  - internal/capture/recordingtest/recording_logdiff_integration_test.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
+  - internal/composition/capture/testhelpers_test.go
+  - internal/recording/testsupport/recording_playback_integration_test.go
+  - internal/recording/testsupport/recording_logdiff_integration_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
-  - cmd/browser-agent/internal/toolrecording/handler_test.go
-  - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
-  - cmd/browser-agent/internal/toolrecording/playback_result_test.go
+  - internal/tools/recording/handler_test.go
+  - internal/tools/recording/toolrecording_test.go
+  - internal/tools/recording/playback_result_test.go
   - internal/recording/manager_test.go
-  - internal/statediag/collector_test.go
+  - internal/lifecycle/doctor/statediag/collector_test.go
   - internal/recording/types_test.go
   - internal/recording/state_path_test.go
   - internal/recording/playback/playback_test.go
   - internal/recording/logdiff/logdiff_test.go
-  - internal/capture/recordingtest/recording_manager_test.go
+  - internal/recording/testsupport/recording_manager_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -115,9 +115,9 @@ last_verified_date: 2026-03-05
   against in-memory fakes.
 - Capture exposes the canonical manager through `Capture.Recordings()`; there
   is no recording/playback delegation surface on Capture.
-- Recording storage HTTP boundary: `internal/capture/httpingest/handlers.go`
-- MCP owners: `cmd/browser-agent/tools_configure.go`, `cmd/browser-agent/internal/toolobserve/dispatcher.go`, and the composition root in `tools_core.go`
-- Recording and playback MCP behavior/state: `cmd/browser-agent/internal/toolrecording/`
+- Recording storage HTTP boundary: `internal/ingestion/http/handlers.go`
+- MCP owners: `cmd/browser-agent/tools_configure.go`, `internal/tools/observe/handler/dispatcher.go`, and the composition root in `tools_core.go`
+- Recording and playback MCP behavior/state: `internal/tools/recording/`
 - Configure playback and log-diff actions route directly to the composed
   `toolrecording.Handler`; no root ToolHandler forwarding surface remains.
 - Playback-result tests call `toolrecording.BuildPlaybackResult` directly, and

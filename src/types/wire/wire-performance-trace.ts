@@ -1,9 +1,9 @@
 // THIS FILE IS GENERATED — do not edit by hand.
-// Source: internal/perftrace/wire_trace.go
+// Source: internal/observation/perftrace/wire_trace.go
 // Generator: scripts/build/generate-wire-types.js
 
 /**
- * @fileoverview Wire types for Chrome performance trace streaming — matches internal/perftrace/wire_trace.go
+ * @fileoverview Wire types for Chrome performance trace streaming — matches internal/observation/perftrace/wire_trace.go
  *
  * Canonical TypeScript definitions for the local trace artifact lifecycle.
  * Changes here MUST be mirrored in the Go counterpart. Run `make check-wire-drift`.

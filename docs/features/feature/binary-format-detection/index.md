@@ -6,12 +6,12 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-06
 code_paths:
-  - internal/capture/telemetrystore/store.go
-  - internal/util/binary.go
+  - internal/observation/store/telemetry/store.go
+  - internal/platform/util/binary.go
 test_paths:
-  - internal/util/binary_test.go
-  - internal/util/binary_protobuf_bson_test.go
-  - internal/capture/pipelinetest/binary_format_integration_test.go
+  - internal/platform/util/binary_test.go
+  - internal/platform/util/binary_protobuf_bson_test.go
+  - internal/observation/testsupport/pipeline/binary_format_integration_test.go
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-04
 ---

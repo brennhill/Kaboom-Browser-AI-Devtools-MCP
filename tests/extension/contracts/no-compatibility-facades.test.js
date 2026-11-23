@@ -66,7 +66,7 @@ test('environment transactions expose no QA-specific private transport aliases',
     'src/types/runtime/queries.ts',
     'src/background/commands/helpers.ts',
     'src/background/pending-queries.ts',
-    'cmd/browser-agent/internal/toolconfigure/qafixture/handler.go'
+    'internal/tools/configure/handler/qafixture/handler.go'
   ]) {
     const source = readFileSync(path, 'utf8')
     assert.doesNotMatch(source, /qa_fixture_(?:snapshot|apply|restore)/, `${path} retains an obsolete private command`)

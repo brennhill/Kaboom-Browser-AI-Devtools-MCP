@@ -44,7 +44,7 @@ For belt-and-suspenders AI review, add a prompt hook to the Edit|Write matcher i
 
 Open `kaboom-code-standards.md` and add your project's patterns. Be specific — vague rules cause false positives.
 
-Good rule: "Request validation must use `validateAndRespond()` from `internal/util/guards.go`. Do not write inline if/else validation chains."
+Good rule: "Request validation must use `validateAndRespond()` from `internal/platform/util/guards.go`. Do not write inline if/else validation chains."
 
 Bad rule: "Use good patterns." (flags everything)
 

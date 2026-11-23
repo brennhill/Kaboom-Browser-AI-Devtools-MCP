@@ -8,10 +8,10 @@ links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
-  - internal/hook/session.go
+  - internal/hooks/session.go
   - cmd/hooks/main.go
 test_paths:
-  - internal/hook/session_test.go
+  - internal/hooks/session_test.go
   - cmd/hooks/main_test.go
 ---
 
@@ -25,10 +25,10 @@ test_paths:
 
 ## Requirement Mapping
 
-- SESSION_TRACK_001 -> `internal/hook/session.go:runSessionTrack()` and `AppendTouch()` — append the classified JSONL entry
-- SESSION_TRACK_002 -> `internal/hook/session.go:checkRedundantRead()` — scans log for prior reads
-- SESSION_TRACK_003 -> `internal/hook/session.go:SessionSummary()` — counts reads/edits/commands
-- SESSION_TRACK_004 -> `internal/hook/session.go:SessionID()` — derives `(ppid, cwd)` hash
+- SESSION_TRACK_001 -> `internal/hooks/session.go:runSessionTrack()` and `AppendTouch()` — append the classified JSONL entry
+- SESSION_TRACK_002 -> `internal/hooks/session.go:checkRedundantRead()` — scans log for prior reads
+- SESSION_TRACK_003 -> `internal/hooks/session.go:SessionSummary()` — counts reads/edits/commands
+- SESSION_TRACK_004 -> `internal/hooks/session.go:SessionID()` — derives `(ppid, cwd)` hash
 - SESSION_TRACK_005 -> all functions return `("", nil)` on I/O errors
 - SESSION_TRACK_006 -> benchmarked and regression-tested in `session_test.go`
 
@@ -94,7 +94,7 @@ kaboom-hooks session-track:
 
 ## Cross-Hook API
 
-Other hooks import `internal/hook/session.go`:
+Other hooks import `internal/hooks/session.go`:
 
 ```go
 // ReadTouches returns all session entries, newest first.
@@ -140,5 +140,5 @@ These are read-only queries against `touches.jsonl`. Any hook can call them with
 
 **Session summary with failure:**
 ```
-[Session] 8 files read, 3 edited, 4 commands. Last test: FAIL (go test ./internal/hook/)
+[Session] 8 files read, 3 edited, 4 commands. Last test: FAIL (go test ./internal/hooks/)
 ```

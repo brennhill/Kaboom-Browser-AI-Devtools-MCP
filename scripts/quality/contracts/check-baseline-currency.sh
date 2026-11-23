@@ -83,7 +83,7 @@ judge_baseline \
 judge_baseline \
   .mcp-response-contract.json \
   response-contract-update \
-  env UPDATE_GOLDEN=1 go test ./cmd/browser-agent/internal/responsegate \
+  env UPDATE_GOLDEN=1 go test ./internal/composition/testsupport/responsegate \
   -run TestDeclaredResponseShapesStillShip -count=1 || failures=$((failures + 1))
 
 if [[ "$failures" -ne 0 ]]; then

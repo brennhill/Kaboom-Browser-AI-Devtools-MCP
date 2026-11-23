@@ -6,18 +6,18 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-07
 code_paths:
-  - internal/performance/diff.go
-  - internal/performance/types.go
-  - internal/capture/perfstore/store.go
+  - internal/observation/performance/diff.go
+  - internal/observation/performance/types.go
+  - internal/observation/store/perf/store.go
   - src/lib/analysis/perf-snapshot.ts
   - src/lib/analysis/performance.ts
 test_paths:
-  - internal/performance/diff_test.go
-  - internal/performance/diff_resource_test.go
-  - internal/performance/diff_summary_test.go
-  - internal/performance/wire_performance_test.go
-  - internal/performance/no_facade_test.go
-  - internal/capture/perfstore/store_test.go
+  - internal/observation/performance/diff_test.go
+  - internal/observation/performance/diff_resource_test.go
+  - internal/observation/performance/diff_summary_test.go
+  - internal/observation/performance/wire_performance_test.go
+  - internal/observation/performance/no_facade_test.go
+  - internal/observation/store/perf/store_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -45,7 +45,7 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-The focused `internal/capture/perfstore` owner retains performance snapshots,
+The focused `internal/observation/store/perf` owner retains performance snapshots,
 chronological repeated-run samples, and pre-action baselines. Its injected clock
 makes oldest-age and eviction behavior deterministic in tests. All three stores
 use oldest-first single-pass eviction and expose size, capacity, cumulative

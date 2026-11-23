@@ -25,8 +25,8 @@ export default [
       'pypi/**/dist/',
       'pypi/**/*.egg-info/',
       // Generated framework smoke artifacts
-      'cmd/browser-agent/internal/testpages/pages/frameworks/**',
-      'cmd/browser-agent/internal/testpages/pages/_next/**',
+      'internal/composition/http/testpages/pages/frameworks/**',
+      'internal/composition/http/testpages/pages/_next/**',
       'scripts/smoke-tests/framework/framework-fixtures/next-app/.next/**',
       'scripts/smoke-tests/framework/framework-fixtures/next-app/out/**',
       // Compiled TypeScript output (linted at the .ts source level)
@@ -46,9 +46,9 @@ export default [
       // Vendored terminal assets (xterm.js) — both the legacy path and the
       // refactored internal/terminal location.
       'cmd/browser-agent/terminal_assets/**',
-      'cmd/browser-agent/internal/terminal/assets/terminal_assets/**',
+      'internal/terminal/adapters/assets/terminal_assets/**',
       // Generated smoke fixture bundles
-      'cmd/browser-agent/internal/testpages/pages/frameworks/*.bundle.js'
+      'internal/composition/http/testpages/pages/frameworks/*.bundle.js'
     ]
   },
 
@@ -238,7 +238,7 @@ export default [
   // is a single expression the injected executor compiles with `return (<script>)`,
   // so it is a script, not a module.
   {
-    files: ['cmd/browser-agent/internal/toolinteract/pagescripts/**/*.js'],
+    files: ['internal/tools/interact/handler/pagescripts/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'script',

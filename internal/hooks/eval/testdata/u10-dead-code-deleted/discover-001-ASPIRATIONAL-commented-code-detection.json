@@ -1,0 +1,14 @@
+{
+  "description": "ASPIRATIONAL U10 Discovery: engine should detect commented-out code blocks in the codebase and report as dead code",
+  "hook": "quality-gate",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "internal/hooks/hook_policy.go", "new_string": "func active() {}" }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["U10", "commented-out", "dead code"],
+    "max_latency_ms": 5000
+  }
+}

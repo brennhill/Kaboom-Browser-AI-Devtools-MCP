@@ -6,27 +6,27 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-09-05
 code_paths:
-  - cmd/browser-agent/internal/replay/contract.go
-  - cmd/browser-agent/internal/sequencehandler/handler.go
-  - cmd/browser-agent/internal/sequencehandler/replay.go
-  - cmd/browser-agent/internal/sequencehandler/contract.go
-  - cmd/browser-agent/internal/toolinteract/interactbatch/batch.go
-  - cmd/browser-agent/internal/toolruntime/tools_interact_dispatch.go
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
+  - internal/recording/replay/contract.go
+  - internal/recording/sequence/handler.go
+  - internal/recording/sequence/replay.go
+  - internal/recording/sequence/contract.go
+  - internal/tools/interact/handler/interactbatch/batch.go
+  - internal/composition/toolruntime/tools_interact_dispatch.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/tools/configure/handler/dispatcher.go
   - internal/recording/actionlog/recorder.go
   - internal/tools/interact/workflow.go
-  - internal/schema/interact/actions.go
-  - internal/schema/interact/properties_output_batch.go
+  - internal/tools/schema/interact/actions.go
+  - internal/tools/schema/interact/properties_output_batch.go
   - internal/tools/configure/capabilities/modespecs_interact.go
 test_paths:
   - tests/architecture/user-state-loaders.test.cjs
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/internal/replay/contract_test.go
-  - cmd/browser-agent/internal/sequencehandler/handler_test.go
-  - cmd/browser-agent/internal/sequencehandler/contract_test.go
-  - cmd/browser-agent/internal/toolinteract/interactbatch/batch_test.go
-  - internal/schema/interact/schema_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
+  - internal/recording/replay/contract_test.go
+  - internal/recording/sequence/handler_test.go
+  - internal/recording/sequence/contract_test.go
+  - internal/tools/interact/handler/interactbatch/batch_test.go
+  - internal/tools/schema/interact/schema_test.go
   - internal/recording/actionlog/recorder_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -38,7 +38,7 @@ last_verified_date: 2026-03-05
 - Status: shipped
 - Tools: `interact`, `configure`
 - Actions: `batch`, `save_sequence`, `replay_sequence`
-- Step results use the canonical `internal/replay.StepResult` contract directly.
+- Step results use the canonical `internal/recording/replay.StepResult` contract directly.
 
 ## Specs
 - Product Spec: [product-spec.md](./product-spec.md)
@@ -49,7 +49,7 @@ last_verified_date: 2026-03-05
 ## Canonical Note
 Batch execution and reusable configure sequences share replay primitives and one
 runtime-scoped concurrency lock. Saved-sequence persistence, CRUD, and replay orchestration stay
-together in `internal/sequencehandler`; interactive batch orchestration remains
+together in `internal/recording/sequence`; interactive batch orchestration remains
 in the dedicated `interactbatch` owner. The former package-global lock and
 unused action-runtime dependency are deleted. Configure actions and saved interact steps both use
 the canonical `what` discriminator. Tool composition constructs one

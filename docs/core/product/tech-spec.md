@@ -13,7 +13,7 @@ canonical: true
 
 ## Architecture
 1. MCP client sends JSON-RPC to `POST /mcp`.
-2. `internal/mcpendpoint.Handler` delegates validation and routing to the canonical MCP owners.
+2. `internal/tools/mcpserver/endpoint.Handler` delegates validation and routing to the canonical MCP owners.
 3. `ToolHandler` dispatches to tool-specific handlers.
 4. Passive reads resolve from server/capture buffers.
 5. Active commands queue extension work and then:
@@ -22,12 +22,12 @@ canonical: true
 - require polling via `observe(command_result)`.
 
 Primary components:
-- Endpoint composition: `cmd/browser-agent/internal/mcpendpoint/handler.go`
-- Transport + MCP routing: `cmd/browser-agent/internal/mcphttp/handler.go` and `cmd/browser-agent/internal/mcprouter/router.go`
+- Endpoint composition: `internal/tools/mcpserver/endpoint/handler.go`
+- Transport + MCP routing: `internal/tools/mcpserver/http/handler.go` and `internal/tools/mcpserver/router/router.go`
 - Tool dispatch: `cmd/browser-agent/tools_core.go`
-- Tool schemas: `internal/schema/schema.go`
-- Queue/command lifecycle: `internal/capture/query_dispatcher.go`
-- Unified extension sync channel: `internal/capture/syncruntime/handler.go`
+- Tool schemas: `internal/tools/schema/schema.go`
+- Queue/command lifecycle: `internal/composition/capture/query_dispatcher.go`
+- Unified extension sync channel: `internal/sync/runtime/handler.go`
 - Extension sync client: `src/background/sync/sync-client.ts`
 - Extension command executor: `src/background/pending-queries.ts`
 
@@ -35,7 +35,7 @@ Primary components:
 
 ### 1. Passive read flow (`observe`)
 1. Client calls `tools/call` with `name:"observe"`.
-2. `toolObserve` dispatches by `what` in `cmd/browser-agent/internal/toolobserve/dispatcher.go`.
+2. `toolObserve` dispatches by `what` in `internal/tools/observe/handler/dispatcher.go`.
 3. Handler returns JSON payload from server buffers and metadata.
 
 ### 2. Active command flow (`analyze`/`interact`)
@@ -70,7 +70,7 @@ Primary components:
 
 ## Resource and Capability Surfaces
 - MCP resources are served from `handler.go` through `resources/list/read`.
-- Tool schemas and descriptions are server-owned in `internal/schema/`.
+- Tool schemas and descriptions are server-owned in `internal/tools/schema/`.
 
 ## Known Compatibility Surface
 - `/sync` is the primary bidirectional extension channel.
@@ -79,11 +79,11 @@ Primary components:
 ## Canonical Code Paths
 - MCP route + methods: `cmd/browser-agent/handler.go`
 - Tool dispatch switch: `cmd/browser-agent/tools_core.go`
-- Observe dispatch map: `cmd/browser-agent/internal/toolobserve/dispatcher.go`
+- Observe dispatch map: `internal/tools/observe/handler/dispatcher.go`
 - Analyze dispatch map: `cmd/browser-agent/tools_analyze.go`
 - Configure dispatch map: `cmd/browser-agent/tools_configure.go`
 - Interact dispatch map: `cmd/browser-agent/tools_interact.go`
-- Generate dispatch map: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
-- Query dispatcher and command tracker: `internal/capture/query_dispatcher.go`
-- Extension sync endpoint: `internal/capture/syncruntime/handler.go`
+- Generate dispatch map: `internal/tools/generate/handler/dispatcher.go`
+- Query dispatcher and command tracker: `internal/composition/capture/query_dispatcher.go`
+- Extension sync endpoint: `internal/sync/runtime/handler.go`
 - Extension command execution: `src/background/pending-queries.ts`

@@ -26,14 +26,14 @@ make_fixture() {
 # allowlisted honors globs, comments, and blank lines
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-printf '# fixtures\ninternal/redaction/*_test.go\n\n docs/examples/*.md # doc samples\n' > "$tmp/allowlist"
+printf '# fixtures\ninternal/platform/redaction/*_test.go\n\n docs/examples/*.md # doc samples\n' > "$tmp/allowlist"
 KABOOM_SECRETS_ALLOWLIST="$tmp/allowlist"
 
-allowlisted "internal/redaction/redaction_test.go"
+allowlisted "internal/platform/redaction/redaction_test.go"
 expect "glob allowlist matches" 0 $?
 allowlisted "docs/examples/security.md"
 expect "allowlist with trailing comment matches" 0 $?
-allowlisted "internal/redaction/engine.go"
+allowlisted "internal/platform/redaction/engine.go"
 expect "non-listed path is not allowed" 1 $?
 
 # scan_paths flags real credential formats with redacted output

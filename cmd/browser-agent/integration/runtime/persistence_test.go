@@ -35,8 +35,8 @@ import (
 	"testing"
 	"time"
 
-	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/integrationtest"
-	corebridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
+	testprocess "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/testsupport/integration"
+	corebridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/bridge/framing"
 )
 
 // TestServerPersistence_StaysAliveWithOpenStdin verifies the server doesn't die

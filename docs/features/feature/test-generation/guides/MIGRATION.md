@@ -92,7 +92,7 @@ cmd/browser-agent/tools_core.go  # Add dispatch for new generate modes
 ### Generate Dispatcher Registration
 
 ```go
-// cmd/browser-agent/internal/toolgenerate/dispatcher.go
+// internal/tools/generate/handler/dispatcher.go
 "test_from_context": func(h *Dispatcher, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
     return h.tests.HandleGenerateTestFromContext(req, args)
 },

@@ -11,7 +11,7 @@
 - New: `cmd/browser-agent/tools_analyze_page_issues_summary.go` (~80 LOC)
 - New: `cmd/browser-agent/tools_analyze_page_issues_test.go`
 - Edit: `cmd/browser-agent/tools_analyze_dispatch.go` (1 line — add to registry)
-- Edit: `internal/schema/analyze.go` (1 line — add to enum)
+- Edit: `internal/tools/schema/analyze.go` (1 line — add to enum)
 
 **Changes:**
 Handler that aggregates from existing data sources in a single call:

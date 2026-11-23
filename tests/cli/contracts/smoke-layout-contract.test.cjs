@@ -35,7 +35,7 @@ test('the canonical runner names resolvable owner-qualified modules', () => {
 
 test('framework fixtures build into the harness-owned embedded page tree', () => {
   const builder = fs.readFileSync(path.join(SMOKE_ROOT, 'framework', 'build-framework-fixtures.mjs'), 'utf8')
-  assert.match(builder, /internal['"], 'testpages['"], 'pages['"]\)/)
+  assert.match(builder, /'internal', 'composition', 'http', 'testpages', 'pages'\)/)
   assert.match(builder, /path\.join\(harnessRootDir, 'frameworks'\)/)
-  assert.doesNotMatch(builder, /cmd['"], 'browser-agent['"], 'testpages['"]/)
+  assert.doesNotMatch(builder, /'cmd', 'browser-agent'/)
 })

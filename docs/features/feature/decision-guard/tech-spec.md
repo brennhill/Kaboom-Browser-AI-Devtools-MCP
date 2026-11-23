@@ -8,10 +8,10 @@ links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
-  - internal/hook/hook_policy.go
+  - internal/hooks/hook_policy.go
   - cmd/hooks/main.go
 test_paths:
-  - internal/hook/hook_policy_test.go
+  - internal/hooks/hook_policy_test.go
   - cmd/hooks/main_test.go
 ---
 
@@ -25,9 +25,9 @@ test_paths:
 
 ## Requirement Mapping
 
-- DECISION_001 -> `internal/hook/hook_policy.go:Decision` struct + `LoadDecisions()`
-- DECISION_002 -> `internal/hook/hook_policy.go:MatchDecisions()` — pattern + scope matching
-- DECISION_003 -> `internal/hook/hook_policy.go:FormatDecisions()` — output formatting
+- DECISION_001 -> `internal/hooks/hook_policy.go:Decision` struct + `LoadDecisions()`
+- DECISION_002 -> `internal/hooks/hook_policy.go:MatchDecisions()` — pattern + scope matching
+- DECISION_003 -> `internal/hooks/hook_policy.go:FormatDecisions()` — output formatting
 - DECISION_004 -> `cmd/hooks/main.go:runLockDecision()` — CLI subcommand
 - DECISION_005 -> no special code needed — file is plain JSON
 - DECISION_006 -> `MatchDecisions()` skips expired decisions
@@ -142,7 +142,7 @@ func runLockDecision() int {
 ```
 [Decision Guard] 1 locked decision applies to this edit:
 
-  use-shared-http-client: Use the shared HTTP client from internal/util/http.go. Do not create new http.Client instances.
+  use-shared-http-client: Use the shared HTTP client from internal/platform/util/http.go. Do not create new http.Client instances.
 
 Comply with these decisions or update .kaboom/decisions.json if they are outdated.
 ```

@@ -7,46 +7,46 @@ owners: []
 last_reviewed: 2026-11-21
 code_paths:
   - cmd/browser-agent/openapi.json
-  - cmd/browser-agent/internal/toolruntime/tools_configure.go
-  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
-  - cmd/browser-agent/internal/toolconfigure/netrecord/handlers.go
-  - cmd/browser-agent/internal/toolconfigure/netrecord/state.go
-  - cmd/browser-agent/internal/toolconfigure/netrecord/filters.go
-  - internal/capture/healthreader/reader.go
-  - internal/capture/actionstore/store.go
-  - internal/capture/bodystore/store.go
-  - internal/capture/capture.go
-  - internal/capture/clientstore/owner.go
-  - internal/capture/settingscache/loader.go
-  - internal/capture/telemetrystore/store.go
-  - internal/capture/resetter/resetter.go
-  - internal/capture/logstore/store.go
-  - internal/capture/perfstore/store.go
-  - internal/capture/pressure/stats.go
-  - internal/capture/ringstore/store.go
-  - internal/capture/waterfallstore/store.go
-  - internal/capture/syncruntime/runtime.go
-  - internal/capture/featureusage/observer.go
-  - internal/capture/httpingest/handlers.go
-  - internal/util/media.go
+  - internal/composition/toolruntime/tools_configure.go
+  - internal/tools/configure/handler/dispatcher.go
+  - internal/tools/configure/handler/netrecord/handlers.go
+  - internal/tools/configure/handler/netrecord/state.go
+  - internal/tools/configure/handler/netrecord/filters.go
+  - internal/observation/healthreader/reader.go
+  - internal/observation/store/actions/store.go
+  - internal/observation/store/bodies/store.go
+  - internal/composition/capture/capture.go
+  - internal/observation/clientstore/owner.go
+  - internal/sync/settingscache/loader.go
+  - internal/observation/store/telemetry/store.go
+  - internal/observation/resetter/resetter.go
+  - internal/observation/store/logs/store.go
+  - internal/observation/store/perf/store.go
+  - internal/observation/pressure/stats.go
+  - internal/observation/store/ring/store.go
+  - internal/observation/store/waterfall/store.go
+  - internal/sync/runtime/runtime.go
+  - internal/observation/featureusage/observer.go
+  - internal/ingestion/http/handlers.go
+  - internal/platform/util/media.go
   - internal/browsercommand/internal/dispatch/dispatcher_queries.go
   - internal/browsercommand/owner.go
   - internal/browsercommand/result.go
   - internal/browsercommand/exchange.go
   - scripts/contracts/layering/main.go
-  - internal/capture/syncruntime/handler.go
-  - internal/capture/syncruntime/wire_sync.go
-  - internal/commandcontract/generated.go
-  - internal/capturefixture/sync.go
-  - internal/circuit/breaker.go
-  - internal/debuglog/logger.go
-  - internal/lifecycle/observer.go
-  - internal/capture/wsconn/doc.go
-  - internal/capture/wsconn/status.go
-  - internal/capture/wsconn/store.go
-  - internal/capture/wsconn/tracker.go
-  - internal/types/wire_log.go
-  - internal/types/network.go
+  - internal/sync/runtime/handler.go
+  - internal/sync/runtime/wire_sync.go
+  - internal/browsercommand/contract/generated.go
+  - internal/observation/testsupport/fixture/sync.go
+  - internal/ingestion/circuit/breaker.go
+  - internal/observation/debuglog/logger.go
+  - internal/observation/lifecycle/observer.go
+  - internal/observation/store/wsconn/doc.go
+  - internal/observation/store/wsconn/status.go
+  - internal/observation/store/wsconn/store.go
+  - internal/observation/store/wsconn/tracker.go
+  - internal/platform/types/wire_log.go
+  - internal/platform/types/network.go
   - src/background.ts
   - src/inject.ts
   - src/background/sync/server.ts
@@ -90,17 +90,17 @@ code_paths:
   - src/early-patch.ts
   - src/lib/page/safe-global-patch.ts
 test_paths:
-  - internal/capture/resetter/resetter_test.go
-  - internal/capture/httpingest/handlers_test.go
-  - internal/capture/clientstore/owner_test.go
-  - internal/capture/actionstore/store_test.go
-  - internal/capture/wsconn/store_test.go
-  - internal/capture/bodystore/store_test.go
-  - internal/capture/settingscache/loader_test.go
-  - internal/capture/telemetrystore/store_test.go
-  - internal/capture/perfstore/store_test.go
-  - internal/capture/ringstore/store_test.go
-  - internal/capture/waterfallstore/store_test.go
+  - internal/observation/resetter/resetter_test.go
+  - internal/ingestion/http/handlers_test.go
+  - internal/observation/clientstore/owner_test.go
+  - internal/observation/store/actions/store_test.go
+  - internal/observation/store/wsconn/store_test.go
+  - internal/observation/store/bodies/store_test.go
+  - internal/sync/settingscache/loader_test.go
+  - internal/observation/store/telemetry/store_test.go
+  - internal/observation/store/perf/store_test.go
+  - internal/observation/store/ring/store_test.go
+  - internal/observation/store/waterfall/store_test.go
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/contracts/no-dynamic-import-background.test.js
@@ -109,38 +109,38 @@ test_paths:
   - tests/extension/state-recovery/storage-fault-fixture.js
   - tests/extension/reliability/diagnostic-log-queue.test.js
   - tests/extension/branding/install-identity-faults.test.js
-  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
-  - cmd/browser-agent/internal/toolconfigure/netrecord/netrecord_test.go
-  - internal/capture/syncruntime/sync_test.go
+  - internal/tools/configure/handler/dispatcher_test.go
+  - internal/tools/configure/handler/netrecord/netrecord_test.go
+  - internal/sync/runtime/sync_test.go
   - tests/extension/sync/sync-client.test.js
-  - internal/capture/syncruntime/sync_test_helpers_test.go
-  - internal/capturefixture/sync_test.go
-  - internal/capture/syncruntime/sync_command_lifecycle_test.go
-  - internal/capture/syncruntime/readiness_gate_test.go
-  - internal/capture/async_queue_integration_test.go
-  - internal/capture/syncruntime/integrationtest/sync_waterfall_test.go
-  - internal/capture/websockettest/websocket_test.go
-  - internal/capture/websockettest/websocket_status_test.go
-  - internal/capture/websockettest/websocket_handlers_test.go
-  - internal/capture/websockettest/websocket-streaming_test.go
-  - internal/capture/syncruntime/sync_test_helpers_test.go
-  - internal/capture/coverage_gaps_part2_test.go
-  - internal/capture/pipelinetest/api_contract_test.go
-  - internal/capture/logstore/store_test.go
-  - internal/capture/logstore/diagnostic_test.go
-  - internal/capture/pipelinetest/accessor_unit_test.go
-  - internal/capture/featureusage/observer_test.go
-  - internal/capture/syncruntime/extension_state_unit_test.go
-  - internal/capture/pipelinetest/buffer_clear_test.go
-  - internal/capture/pipelinetest/capture_stress_test.go
-  - internal/capture/pipelinetest/capture_bench_test.go
-  - internal/capture/testhelpers_test.go
-  - internal/capture/no_facade_test.go
-  - internal/capture/healthreader/reader_test.go
-  - internal/capture/syncruntime/integrationtest/sync_handler_owner_test.go
-  - internal/circuit/breaker_test.go
-  - internal/debuglog/logger_test.go
-  - internal/lifecycle/observer_test.go
+  - internal/sync/runtime/sync_test_helpers_test.go
+  - internal/observation/testsupport/fixture/sync_test.go
+  - internal/sync/runtime/sync_command_lifecycle_test.go
+  - internal/sync/runtime/readiness_gate_test.go
+  - internal/composition/capture/async_queue_integration_test.go
+  - internal/sync/runtime/integrationtest/sync_waterfall_test.go
+  - internal/observation/testsupport/websocket/websocket_test.go
+  - internal/observation/testsupport/websocket/websocket_status_test.go
+  - internal/observation/testsupport/websocket/websocket_handlers_test.go
+  - internal/observation/testsupport/websocket/websocket-streaming_test.go
+  - internal/sync/runtime/sync_test_helpers_test.go
+  - internal/composition/capture/coverage_gaps_part2_test.go
+  - internal/observation/testsupport/pipeline/api_contract_test.go
+  - internal/observation/store/logs/store_test.go
+  - internal/observation/store/logs/diagnostic_test.go
+  - internal/observation/testsupport/pipeline/accessor_unit_test.go
+  - internal/observation/featureusage/observer_test.go
+  - internal/sync/runtime/extension_state_unit_test.go
+  - internal/observation/testsupport/pipeline/buffer_clear_test.go
+  - internal/observation/testsupport/pipeline/capture_stress_test.go
+  - internal/observation/testsupport/pipeline/capture_bench_test.go
+  - internal/composition/capture/testhelpers_test.go
+  - internal/composition/capture/no_facade_test.go
+  - internal/observation/healthreader/reader_test.go
+  - internal/sync/runtime/integrationtest/sync_handler_owner_test.go
+  - internal/ingestion/circuit/breaker_test.go
+  - internal/observation/debuglog/logger_test.go
+  - internal/observation/lifecycle/observer_test.go
   - tests/extension/sync/sync-client-commands.test.js
   - tests/extension/sync/sync-client-fixture.js
   - tests/extension/sync/sync-client-resilience.test.js
@@ -184,13 +184,13 @@ last_verified_date: 2026-04-13
 
 Capture dependencies use the canonical `capture.Capture` container type.
 Persisted extension settings are read and written only through the canonical
-`internal/state.SettingsFile` location by `ExtensionRuntime`; there is no
+`internal/platform/state/paths.SettingsFile` location by `ExtensionRuntime`; there is no
 Capture forwarding method or fallback settings reader.
 The former `capture.Store` and `capture.Snapshot` aliases have been removed.
-URL-path normalization consumers import `internal/util.ExtractURLPath`
+URL-path normalization consumers import `internal/platform/util.ExtractURLPath`
 directly; the capture-package pass-through and its duplicate tests are deleted.
 Capture APIs and their callers use the canonical wire contracts from
-`internal/types` directly; `internal/capture` does not re-export wire types.
+`internal/platform/types` directly; `internal/composition/capture` does not re-export wire types.
 Capture stores take ownership of nested mutable values at ingestion and return
 deeply detached snapshots. Response-header maps, test-ID slices, WebSocket
 sampling metadata, extension-log JSON, enhanced-action selector trees, and
@@ -351,7 +351,7 @@ Tests likewise mutate extension-owned pilot, tracking, connection, tab, and CSP
 state through `Capture.Extension()`; the seven Capture-level test-helper
 facades are deleted. The remaining sync simulation helper stays on Capture
 because it coordinates extension state with lifecycle emission.
-Buffer-clear APIs likewise return `internal/types.BufferClearCounts` directly.
+Buffer-clear APIs likewise return `internal/platform/types.BufferClearCounts` directly.
 The background manifest entrypoint performs initialization only; batching,
 transport, cache, and processing consumers import their canonical owner modules
 directly instead of relying on re-exported compatibility names.
@@ -368,8 +368,8 @@ diagnostic. Daemon handoffs also invalidate in-flight extension responses so an
 old server cannot dispatch work after the client changes endpoints.
 
 The complete `/sync` request/response graph now has one Go wire owner in
-`internal/capture/syncruntime/wire_sync.go`; extension diagnostic entries have their one
-nested owner in `internal/types/wire_log.go`. TypeScript contracts and
+`internal/sync/runtime/wire_sync.go`; extension diagnostic entries have their one
+nested owner in `internal/platform/types/wire_log.go`. TypeScript contracts and
 the OpenAPI sync components are generated from those structs, and CI compares
 the generated OpenAPI client plus a shared bidirectional JSON fixture. The old
 hand-maintained optionality checker and duplicate TypeScript interfaces were
@@ -405,17 +405,17 @@ this one bounded delivery contract.
 ## Code and Tests
 
 Extension and daemon diagnostic logs now belong to the focused
-`internal/capture/logstore` package. It owns redaction, bounded retention,
+`internal/observation/store/logs` package. It owns redaction, bounded retention,
 detached reads, and drop-pressure reporting; the root `Capture` type only
 composes and exposes that canonical owner. Generic bounded-resource metrics
-belong to `internal/capture/pressure`, so telemetry, performance, and health
+belong to `internal/observation/pressure`, so telemetry, performance, and health
 reporting share one neutral value contract without importing a broad capture
 implementation or preserving an obsolete compatibility surface.
 
-- `internal/capture/syncruntime/sync_test_helpers_test.go` centralizes `/sync` request marshaling, transport dispatch, and response decoding helpers.
-- `internal/capture/syncruntime/sync_test.go` reuses those helpers for request ingestion, heartbeats, and connection state.
-- `internal/capture/syncruntime/sync_command_lifecycle_test.go` owns adaptive polling, command-result lifecycle, and deterministic old-poll-resumes-after-reconnect coverage (superseded polls cannot mutate current-generation commands; command lifecycle itself lives in `internal/browsercommand`).
-- `internal/capture/syncruntime/integrationtest/sync_waterfall_test.go` owns waterfall query and result delivery coverage.
+- `internal/sync/runtime/sync_test_helpers_test.go` centralizes `/sync` request marshaling, transport dispatch, and response decoding helpers.
+- `internal/sync/runtime/sync_test.go` reuses those helpers for request ingestion, heartbeats, and connection state.
+- `internal/sync/runtime/sync_command_lifecycle_test.go` owns adaptive polling, command-result lifecycle, and deterministic old-poll-resumes-after-reconnect coverage (superseded polls cannot mutate current-generation commands; command lifecycle itself lives in `internal/browsercommand`).
+- `internal/sync/runtime/integrationtest/sync_waterfall_test.go` owns waterfall query and result delivery coverage.
 - Additional capture contract tests (`coverage_gaps_part2_test`, `api_contract_test`) reuse shared helper assertions to keep endpoint/status checks consistent; canonical settings-path and recovery coverage lives with `settingscache`.
 - `src/background/sync/server.ts` now treats popup/background `connected` as daemon-confirmed heartbeat state instead of raw `/health` reachability.
 - `tests/extension/performance/rate-limit.test.js` deterministically covers autonomous half-open probe success, failure, buffer drain, and reopen transitions without wall-clock sleeps.
@@ -440,5 +440,5 @@ implementation or preserving an obsolete compatibility surface.
   deleted rather than preserved as a cross-owner test facade.
 - Capture queue integration tests prove only the Capture-to-QueryDispatcher
   composition. Queue concurrency, capacity, timeout, and cleanup semantics live
-  with `internal/queries`; the duplicate jitter-driven reliability suite was
+  with `internal/browsercommand/query`; the duplicate jitter-driven reliability suite was
   removed so capture tests no longer depend on scheduler timing.

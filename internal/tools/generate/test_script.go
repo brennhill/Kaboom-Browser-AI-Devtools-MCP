@@ -5,10 +5,10 @@ package generate
 
 import (
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/reproduction"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/reproduction"
 )
 
 // TestGenParams are the parsed arguments for generate({format: "test"}).

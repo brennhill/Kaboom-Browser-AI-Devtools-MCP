@@ -6,7 +6,7 @@ package dispatch
 import (
 	"bytes"
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
 	"os"
 	"sync/atomic"
 	"time"

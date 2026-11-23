@@ -17,7 +17,7 @@ last_verified_date: 2026-03-05
 
 ## Unit Tests
 
-### `internal/issuereport/` (28 tests)
+### `internal/tools/issuereport/` (28 tests)
 
 | Test | Validates |
 |------|-----------|
@@ -45,7 +45,7 @@ last_verified_date: 2026-03-05
 | `TestConfirmedSubmitStillValidatesItsPayload` | `confirm` cannot push a missing title or unknown template through |
 | `TestModeSpecDescribesWhatSubmitActuallyDoes` | describe_capabilities text for report_issue matches the handler's real transmission behavior |
 
-### Operation routing (`internal/issuereport/handler_test.go`)
+### Operation routing (`internal/tools/issuereport/handler_test.go`)
 
 | Test | Validates |
 |------|-----------|

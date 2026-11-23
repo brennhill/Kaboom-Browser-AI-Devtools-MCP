@@ -6,14 +6,14 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-05
 code_paths:
-  - internal/types/network.go
-  - internal/types/wire_network.go
+  - internal/platform/types/network.go
+  - internal/platform/types/wire_network.go
   - internal/tools/observe/network/network.go
   - src/lib/net/network.ts
   - src/lib/net/request-attribution.ts
   - src/types/wire/wire-network.ts
 test_paths:
-  - internal/capture/network_waterfall_test.go
+  - internal/composition/capture/network_waterfall_test.go
   - internal/tools/observe/network/network_test.go
   - tests/extension/network-http/network-waterfall.test.js
 last_verified_version: 0.9.0

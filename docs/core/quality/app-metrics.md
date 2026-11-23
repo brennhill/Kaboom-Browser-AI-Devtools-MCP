@@ -330,7 +330,7 @@ Recommended `error_kind` values:
 - `unknown`
 
 Kaboom producers do not pass free-form values for these fields. Every runtime
-failure uses a code from `internal/incident/registry.go`, which owns its source,
+failure uses a code from `internal/lifecycle/doctor/incident/registry.go`, which owns its source,
 stage, severity, retryability, error kind, Doctor guidance, and
 `bounded_product_metadata` privacy classification. Unknown codes are rejected
 before an envelope is built. The current stable codes are:

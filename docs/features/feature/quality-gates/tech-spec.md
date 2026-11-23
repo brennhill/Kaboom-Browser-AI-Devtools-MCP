@@ -10,20 +10,20 @@ links:
   setup_guide: ./setup-guide.md
 code_paths:
   - cmd/hooks/main.go
-  - internal/hook/hook_policy.go
-  - internal/hook/conventions/conventions.go
-  - internal/hook/compress_output.go
-  - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
+  - internal/hooks/hook_policy.go
+  - internal/hooks/conventions/conventions.go
+  - internal/hooks/compress_output.go
+  - internal/tools/configure/handler/qualitygates/handler.go
   - cmd/browser-agent/tools_configure.go
-  - internal/tracking/token_tracker.go
+  - internal/hooks/tokensavings/token_tracker.go
 test_paths:
-  - cmd/browser-agent/internal/toolconfigure/qualitygates/handler_test.go
+  - internal/tools/configure/handler/qualitygates/handler_test.go
   - cmd/hooks/main_test.go
-  - internal/hook/hook_policy_test.go
-  - internal/hook/conventions/conventions_test.go
-  - internal/hook/compress_output_test.go
+  - internal/hooks/hook_policy_test.go
+  - internal/hooks/conventions/conventions_test.go
+  - internal/hooks/compress_output_test.go
   - cmd/browser-agent/tools_configure_quality_gates_test.go
-  - internal/tracking/token_tracker_test.go
+  - internal/hooks/tokensavings/token_tracker_test.go
 ---
 
 # Quality Gates Tech Spec
@@ -46,13 +46,13 @@ Quality gates span three binaries:
 
 ## Key Components
 
-### Hook protocol — `internal/hook/hook_policy.go`
+### Hook protocol — `internal/hooks/hook_policy.go`
 
 Defines the wire types. `Input` holds `tool_name`, `tool_input`, and `tool_response` (the JSON Claude Code sends). `ToolInputFields` pulls the common fields (`file_path`, `command`, `new_string`, `content`). `Output` carries `additionalContext` (tagged `SPEC:claude-code-hooks`, camelCase per protocol).
 
 `DetectAgent` reads environment variables to identify Claude, Gemini, or Codex. `WriteOutput` adapts the envelope: Claude gets a flat `additionalContext`; Gemini gets it nested under `hookSpecificOutput`. It writes nothing when the context is empty, so a hook that finds nothing produces no output.
 
-### Quality gate — `internal/hook/hook_policy.go`
+### Quality gate — `internal/hooks/hook_policy.go`
 
 `RunQualityGate(input)` is the core check on Edit/Write:
 
@@ -67,15 +67,15 @@ Defines the wire types. `Input` holds `tool_name`, `tool_input`, and `tool_respo
 
 The result is the joined parts, or nil when there is nothing to say.
 
-### Convention detection — `internal/hook/conventions/conventions.go`
+### Convention detection — `internal/hooks/conventions/conventions.go`
 
 Documented in detail in the convention-engine tech spec. In short: it merges auto-discovered call-site probes with static probes (`http.Client{`, `map[string]func`, `sync.Mutex`, `chrome.storage.`, and so on) and `type X struct` declarations, searches the codebase for examples (capped, skipping vendored/generated/oversized files), and suggests extracting a helper at `helperThreshold` (2) instances.
 
-### Output compression — `internal/hook/compress_output.go`
+### Output compression — `internal/hooks/compress_output.go`
 
 On Bash, `CompressOutput(input)` inspects the command and its output, detects the tool family (go test, jest/vitest, pytest, cargo test/build, go build/vet, make, tsc, npm/webpack), and collapses output to a summary plus the failing lines. Generic output over a threshold is reduced to head plus tail. It fires only when output exceeds the line threshold (so short output is untouched) and returns a `CompressResult` with category and before/after token counts.
 
-### Setup handler — `cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go`
+### Setup handler — `internal/tools/configure/handler/qualitygates/handler.go`
 
 `qualitygates.Handle`:
 
@@ -85,7 +85,7 @@ On Bash, `CompressOutput(input)` inspects the command and its output, detects th
 4. `installClaudeCodeHooks` merges hook entries into `.claude/settings.json`: Edit/Write gets quality-gate + blast-radius + decision-guard + session-track; Read gets session-track; Bash gets compress-output + session-track. `containsManagedHooks` makes install idempotent by recognizing prior managed entries.
 5. Returns config/standards paths, defaults, suggestions, and the install result.
 
-### Token tracking — `internal/tracking/`
+### Token tracking — `internal/hooks/tokensavings/`
 
 The compression hook posts `{category, tokens_before, tokens_after}` to the daemon (`/api/token-savings`) with a 200ms timeout so it never delays process exit. The daemon aggregates per-session savings, logs a summary on shutdown, and persists lifetime stats to `~/.kaboom/stats/lifetime.json`.
 
@@ -150,4 +150,4 @@ Each hook is a short-lived process that does one thing and exits. The design fav
 
 ## Validation
 
-`cmd/hooks/main_test.go`, `internal/hook/hook_policy_test.go`, `internal/hook/conventions/conventions_test.go`, and `internal/hook/compress_output_test.go` cover the hooks. `cmd/browser-agent/tools_configure_quality_gates_test.go` covers setup. `internal/tracking/token_tracker_test.go` covers stats. The hook eval rig exercises the quality-gate and compress-output fixtures against the Kaboom codebase. Install behavior is covered by `scripts/release/install-upgrade-regression.contract.test.mjs` and `scripts/setup/test-install-hooks-only.sh`.
+`cmd/hooks/main_test.go`, `internal/hooks/hook_policy_test.go`, `internal/hooks/conventions/conventions_test.go`, and `internal/hooks/compress_output_test.go` cover the hooks. `cmd/browser-agent/tools_configure_quality_gates_test.go` covers setup. `internal/hooks/tokensavings/token_tracker_test.go` covers stats. The hook eval rig exercises the quality-gate and compress-output fixtures against the Kaboom codebase. Install behavior is covered by `scripts/release/install-upgrade-regression.contract.test.mjs` and `scripts/setup/test-install-hooks-only.sh`.

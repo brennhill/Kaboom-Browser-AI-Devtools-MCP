@@ -79,7 +79,7 @@ fi
 echo ""
 echo "3️⃣  Running Go unit tests..."
 
-if go test ./internal/capture -v -short > /tmp/kaboom-unit-tests.log 2>&1; then
+if go test ./internal/composition/capture -v -short > /tmp/kaboom-unit-tests.log 2>&1; then
     TEST_COUNT=$(grep -c "^=== RUN" /tmp/kaboom-unit-tests.log || echo "0")
     PASS_COUNT=$(grep -c "^--- PASS" /tmp/kaboom-unit-tests.log || echo "0")
     echo "   ✅ Unit tests passed ($PASS_COUNT/$TEST_COUNT tests)"
@@ -97,7 +97,7 @@ fi
 echo ""
 echo "4️⃣  Running integration tests (async queue)..."
 
-if go test -v ./internal/capture -run TestAsyncQueueIntegration > /tmp/kaboom-integration.log 2>&1; then
+if go test -v ./internal/composition/capture -run TestAsyncQueueIntegration > /tmp/kaboom-integration.log 2>&1; then
     echo "   ✅ Async queue integration test passed"
 else
     echo "   ❌ Integration test FAILED"

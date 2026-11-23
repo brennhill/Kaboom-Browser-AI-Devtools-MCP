@@ -201,7 +201,7 @@ Define a standard payload model used by `analyze`, `interact`, and future async 
 ### Implementation targets
 
 1. Go shared types:
-   - `internal/types/async_result.go`
+   - `internal/platform/types/async_result.go`
 2. TS shared types:
    - `src/types/async-result.ts`
 3. Mapping layer in handlers:
@@ -285,7 +285,7 @@ Optional compatibility methods during migration:
 
 1. `internal/tools/<tool>/module.go`
 2. `internal/tools/<tool>/validation.go`, `execute.go`, `describe.go`, `examples.go`
-3. `cmd/browser-agent/internal/toolmodule/registry.go` for canonical module registration and dispatch
+3. `internal/tools/module/registry.go` for canonical module registration and dispatch
 4. Keep `ToolHandler` as integration root during migration.
 
 ### Registry policy

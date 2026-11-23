@@ -50,7 +50,7 @@ func run(raw []byte) {
 
 func TestScanFindsDecoderDecodeIntoAWireType(t *testing.T) {
 	root := t.TempDir()
-	writeGo(t, root, "internal/perftrace/http.go", `package perftrace
+	writeGo(t, root, "internal/observation/perftrace/http.go", `package perftrace
 
 import (
 	"encoding/json"
@@ -75,7 +75,7 @@ func run(r io.Reader) {
 // that shipped the defect, so the scanner must follow it.
 func TestScanFollowsADecoderHeldInAVariable(t *testing.T) {
 	root := t.TempDir()
-	writeGo(t, root, "internal/perftrace/http.go", `package perftrace
+	writeGo(t, root, "internal/observation/perftrace/http.go", `package perftrace
 
 import (
 	"encoding/json"
@@ -102,7 +102,7 @@ func run(r io.Reader) {
 // what makes the contract cover the sites that actually shipped the defect.
 func TestScanFollowsAGenericDecodeHelperCalledWithAWireType(t *testing.T) {
 	root := t.TempDir()
-	writeGo(t, root, "internal/perftrace/http.go", `package perftrace
+	writeGo(t, root, "internal/observation/perftrace/http.go", `package perftrace
 
 import (
 	"encoding/json"
@@ -125,7 +125,7 @@ func run(r io.Reader) {
 	if len(sites) != 1 || sites[0].Type != "WireTraceStart" {
 		t.Fatalf("sites = %+v, want the helper call flagged with the wire type", sites)
 	}
-	if sites[0].File != "internal/perftrace/http.go" {
+	if sites[0].File != "internal/observation/perftrace/http.go" {
 		t.Errorf("File = %q, want the call site's file", sites[0].File)
 	}
 }
@@ -135,7 +135,7 @@ func run(r io.Reader) {
 // an ordinary params struct must stay silent or the contract is unusable.
 func TestScanIgnoresAGenericHelperCalledWithANonWireType(t *testing.T) {
 	root := t.TempDir()
-	writeGo(t, root, "internal/mcp/args.go", `package mcp
+	writeGo(t, root, "internal/tools/mcp/args.go", `package mcp
 
 import "encoding/json"
 
@@ -280,7 +280,7 @@ func run(raw []byte) {
 // forbidding its own implementation.
 func TestScanIgnoresTheWirecodecPackage(t *testing.T) {
 	root := t.TempDir()
-	writeGo(t, root, "internal/wirecodec/decode.go", `package wirecodec
+	writeGo(t, root, "internal/platform/wirecodec/decode.go", `package wirecodec
 
 import "encoding/json"
 
@@ -310,9 +310,9 @@ func TestEvaluateReportsAnUnexemptedSite(t *testing.T) {
 }
 
 func TestEvaluateAcceptsAnExemptedSite(t *testing.T) {
-	sites := []site{{File: "internal/qafixture/wire_fixture.go", Type: "WireQAFixture"}}
+	sites := []site{{File: "internal/testgen/qafixture/wire_fixture.go", Type: "WireQAFixture"}}
 	exemptions := []exemption{{
-		File:   "internal/qafixture/wire_fixture.go",
+		File:   "internal/testgen/qafixture/wire_fixture.go",
 		Type:   "WireQAFixture",
 		Reason: "author-facing fixture documents reject unknown fields outright, which is stricter",
 	}}

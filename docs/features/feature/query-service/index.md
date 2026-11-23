@@ -6,35 +6,35 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - internal/mcp/response.go
-  - internal/mcp/response_content.go
-  - internal/mcp/response_clamp.go
-  - internal/mcp/errors.go
+  - internal/tools/mcp/response.go
+  - internal/tools/mcp/response_content.go
+  - internal/tools/mcp/response_clamp.go
+  - internal/tools/mcp/errors.go
   - internal/browsercommand/internal/dispatch/dispatcher.go
   - internal/browsercommand/internal/dispatch/dispatcher_commands.go
   - internal/browsercommand/internal/dispatch/dispatcher_queries.go
   - internal/browsercommand/internal/dispatch/dispatcher_results.go
   - internal/browsercommand/internal/dispatch/dispatcher_trace.go
-  - internal/queries/types.go
+  - internal/browsercommand/query/types.go
   - internal/browsercommand/owner.go
   - internal/browsercommand/result.go
   - internal/browsercommand/exchange.go
   - internal/browsercommand/views.go
   - internal/browsercommand/commandtest/commandtest.go
-  - internal/app/ports/ports.go
+  - internal/browsercommand/ports/ports.go
   - scripts/contracts/layering/main.go
   - scripts/contracts/layering/command_owner.go
-  - cmd/browser-agent/internal/mediaapi/handler.go
-  - cmd/browser-agent/internal/screenrec/save.go
-  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
-  - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command.go
-  - cmd/browser-agent/internal/toolobserve/dispatcher.go
-  - cmd/browser-agent/internal/toolruntime/interact_wiring.go
-  - internal/app/pagestorage/execute.go
-  - internal/capture/capture.go
-  - internal/capture/syncruntime/handler.go
-  - cmd/browser-agent/internal/asynccommand/handler.go
-  - cmd/browser-agent/internal/asyncresult/normalization.go
+  - internal/annotation/adapters/http/handler.go
+  - internal/screenrec/save.go
+  - internal/tools/analyze/handler/annotationanalysis/handler.go
+  - internal/tools/configure/handler/qafixture/transport/command.go
+  - internal/tools/observe/handler/dispatcher.go
+  - internal/composition/toolruntime/interact_wiring.go
+  - internal/page/app/storage/execute.go
+  - internal/composition/capture/capture.go
+  - internal/sync/runtime/handler.go
+  - internal/tools/asynccommand/handler.go
+  - internal/tools/asyncresult/normalization.go
   - src/types/global.d.ts
   - src/types/capture/
   - src/types/runtime/
@@ -52,29 +52,29 @@ code_paths:
   - scripts/contracts/check-architecture-boundaries.cjs
   - scripts/quality/verification/validate-architecture.sh
 test_paths:
-  - internal/mcp/response_test.go
-  - internal/mcp/errors_test.go
+  - internal/tools/mcp/response_test.go
+  - internal/tools/mcp/errors_test.go
   - internal/browsercommand/internal/dispatch/dispatcher_test.go
   - internal/browsercommand/internal/dispatch/commands_test.go
   - internal/browsercommand/internal/dispatch/command_trace_test.go
   - internal/browsercommand/internal/dispatch/expire_signal_test.go
   - internal/browsercommand/owner_test.go
   - internal/browsercommand/local_test.go
-  - cmd/browser-agent/internal/toolconfigure/qafixture/transport/command_test.go
-  - cmd/browser-agent/internal/toolinteract/interactbatch/batch_test.go
-  - internal/capture/syncruntime/sync_command_lifecycle_test.go
-  - internal/capture/syncruntime/sync_test.go
+  - internal/tools/configure/handler/qafixture/transport/command_test.go
+  - internal/tools/interact/handler/interactbatch/batch_test.go
+  - internal/sync/runtime/sync_command_lifecycle_test.go
+  - internal/sync/runtime/sync_test.go
   - scripts/contracts/layering/main_test.go
   - cmd/browser-agent/composition_test.go
-  - cmd/browser-agent/internal/screenrec/screenrec_test.go
-  - internal/capture/syncruntime/extension_state_unit_test.go
-  - internal/capture/async_queue_integration_test.go
-  - internal/capture/no_facade_test.go
-  - internal/capture/syncruntime/integrationtest/sync_handler_owner_test.go
-  - internal/capture/query_commands_test.go
-  - cmd/browser-agent/internal/asyncresult/normalization_test.go
-  - cmd/browser-agent/internal/asynccommand/formatting_test.go
-  - cmd/browser-agent/internal/asynccommand/handler_test.go
+  - internal/screenrec/screenrec_test.go
+  - internal/sync/runtime/extension_state_unit_test.go
+  - internal/composition/capture/async_queue_integration_test.go
+  - internal/composition/capture/no_facade_test.go
+  - internal/sync/runtime/integrationtest/sync_handler_owner_test.go
+  - internal/composition/capture/query_commands_test.go
+  - internal/tools/asyncresult/normalization_test.go
+  - internal/tools/asynccommand/formatting_test.go
+  - internal/tools/asynccommand/handler_test.go
   - tests/extension/contracts/no-compatibility-facades.test.js
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/contracts/tooling-contracts.test.js
@@ -133,9 +133,9 @@ accepted unresolved command to make room for disposable history.
 ## Code and Tests
 
 - Query response assembly:
-  - `internal/mcp/response.go` — marshal helpers plus the canonical `Succeed`/`SucceedText`/`Fail`/`ParseArgs` vocabulary
-  - `internal/mcp/response_content.go` — image and warning content blocks
-  - `internal/mcp/response_clamp.go` — JSON-aware payload clamping
+  - `internal/tools/mcp/response.go` — marshal helpers plus the canonical `Succeed`/`SucceedText`/`Fail`/`ParseArgs` vocabulary
+  - `internal/tools/mcp/response_content.go` — image and warning content blocks
+  - `internal/tools/mcp/response_clamp.go` — JSON-aware payload clamping
 - Browser-command lifecycle owner (`internal/browsercommand`, kaboom-jdm5.2):
   `Owner` wraps `QueryDispatcher` state and is the only path the transports use
   for queueing (`Enqueue`), long-poll delivery (`AwaitPending`), results
@@ -153,13 +153,13 @@ accepted unresolved command to make room for disposable history.
   completion of a daemon-local command registered with `RegisterLocal` (for
   example annotation waits). Connection identity, liveness and generation
   stay with `syncruntime.Runtime`. `scripts/contracts/layering` forbids the
-  command module (`internal/browsercommand`, `internal/queries`) from importing
-  `net/http`, `internal/mcp` or `internal/capture/**`.
+  command module (`internal/browsercommand`, `internal/browsercommand/query`) from importing
+  `net/http`, `internal/tools/mcp` or `internal/composition/capture/**`.
 - Owner-only dispatcher access (kaboom-jdm5.5): every production caller —
   interact (`toolinteract.Commands`, batch `WaitCommand`), observe
   (`observecore.Deps.Commands`, storage/IndexedDB/waterfall), analyze annotation
   waits (`annotationanalysis.Commands`), media/recording uploads
-  (`ports.ResultSink` in `internal/app/ports`, as `query_result`), QA fixtures,
+  (`ports.ResultSink` in `internal/browsercommand/ports`, as `query_result`), QA fixtures,
   health/doctor/operational traces (`Snapshot`, `PendingCommands`,
   `CompletedCommands`, `FailedCommands`, `RecentTraces`) — goes through
   `browsercommand.Owner` or a consumer interface it satisfies. `queries.QueryRunner`
@@ -173,11 +173,11 @@ accepted unresolved command to make room for disposable history.
   the extension side through `internal/browsercommand/commandtest`, which uses only
   the owner's public result-source API (`query_result` submissions and a gated
   `ApplySyncExchange` acknowledgment). `ports.ResultSink` lives in
-  `internal/app/ports` because the ownership rule rejects a producer-owned
+  `internal/browsercommand/ports` because the ownership rule rejects a producer-owned
   interface in `browsercommand` and `queries` cannot import `browsercommand`.
 - Capture is a composition-root concern (kaboom-jdm5.5): only `cmd/browser-agent`,
-  its `toolruntime` wiring, the `internal/capture` tree and test-support packages
-  import `internal/capture` (layering rule `capture-root`; `test-support` keeps
+  its `toolruntime` wiring, the `internal/composition/capture` tree and test-support packages
+  import `internal/composition/capture` (layering rule `capture-root`; `test-support` keeps
   production code off `observe/testsupport`, `capturefixture` and `commandtest`).
   Every other consumer receives the owners it uses: toolguard, insecureproxy,
   mcpresponse take `syncruntime.Runtime`; configure clear, telemetryapi,
@@ -217,11 +217,11 @@ accepted unresolved command to make room for disposable history.
   `GetLastPendingQuery` test accessor was a production compatibility surface;
   every caller now derives the latest detached snapshot in test code, and the
   query architecture gate prevents that facade from returning.
-- `internal/asynccommand.Handler` owns queue admission, accessibility queries,
+- `internal/tools/asynccommand.Handler` owns queue admission, accessibility queries,
   connectivity-aware waiting, terminal response enrichment, and outcome
   recording as one lifecycle. Callers receive its functions explicitly; the
   composition root exposes no parallel command-completion methods or provider
   interfaces.
 - Tests:
-  - `internal/mcp/response_test.go`
-  - `internal/browsercommand/internal/dispatch/dispatcher_test.go` and `internal/capture/no_facade_test.go` prevent compatibility-only command lifecycle APIs from returning.
+  - `internal/tools/mcp/response_test.go`
+  - `internal/browsercommand/internal/dispatch/dispatcher_test.go` and `internal/composition/capture/no_facade_test.go` prevent compatibility-only command lifecycle APIs from returning.

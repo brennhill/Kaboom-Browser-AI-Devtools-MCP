@@ -6,14 +6,14 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
-  - cmd/browser-agent/internal/toolinteract/action_owners.go
-  - cmd/browser-agent/internal/toolguard/guards.go
+  - internal/tools/interact/handler/interactupload/upload.go
+  - internal/tools/interact/handler/action_owners.go
+  - internal/tools/guard/guards.go
   - cmd/browser-agent/server.go
   - cmd/browser-agent/config.go
-  - cmd/browser-agent/internal/startupconfig/paths.go
-  - cmd/browser-agent/internal/startupconfig/runtime.go
-  - cmd/browser-agent/internal/toolruntime/tools_core.go
+  - internal/lifecycle/startupconfig/paths.go
+  - internal/lifecycle/startupconfig/runtime.go
+  - internal/composition/toolruntime/tools_core.go
   - internal/upload/httpapi/handlers.go
   - internal/upload/handlers.go
   - internal/upload/form_submit.go
@@ -26,12 +26,12 @@ code_paths:
   - internal/upload/osauto/pid.go
   - scripts/smoke-tests/upload/upload-server.py
 test_paths:
-  - cmd/browser-agent/internal/startupconfig/paths_test.go
-  - cmd/browser-agent/internal/startupconfig/runtime_test.go
+  - internal/lifecycle/startupconfig/paths_test.go
+  - internal/lifecycle/startupconfig/runtime_test.go
   - internal/upload/uploadsec/injectiontests/injection_test.go
   - scripts/contracts/smokeupload/contracts_test.go
   - internal/upload/osauto/pid_test.go
-  - cmd/browser-agent/internal/toolinteract/interactupload/upload_test.go
+  - internal/tools/interact/handler/interactupload/upload_test.go
   - internal/upload/httpapi/contracts_test.go
   - internal/upload/httpapi/handlers_test.go
   - internal/upload/httpapi/handler_instances_test.go

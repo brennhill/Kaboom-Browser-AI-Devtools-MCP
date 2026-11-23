@@ -16,7 +16,7 @@ The Go server is organized into 5 logical layers: Foundation Types, Domain Packa
 
 ```mermaid
 graph TB
-    subgraph Foundation["🔹 Layer 1: Foundation Types (internal/types/)"]
+    subgraph Foundation["🔹 Layer 1: Foundation Types (internal/platform/types/)"]
         direction LR
         Protocol["protocol.go<br/>JSON-RPC types<br/>- Request/Response<br/>- Error handling"]
         Network["network.go<br/>Network telemetry<br/>- HTTP timing<br/>- Body capture"]
@@ -32,7 +32,7 @@ graph TB
     subgraph Domain["🟠 Layer 2: Domain Packages"]
         direction TB
 
-        subgraph Capture["**Capture** (internal/capture/)<br/>Telemetry buffering"]
+        subgraph Capture["**Capture** (internal/composition/capture/)<br/>Telemetry buffering"]
             CTypes["types.go<br/>Capture struct"]
             WS["websocket.go<br/>WS events"]
             NetBody["network_bodies.go<br/>HTTP bodies"]
@@ -62,7 +62,7 @@ graph TB
             CTypes --> Settings
         end
 
-        subgraph Session["**Session** (internal/session/)<br/>Client management"]
+        subgraph Session["**Session** (internal/analysis/snapshots/)<br/>Client management"]
             STypes["types.go"]
             Registry["client_registry.go<br/>Multi-client isolation"]
             Verify["verify.go<br/>Token verification"]
@@ -78,7 +78,7 @@ graph TB
             Clustering -.-> APIContract
         end
 
-        subgraph Security["**Security** (internal/security/)<br/>Threat detection"]
+        subgraph Security["**Security** (internal/analysis/security/)<br/>Threat detection"]
             SecurityCore["security.go<br/>Core analysis"]
             CSP["csp.go<br/>CSP violation detection"]
             SRI["sri.go<br/>SRI validation"]
@@ -88,13 +88,13 @@ graph TB
             SecurityCore --> Flagging
         end
 
-        subgraph Pagination["**Pagination** (internal/pagination/)<br/>Cursor-based pagination"]
+        subgraph Pagination["**Pagination** (internal/observation/pagination/)<br/>Cursor-based pagination"]
             Cursor["cursor.go<br/>Encoding/decoding"]
             PaginationL["pagination.go<br/>RFC-compliant"]
             Cursor --> PaginationL
         end
 
-        subgraph Buffers["**Buffers** (internal/buffers/)<br/>Data structures"]
+        subgraph Buffers["**Buffers** (internal/observation/buffers/)<br/>Data structures"]
             RingBuf["ring_buffer.go<br/>FIFO circular buffer<br/>Cursor-based reads"]
         end
 
@@ -108,7 +108,7 @@ graph TB
     subgraph Tools["🔧 Layer 3: MCP Tools (cmd/browser-agent/tools_*.go)"]
         direction LR
         Observe["tools_observe.go<br/>observe(what)"]
-        Generate["internal/toolgenerate/dispatcher.go<br/>generate(format)"]
+        Generate["internal/tools/generate/handler/dispatcher.go<br/>generate(format)"]
         Interact["tools_interact.go<br/>interact(action)"]
         Configure["tools_configure.go<br/>configure(action)"]
 
@@ -186,7 +186,7 @@ graph TB
 
 ## Layer Responsibilities
 
-### Layer 1: Foundation Types (`internal/types/`)
+### Layer 1: Foundation Types (`internal/platform/types/`)
 **Purpose:** Zero-dependency type definitions for all layers
 - **protocol.go** - JSON-RPC 2.0 message types
 - **network.go** - Network telemetry (PerformanceResourceTiming, HTTP timing)
@@ -201,7 +201,7 @@ graph TB
 
 ### Layer 2: Domain Packages
 
-#### **Capture** (`internal/capture/`)
+#### **Capture** (`internal/composition/capture/`)
 **Purpose:** Receive and buffer browser telemetry
 - **Ring Buffers:** logs, network_bodies, network_waterfall, websocket_events, actions
 - **Memory Enforcement:** TTL eviction, max size limits
@@ -226,7 +226,7 @@ graph TB
 - Query queueing and routing
 - Correlation ID tracking for results
 
-#### **Session** (`internal/session/`)
+#### **Session** (`internal/analysis/snapshots/`)
 **Purpose:** Multi-client isolation and verification
 - **Client Registry** - Track connected clients
 - **Token Verification** - Constant-time token comparison
@@ -250,7 +250,7 @@ graph TB
 - `generate` tool (for test generation, error summaries)
 - Security analysis (for threat context)
 
-#### **Security** (`internal/security/`)
+#### **Security** (`internal/analysis/security/`)
 **Purpose:** Threat detection and compliance. Split into focused subpackages:
 - **`scan/`** - Aggregate audit: credentials, PII, headers, cookies, transport, auth
 - **`csp/`** - Detect CSP violations, suggest policies from observed traffic
@@ -264,7 +264,7 @@ graph TB
 - `generate` tool (for SARIF reports, CSP recommendations)
 - Alerts (for security notifications)
 
-#### **Pagination** (`internal/pagination/`)
+#### **Pagination** (`internal/observation/pagination/`)
 **Purpose:** RFC-compliant cursor-based pagination
 - **Cursor Encoding** - timestamp:sequence format
 - **Eviction Handling** - Automatic restart when cursor expires
@@ -272,7 +272,7 @@ graph TB
 
 **Used By:** All observe queries with pagination
 
-#### **Buffers** (`internal/buffers/`)
+#### **Buffers** (`internal/observation/buffers/`)
 **Purpose:** Generic ring buffer data structure
 - **Ring Buffer** - Fixed-size circular FIFO
 - **Cursor-based Reads** - Safe concurrent reads
@@ -289,7 +289,7 @@ graph TB
 | Tool | File | Purpose | Uses |
 |------|------|---------|------|
 | **observe** | tools_observe.go | Query buffered telemetry | Capture, Analysis, Security |
-| **generate** | internal/toolgenerate/dispatcher.go | Generate artifacts (tests, SARIF, HAR, CSP) | Capture, Analysis, Security |
+| **generate** | internal/tools/generate/handler/dispatcher.go | Generate artifacts (tests, SARIF, HAR, CSP) | Capture, Analysis, Security |
 | **interact** | tools_interact.go | DOM queries, browser control | Capture, Session |
 | **configure** | tools_configure.go | Noise rules, state persistence | Session, Capture |
 
@@ -382,8 +382,8 @@ AI calls interact({what: 'execute_js'})
 ### Pattern 3: Generate Tool
 ```
 AI calls generate({what: 'test'})
-  → handler.go routes to internal/toolgenerate/dispatcher.go
-  → internal/toolgenerate/dispatcher.go queries Capture buffers
+  → handler.go routes to internal/tools/generate/handler/dispatcher.go
+  → internal/tools/generate/handler/dispatcher.go queries Capture buffers
   → Analysis clusters errors, infers API schemas
   → testgen.go classifies and heals selectors
   → Pagination handles large datasets
@@ -406,14 +406,14 @@ AI calls configure({what: 'store', data: {...}})
 ## References
 
 ### Implementation Files
-- **Foundation:** `internal/types/*.go`
-- **Capture:** `internal/capture/*.go` (29 files)
-- **Session:** `internal/session/*.go` (6 files)
+- **Foundation:** `internal/platform/types/*.go`
+- **Capture:** `internal/composition/capture/*.go` (29 files)
+- **Session:** `internal/analysis/snapshots/*.go` (6 files)
 - **Analysis:** `internal/analysis/{apicontract,apischema,clustering,thirdparty}/*.go` (24 files)
-- **Security:** `internal/security/{scan,csp,sri,diff,policy,netflag,httpsec}/*.go` (38 files)
+- **Security:** `internal/analysis/security/{scan,csp,sri,diff,policy,netflag,httpsec}/*.go` (38 files)
 - **Tools:** `cmd/browser-agent/tools_*.go` (8 files)
 - **HTTP Server:** `cmd/browser-agent/{main,handler,server,middleware,routes,health}.go`
-- **Utilities:** `internal/{rate_limit,circuit_breaker,redaction,export}` + `internal/util/`
+- **Utilities:** `internal/{rate_limit,circuit_breaker,redaction,export}` + `internal/platform/util/`
 
 ### Related Diagrams
 - [C2: Containers](c2-containers.md) - Container boundaries

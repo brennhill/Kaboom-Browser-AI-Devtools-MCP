@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 # Timeline & Search — Technical Specification
 
-> **Status: proposed (reviewed 2026-11-21).** The correlation-id query engine, causality analyzer, `timeline_search`/`timeline_stats` modes and `timeline_export` action described here are not built. What ships today is narrower: `observe({what: "timeline"})` (a merged, time-ordered view of actions, errors, network and WebSocket events, with `include`, `limit` and `summary`) and `observe({what: "error_bundles"})`, both implemented in `internal/tools/observe/timeline/correlation.go` and dispatched from `cmd/browser-agent/internal/toolobserve/dispatcher.go`.
+> **Status: proposed (reviewed 2026-11-21).** The correlation-id query engine, causality analyzer, `timeline_search`/`timeline_stats` modes and `timeline_export` action described here are not built. What ships today is narrower: `observe({what: "timeline"})` (a merged, time-ordered view of actions, errors, network and WebSocket events, with `include`, `limit` and `summary`) and `observe({what: "error_bundles"})`, both implemented in `internal/tools/observe/timeline/correlation.go` and dispatched from `internal/tools/observe/handler/dispatcher.go`.
 
 ## Architecture
 
@@ -262,8 +262,8 @@ observe({
 
 ### Existing implementation to extend:
 - `internal/tools/observe/timeline/correlation.go` — current `timeline` and `error_bundles` modes (merging and sorting across buffers)
-- `cmd/browser-agent/internal/toolobserve/dispatcher.go` — observe mode dispatch
-- `internal/schema/observe.go` — observe `what` enum
+- `internal/tools/observe/handler/dispatcher.go` — observe mode dispatch
+- `internal/tools/schema/observe.go` — observe `what` enum
 
 ### Planned (not yet created):
 - Query parser and executor, event indexer, causality analyzer, export manager and event normalization types, most likely as additions to the `internal/tools/observe/timeline` package

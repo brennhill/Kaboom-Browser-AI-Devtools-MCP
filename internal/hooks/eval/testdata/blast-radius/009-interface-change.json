@@ -1,0 +1,17 @@
+{
+  "description": "ASPIRATIONAL: Changing an interface should warn about all implementors",
+  "hook": "blast-radius",
+  "project_root": "REPO_ROOT",
+  "input": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "internal/hooks/hook_policy.go",
+      "new_string": "type HookResult interface {\n\tFormatContext() string\n\tValidate() error\n}"
+    }
+  },
+  "expect": {
+    "has_output": true,
+    "contains": ["interface", "implement"],
+    "max_latency_ms": 5000
+  }
+}

@@ -12,9 +12,9 @@ last_verified_date: 2026-03-05
 ## Automated Coverage
 - `cmd/browser-agent/integration/bridge/startup_contention_test.go`
 - `cmd/browser-agent/integration/bridge/faststart_extended_test.go`
-- `cmd/browser-agent/internal/bridge/bridge_startup_test.go` (single-leader election, stale-lock reclaim, respawn)
-- `cmd/browser-agent/internal/bridge/startuplock/lock_test.go`
-- `cmd/browser-agent/internal/bridge/bridge_coverage_extra_test.go` (respawn peer signals, restart path)
+- `internal/lifecycle/bridge/bridge_startup_test.go` (single-leader election, stale-lock reclaim, respawn)
+- `internal/lifecycle/bridge/startuplock/lock_test.go`
+- `internal/lifecycle/bridge/bridge_coverage_extra_test.go` (respawn peer signals, restart path)
 
 ## Required Scenarios
 1. Multiple concurrent clients converge to one daemon.

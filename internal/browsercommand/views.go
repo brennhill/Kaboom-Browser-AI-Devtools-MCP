@@ -9,7 +9,7 @@ package browsercommand
 import (
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/query"
 )
 
 // RegisterLocal creates a pending command that the daemon itself completes

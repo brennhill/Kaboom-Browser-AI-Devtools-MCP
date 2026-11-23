@@ -17,12 +17,12 @@ last_verified_date: 2026-03-05
 
 ## Dispatcher
 
-- Entry: `issuereport.Handle` in `internal/issuereport/handler.go`
-- Registry: the `report_issue` handler supplied to `internal/toolconfigure.Dispatcher` in `tools_configure.go`
-- Schema: `report_issue` in `internal/schema/configure/properties_runtime.go`
+- Entry: `issuereport.Handle` in `internal/tools/issuereport/handler.go`
+- Registry: the `report_issue` handler supplied to `internal/tools/configure/handler.Dispatcher` in `tools_configure.go`
+- Schema: `report_issue` in `internal/tools/schema/configure/properties_runtime.go`
 - Mode spec: `report_issue` in `internal/tools/configure/capabilities/modespecs_configure.go`
 
-## Package: `internal/issuereport/`
+## Package: `internal/tools/issuereport/`
 
 | File | Purpose |
 |------|---------|
@@ -85,12 +85,12 @@ public issues.
 
 - `cmd/browser-agent/tools_configure.go`
 - `cmd/browser-agent/tools_configure_report_issue_test.go`
-- `internal/issuereport/handler.go`
-- `internal/issuereport/handler_test.go`
-- `internal/issuereport/types.go`
-- `internal/issuereport/templates.go`
-- `internal/issuereport/sanitize.go`
-- `internal/issuereport/submit.go`
-- `internal/issuereport/templates_test.go`
-- `internal/issuereport/sanitize_test.go`
-- `internal/issuereport/submit_test.go`
+- `internal/tools/issuereport/handler.go`
+- `internal/tools/issuereport/handler_test.go`
+- `internal/tools/issuereport/types.go`
+- `internal/tools/issuereport/templates.go`
+- `internal/tools/issuereport/sanitize.go`
+- `internal/tools/issuereport/submit.go`
+- `internal/tools/issuereport/templates_test.go`
+- `internal/tools/issuereport/sanitize_test.go`
+- `internal/tools/issuereport/submit_test.go`

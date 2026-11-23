@@ -84,7 +84,7 @@ tags: [testing, qa, hooks, conventions]
 
 ### 4.1 Unit Tests
 
-Source under test: `internal/hook/conventions/conventions.go`, `internal/hook/conventions/conventions.go`. Tests: `convention_discover_test.go`, `convention_detect_test.go`.
+Source under test: `internal/hooks/conventions/conventions.go`, `internal/hooks/conventions/conventions.go`. Tests: `convention_discover_test.go`, `convention_detect_test.go`.
 
 | # | Test Case | Input | Expected Output | Priority |
 |---|-----------|-------|-----------------|----------|
@@ -111,7 +111,7 @@ Source under test: `internal/hook/conventions/conventions.go`, `internal/hook/co
 | IT-1 | Quality gate injects summary | `RunQualityGate` on an edit | `PROJECT CONVENTIONS` block present | must |
 | IT-2 | Quality gate injects examples | Edit containing a known probe | `CODEBASE CONVENTIONS` block with examples | must |
 | IT-3 | Discovery feeds detection | `DiscoveredProbes` merged with static probes | Discovered patterns drive example search | must |
-| IT-4 | Eval fixtures on real repo | `internal/hook/eval/testdata/quality-gate/` and `u01..u10` | Regression fixtures pass against the Kaboom codebase | must |
+| IT-4 | Eval fixtures on real repo | `internal/hooks/eval/testdata/quality-gate/` and `u01..u10` | Regression fixtures pass against the Kaboom codebase | must |
 
 ### 4.3 Edge Case Tests
 

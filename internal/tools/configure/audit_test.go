@@ -7,7 +7,7 @@ package configure
 import (
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/audit"
 )
 
 func TestSummarizeAuditEntries_Empty(t *testing.T) {

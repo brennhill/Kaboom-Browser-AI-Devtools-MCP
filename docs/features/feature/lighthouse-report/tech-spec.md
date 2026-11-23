@@ -17,7 +17,7 @@ last_verified_date: 2026-06-29
 Lighthouse Report adds a new analyze mode, `analyze({what: "lighthouse_report"})`, that runs
 a real Google Lighthouse audit against the tracked tab and returns a trimmed result. The mode
 registers in the analyze dispatch registry (the private analyze mode registry in
-`cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`) alongside existing modes such as `audit`,
+`internal/tools/analyze/handler/analyzedispatch/dispatcher.go`) alongside existing modes such as `audit`,
 `performance`, and `accessibility`. Its hint and optional parameters register in
 `internal/tools/configure/capabilities/modespecs_analyze.go`.
 
@@ -39,7 +39,7 @@ dependency but duplicates work the existing `audit` mode already approximates.
 request parameters (`categories`, `device`, `mode`), then either invokes the Lighthouse CLI as
 a subprocess or dispatches an asynchronous CDP command to the extension. The handler follows
 the same registration and dispatch conventions as the existing `combinedaudit.Handle` handler in
-`cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go`.
+`internal/tools/analyze/handler/combinedaudit/handler.go`.
 
 **CDP attach lifecycle (extension)**: The extension already manages the Chrome debugger
 attach and detach lifecycle in `src/background/dom/cdp/cdp-dispatch.ts`, using
@@ -57,7 +57,7 @@ estimated savings, and diagnostics. The trimmed response targets under five kilo
 agent polls for completion through `observe({what: "command_result"})`. Pending and failed
 commands are observable through `observe({what: "pending_commands"})` and
 `observe({what: "failed_commands"})`, consistent with the existing command-result enum in
-`internal/schema/observe.go`.
+`internal/tools/schema/observe.go`.
 
 ## Data Flows
 
@@ -91,7 +91,7 @@ Agent polls observe({what: "command_result"}) and receives the structured report
 
 **New server files**:
 - A `lighthouse_report` handler wired into the private analyze mode registry in
-  `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`.
+  `internal/tools/analyze/handler/analyzedispatch/dispatcher.go`.
 - A result-trimming helper that maps the raw Lighthouse JSON to the structured response.
 
 **Modified server files**:
@@ -167,10 +167,10 @@ Agent polls observe({what: "command_result"}) and receives the structured report
 ## Dependencies
 
 ### Depends on:
-- The analyze dispatch registry (`cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`).
+- The analyze dispatch registry (`internal/tools/analyze/handler/analyzedispatch/dispatcher.go`).
 - The CDP attach/detach lifecycle (`src/background/dom/cdp/cdp-dispatch.ts`).
 - The asynchronous command pattern and command-result polling
-  (`cmd/browser-agent/internal/toolinteract/interact_dom.go`,
+  (`internal/tools/interact/handler/interact_dom.go`,
   `observe({what: "command_result"})`).
 - For Option A, a Lighthouse CLI in the user's PATH.
 

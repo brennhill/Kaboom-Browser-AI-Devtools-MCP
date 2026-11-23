@@ -6,29 +6,29 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-21
 code_paths:
-  - cmd/browser-agent/internal/toolanalyze/designdrift/handler.go
-  - cmd/browser-agent/internal/toolanalyze/designdrift/finding.go
-  - cmd/browser-agent/internal/toolanalyze/designdrift/spec.go
-  - cmd/browser-agent/internal/toolanalyze/designdrift/consistency.go
-  - cmd/browser-agent/internal/toolanalyze/designdrift/tokens.go
-  - cmd/browser-agent/internal/toolanalyze/designdrift/spacing.go
-  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
-  - cmd/browser-agent/internal/cli/parser/observe_analyze.go
-  - internal/styleprobe/wire_style_probe.go
-  - internal/schema/analyze.go
+  - internal/tools/analyze/handler/designdrift/handler.go
+  - internal/tools/analyze/handler/designdrift/finding.go
+  - internal/tools/analyze/handler/designdrift/spec.go
+  - internal/tools/analyze/handler/designdrift/consistency.go
+  - internal/tools/analyze/handler/designdrift/tokens.go
+  - internal/tools/analyze/handler/designdrift/spacing.go
+  - internal/tools/analyze/handler/analyzedispatch/dispatcher.go
+  - internal/tools/cli/parser/observe_analyze.go
+  - internal/page/styleprobe/wire_style_probe.go
+  - internal/tools/schema/analyze.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - src/inject/computed-styles.ts
   - src/types/wire/wire-style-probe.ts
   - gokaboom.dev/src/content/docs/reference/analyze.md
 test_paths:
-  - cmd/browser-agent/internal/toolanalyze/designdrift/contract_test.go
-  - cmd/browser-agent/internal/toolanalyze/designdrift/analyzers_test.go
-  - cmd/browser-agent/internal/toolanalyze/designdrift/spacing_test.go
-  - cmd/browser-agent/internal/toolanalyze/designdrift/tokens_test.go
-  - cmd/browser-agent/internal/toolanalyze/designdrift/testdata/expected-findings.json
-  - cmd/browser-agent/internal/toolanalyze/designdrift/testdata/fixture-probe.json
-  - cmd/browser-agent/internal/testpages/pages/design-drift.html
-  - cmd/browser-agent/internal/testpages/designfixture_test.go
+  - internal/tools/analyze/handler/designdrift/contract_test.go
+  - internal/tools/analyze/handler/designdrift/analyzers_test.go
+  - internal/tools/analyze/handler/designdrift/spacing_test.go
+  - internal/tools/analyze/handler/designdrift/tokens_test.go
+  - internal/tools/analyze/handler/designdrift/testdata/expected-findings.json
+  - internal/tools/analyze/handler/designdrift/testdata/fixture-probe.json
+  - internal/composition/http/testpages/pages/design-drift.html
+  - internal/composition/http/testpages/designfixture_test.go
   - scripts/tests/browser/cat-36-design-drift.sh
   - scripts/ci/mutation-cases.json
   - scripts/docs/reference/check-reference-schema-sync.mjs
@@ -281,7 +281,7 @@ identically is how a tool starts claiming success it did not earn.
 
 ## Verification
 
-The fixture at `cmd/browser-agent/internal/testpages/pages/design-drift.html`
+The fixture at `internal/composition/http/testpages/pages/design-drift.html`
 plants every example from the three issues plus six negative controls
 (first-child margin, state variant, exact token match, parent-owned flex gap,
 two-element group, out-of-flow sibling).
@@ -314,7 +314,7 @@ so editing the markup or the stylesheet left `fixture-probe.json` describing a
 page that no longer existed, with the whole Go suite green and UAT category 36 —
 which runs the same expectations against the live page — the only thing that
 could notice. `TestDesignDriftFixtureMatchesItsPage` in
-`cmd/browser-agent/internal/testpages` closes that: it recomputes the SHA-256 of
+`internal/composition/http/testpages` closes that: it recomputes the SHA-256 of
 the page's `<style>` and `<body>` against the digests recorded in the capture's
 `_source` block, and separately derives each group's element count, generated
 selector and `:root` token table from the markup. The digests fail on any change

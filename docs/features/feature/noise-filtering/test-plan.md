@@ -115,7 +115,7 @@ last_verified_date: 2026-03-05
 - Security invariants (auth responses, app errors protection)
 - Framework detection (React, Next.js, Vite signatures)
 
-**Test File:** `internal/noise/noise_test.go`
+**Test File:** `internal/observation/noise/noise_test.go`
 
 #### Key Test Cases:
 1. `TestNewNoiseConfigHasAllBuiltins` — Verify ~50 built-in rules present

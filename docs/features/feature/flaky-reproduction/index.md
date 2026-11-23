@@ -6,11 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-08-03
 code_paths:
-  - internal/flakerepro/runner.go
-  - internal/workflowverify/runner.go
+  - internal/analysis/flakerepro/runner.go
+  - internal/analysis/workflowverify/runner.go
 test_paths:
-  - internal/flakerepro/runner_test.go
-  - internal/workflowverify/runner_test.go
+  - internal/analysis/flakerepro/runner_test.go
+  - internal/analysis/workflowverify/runner_test.go
 ---
 
 # Deterministic Flaky-Failure Reproduction

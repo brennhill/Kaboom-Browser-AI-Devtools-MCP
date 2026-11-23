@@ -1,6 +1,6 @@
 // shape.go — Derives a machine-checkable response shape from a real MCP tool response.
 //
-// PURPOSE: MCP tool responses had no declared output contract (internal/mcp
+// PURPOSE: MCP tool responses had no declared output contract (internal/tools/mcp
 // declares InputSchema and nothing for output), so a handler could drop, rename
 // or retype a field and every layer stayed green. A Shape is the declarable
 // half of a response: the field PATHS and their JSON TYPES, never their values.
@@ -16,7 +16,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
 // kindDirect is a daemon-local response: the payload IS the answer.

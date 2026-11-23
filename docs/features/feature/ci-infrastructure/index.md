@@ -13,17 +13,17 @@ code_paths:
   - scripts/quality/workflows/check-go-test-targets.mjs
   - scripts/uat/runners/test-js-sharded.sh
   - scripts/quality/verification/validate-architecture.sh
-  - cmd/browser-agent/internal/ciapi/handlers.go
-  - cmd/browser-agent/internal/ciapi/snapshot.go
-  - cmd/browser-agent/internal/ciapi/types.go
+  - internal/composition/http/ci/handlers.go
+  - internal/composition/http/ci/snapshot.go
+  - internal/composition/http/ci/types.go
   - cmd/browser-agent/server.go
 test_paths:
-  - internal/capture/resetter/resetter_test.go
+  - internal/observation/resetter/resetter_test.go
   - tests/extension/contracts/tooling-contracts.test.js
   - tests/extension/misc/integration.test.cjs
-  - cmd/browser-agent/internal/ciapi/snapshot_test.go
-  - cmd/browser-agent/internal/ciapi/compute_test.go
-  - cmd/browser-agent/internal/ciapi/handlers_integration_test.go
+  - internal/composition/http/ci/snapshot_test.go
+  - internal/composition/http/ci/compute_test.go
+  - internal/composition/http/ci/handlers_integration_test.go
   - scripts/quality/workflows/check-local-paths.test.mjs
   - scripts/quality/workflows/check-go-test-targets.test.mjs
 last_verified_version: 0.7.12
@@ -53,19 +53,19 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-- HTTP endpoint implementation: `cmd/browser-agent/internal/ciapi/`
+- HTTP endpoint implementation: `internal/composition/http/ci/`
 - Route registration: `cmd/browser-agent/server.go`
 - Snapshot, clear, and test-boundary endpoint behavior:
-  `cmd/browser-agent/internal/ciapi/handlers.go`
+  `internal/composition/http/ci/handlers.go`
 - The clear route receives `resetter.Resetter` explicitly; snapshot and
   test-boundary handlers retain only the narrower capture read surface.
 - Snapshot filtering, statistics, and payload contracts:
-  `cmd/browser-agent/internal/ciapi/snapshot.go`,
-  `cmd/browser-agent/internal/ciapi/types.go`
+  `internal/composition/http/ci/snapshot.go`,
+  `internal/composition/http/ci/types.go`
 - Characterization and route tests:
-  `cmd/browser-agent/internal/ciapi/snapshot_test.go`,
-  `cmd/browser-agent/internal/ciapi/compute_test.go`,
-  `cmd/browser-agent/internal/ciapi/handlers_integration_test.go`
+  `internal/composition/http/ci/snapshot_test.go`,
+  `internal/composition/http/ci/compute_test.go`,
+  `internal/composition/http/ci/handlers_integration_test.go`
 - JavaScript CI rebuilds TypeScript and fails on content drift; checkout
   modification times are never treated as build evidence. Sharded failures are
   attributed only to the process that exited nonzero.

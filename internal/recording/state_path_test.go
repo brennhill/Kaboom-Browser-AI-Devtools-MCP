@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statediag"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/statefault"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/statediag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/fault"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/paths"
 )
 
 func TestPersistRecordingWritesToStateDirectory(t *testing.T) {

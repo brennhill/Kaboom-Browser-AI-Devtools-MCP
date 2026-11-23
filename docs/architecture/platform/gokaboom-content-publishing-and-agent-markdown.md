@@ -214,7 +214,7 @@ Covers complete homepage theme/layout replacement and messaging updates (includi
 1. New docs/blog/articles routes must resolve to both HTML and `*.md` outputs.
 2. Changes to markdown URL generation must update `llms.txt` and `llms-full.txt` behavior.
 3. Reference pages must preserve `## Quick Reference` and `## Common Parameters` headings.
-4. Reference pages must keep mode/action sections synchronized with `internal/schema/*`.
+4. Reference pages must keep mode/action sections synchronized with `internal/tools/schema/*`.
 5. Keep legacy `/markdown/*` compatibility until consumers are migrated.
 6. Changed how-to files must keep acronym expansions and step-by-step structure.
 7. Docs version references must remain sourced from root `VERSION` (no hard-coded release strings).

@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/reproduction-scripts/index.md
 
 // reproduction_test.go — Integration tests for reproduction helpers that live in cmd/browser-agent.
-// Pure reproduction tests live in internal/reproduction/reproduction_test.go.
+// Pure reproduction tests live in internal/recording/reproduction/reproduction_test.go.
 package interact
 
 import "testing"
