@@ -86,6 +86,28 @@ test('upgrade regression always restores its disposable host', () => {
   assert.match(source, /rmSync\(tmpRoot,\s*\{\s*recursive:\s*true/, 'must remove the disposable host after UAT')
 })
 
+test('upgrade regression cleanup failure never masks the stage failure', () => {
+  const source = fs.readFileSync(scriptPath, 'utf8')
+  const teardown = source.slice(source.indexOf('async function teardownSandbox('))
+  assert.match(source, /stagesPassed = true\s*\} finally \{\s*await teardownSandbox\(ctx, stagesPassed\)/)
+  assert.match(
+    teardown,
+    /stagesPassed \? cleanupHost\(\) : runCleanupReportingErrors\(\)/,
+    'after a stage failure, cleanup errors are only logged'
+  )
+})
+
+test('upgrade regression never leaves a running kaboom process locking the sandbox', () => {
+  const source = fs.readFileSync(scriptPath, 'utf8')
+  const teardown = source.slice(source.indexOf('async function teardownSandbox('))
+  assert.match(teardown, /await crashDaemon\(ctx\.daemon\)/, 'teardown must tree-kill and await the stage daemon')
+  assert.match(
+    source,
+    /waitForChildExit\(rejected, 5000\)\.finally\(\(\) => crashDaemon\(rejected\)\)/,
+    'a stuck rollback replacement must be killed'
+  )
+})
+
 test('upgrade identity accepts the canonical operational health name', () => {
   assert.equal(resolveDaemonServiceName({ name: 'kaboom-browser-devtools' }), 'kaboom-browser-devtools')
   assert.equal(resolveDaemonServiceName({ service_name: 'legacy-snake' }), 'legacy-snake')
