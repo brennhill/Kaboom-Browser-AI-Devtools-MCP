@@ -611,7 +611,6 @@ func TestInteractTestsDoNotMirrorRootAccessor(t *testing.T) {
 func TestPackagesDoNotReexportCanonicalLogEntry(t *testing.T) {
 	for _, relativePath := range []string{
 		"internal/tools/mcp/types.go",
-		"internal/composition/serverlog/main_handlers.go",
 		"internal/observation/pagination/entries.go",
 		"internal/analysis/security/scan/scan.go",
 		"internal/observation/daemonlog/store.go",

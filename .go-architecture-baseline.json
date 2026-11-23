@@ -1737,14 +1737,6 @@
       "mutable_globals": 0,
       "exports": 3
     },
-    "internal/composition/serverlog/log_accessor.go": {
-      "mutable_globals": 1,
-      "exports": 9
-    },
-    "internal/composition/serverlog/main_handlers.go": {
-      "mutable_globals": 0,
-      "exports": 3
-    },
     "internal/platform/defaults/defaults.go": {
       "mutable_globals": 0,
       "exports": 2
