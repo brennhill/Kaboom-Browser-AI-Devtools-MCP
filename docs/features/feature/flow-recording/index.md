@@ -4,7 +4,7 @@ feature_id: feature-flow-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-11-21
+last_reviewed: 2026-11-23
 code_paths:
   - internal/composition/toolruntime/tools_configure.go
   - internal/tools/configure/handler/dispatcher.go
@@ -41,6 +41,8 @@ code_paths:
   - internal/recording/manager_store.go
   - internal/screenrec/save.go
 test_paths:
+  - internal/recording/actionlog/flow_test.go
+  - internal/recording/manager_active_test.go
   - internal/ingestion/http/handlers_test.go
   - internal/tools/configure/handler/dispatcher_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
