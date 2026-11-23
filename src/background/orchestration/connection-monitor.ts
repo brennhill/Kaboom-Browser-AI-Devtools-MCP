@@ -6,7 +6,7 @@
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js'
 import { DebugCategory, debugLog } from '../debug.js'
-import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js'
+import { isAiWebPilotEnabled } from '../tab-tracking/pilot-state.js'
 import {
   acknowledgeExtensionLogQueue,
   getExtensionLogQueueSnapshot,

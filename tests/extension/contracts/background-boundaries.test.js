@@ -22,8 +22,14 @@ test('background routing is composed from feature-owned handler modules', () => 
 
 test('background mutable state is owned by change-coupled modules', () => {
   assert.strictEqual(fs.existsSync('src/background/state.ts'), false)
-  for (const owner of ['connection-state.ts', 'settings-state.ts', 'pilot-state.ts', 'log-queue.ts', 'startup-state.ts']) {
-    assert.strictEqual(fs.existsSync(`src/background/runtime-state/${owner}`), true, owner)
+  for (const owner of [
+    'runtime-state/connection-state.ts',
+    'runtime-state/settings-state.ts',
+    'tab-tracking/pilot-state.ts',
+    'runtime-state/log-queue.ts',
+    'runtime-state/startup-state.ts'
+  ]) {
+    assert.strictEqual(fs.existsSync(`src/background/${owner}`), true, owner)
   }
 })
 

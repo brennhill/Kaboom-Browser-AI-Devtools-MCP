@@ -4,7 +4,7 @@ feature_id: feature-tab-tracking-ux
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-11-21
+last_reviewed: 2026-11-23
 code_paths:
   - docs/architecture/diagrams/ui/flame-flicker-visual.md
   - src/lib/brand.ts
@@ -32,10 +32,10 @@ code_paths:
   - extension/popup.css
   - src/background/message-handlers.ts
   - src/background/message-routing/pilot-handler.ts
-  - src/background/runtime-state/pilot-state.ts
+  - src/background/tab-tracking/pilot-state.ts
   - src/background/runtime-state/connection-generation.ts
-  - src/background/runtime-state/tracking-continuity.ts
-  - src/background/runtime-state/content-readiness.ts
+  - src/background/tab-tracking/tracking-continuity.ts
+  - src/background/tab-tracking/content-readiness.ts
   - src/background/runtime-state/state-recovery.ts
   - src/background/commands/registry.ts
   - src/background/commands/helpers.ts

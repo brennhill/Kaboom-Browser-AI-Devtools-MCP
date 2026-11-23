@@ -19,7 +19,7 @@ globalThis.chrome = {
 globalThis.__KABOOM_DEBUG_LOG__ = diagnosticLog
 
 const { handlePilotCommand } = await import('../../../extension/background/commands/interact.js')
-const { resetPilotCacheForTesting } = await import('../../../extension/background/runtime-state/pilot-state.js')
+const { resetPilotCacheForTesting } = await import('../../../extension/background/tab-tracking/pilot-state.js')
 
 describe('pilot command response contract', () => {
   beforeEach(() => {

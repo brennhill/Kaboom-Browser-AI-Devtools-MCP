@@ -42,7 +42,7 @@ import {
   setAiWebPilotEnabledCache,
   setAiWebPilotCacheInitialized,
   setPilotInitCallback
-} from './runtime-state/pilot-state.js'
+} from './tab-tracking/pilot-state.js'
 import { EXTENSION_SESSION_ID, markInitComplete } from './runtime-state/startup-state.js'
 import {
   isSourceMapEnabled,
@@ -77,7 +77,7 @@ import { installContextMenus } from './ui/context-menus.js'
 import { saveSetting, loadDebugModeState, loadAiWebPilotState, loadSavedSettings } from './ui/settings-storage.js'
 import { forwardToAllContentScripts, sendTabToast } from './ui/content-script-bridge.js'
 import { getActiveTab } from './ui/tracked-tab-state.js'
-import { trackingContinuity } from './runtime-state/tracking-continuity.js'
+import { trackingContinuity } from './tab-tracking/tracking-continuity.js'
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js'
 import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js'
 import { installMessageListener } from './message-handlers.js'

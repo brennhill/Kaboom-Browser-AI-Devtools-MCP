@@ -3,9 +3,9 @@
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
 import { debugLog, DebugCategory } from '../debug.js';
-import { reportStateRecovery, resolveStateRecovery } from './state-recovery.js';
+import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js';
 import { trackingContinuity } from './tracking-continuity.js';
-import { getConnectionGeneration } from './connection-generation.js';
+import { getConnectionGeneration } from '../runtime-state/connection-generation.js';
 const DEFAULT_DELAYS_MS = [25, 75, 150];
 const CONTENT_COMMANDS = new Set([
     'a11y',

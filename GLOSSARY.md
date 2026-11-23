@@ -26,7 +26,7 @@ public interface listed here. Details are in the architecture guides.
 | --- | --- | --- | --- |
 | **Connection & Sync** | Connection identity: extension session, connection generation, liveness, the /sync protocol, and the daemon's projections of tracking and Pilot | `internal/sync/runtime/` | `src/background/sync/`, `src/background/runtime-state/connection-generation.ts` |
 | **Browser Command** | Command lifecycle: queue, delivery eligibility, progress, results, expiry, lost commands | `internal/browsercommand/`, `internal/browsercommand/query/` | `src/background/commands/`, `src/background/pending-queries.ts`, `src/background/exec/`, `src/background/dom/` (as **Browser Command Execution**) |
-| **Tab Tracking & Pilot** | Tracked-tab selection, tracking continuity, content readiness, Pilot intent | (projection only, in Connection & Sync) | `src/lib/tabs/`, `src/background/runtime-state/tracking-continuity.ts`, `src/background/runtime-state/content-readiness.ts`, `src/background/runtime-state/pilot-state.ts` |
+| **Tab Tracking & Pilot** | Tracked-tab selection, tracking continuity, content readiness, Pilot intent | (projection only, in Connection & Sync) | `src/lib/tabs/`, `src/background/tab-tracking/tracking-continuity.ts`, `src/background/tab-tracking/content-readiness.ts`, `src/background/tab-tracking/pilot-state.ts` |
 | **Observation Capture** | Retention and queries for captured browser observations | `internal/observation/store/telemetry/`, `internal/observation/store/logs/`, `internal/observation/store/perf/` and their ring stores | `src/inject/`, `src/content/`, `src/background/sync/batcher-instances.ts` (capture and batching) |
 | **Extension Ingestion** | HTTP endpoints that accept extension uploads and write them to their owners | `internal/ingestion/http/`, `internal/annotation/adapters/http/` | — |
 | **Event Recording** | Recordings of user-flow events, their persistence, playback and diff | `internal/recording/`, `internal/tools/recording/` | — |
@@ -136,7 +136,7 @@ current-generation commands.
 The barrier that holds commands needing a content script until the tracked
 tab's content script reports ready after a navigation or injection.
 - Context: Tab Tracking & Pilot (extension).
-- Code: `src/background/runtime-state/content-readiness.ts:ContentReadinessBarrier`, `src/background/runtime-state/content-readiness.ts:requiresContentReadiness`, `src/types/runtime/tracking.ts:TrackingContentReadyMessage`.
+- Code: `src/background/tab-tracking/content-readiness.ts:ContentReadinessBarrier`, `src/background/tab-tracking/content-readiness.ts:requiresContentReadiness`, `src/types/runtime/tracking.ts:TrackingContentReadyMessage`.
 - Avoid: "page loaded". Readiness means the content script answered, not that the document loaded.
 
 ### Correlation ID
@@ -217,7 +217,7 @@ the browser. **Pilot intent** is the user's enabled or disabled choice. Chrome
 owns it in `chrome.storage`. The daemon holds only a projection that arrives
 on the heartbeat, and gates actions with it.
 - Context: Tab Tracking & Pilot (owner). Connection & Sync holds the projection.
-- Code: `src/background/runtime-state/pilot-state.ts:isAiWebPilotEnabled`, `src/lib/constants.ts:StorageKey.AI_WEB_PILOT_ENABLED`, `src/background/commands/helpers.ts:requireAiWebPilot`, `internal/sync/runtime/runtime.go:Runtime.IsPilotActionAllowed`.
+- Code: `src/background/tab-tracking/pilot-state.ts:isAiWebPilotEnabled`, `src/lib/constants.ts:StorageKey.AI_WEB_PILOT_ENABLED`, `src/background/commands/helpers.ts:requireAiWebPilot`, `internal/sync/runtime/runtime.go:Runtime.IsPilotActionAllowed`.
 - Avoid: "autopilot", or "pilot mode" as a daemon setting.
 
 ### Port
@@ -294,7 +294,7 @@ injection, reconnect and close (establish, confirm, navigationStarted, fail,
 close). Lifecycle adapters report to it. They do not write tracking state
 directly.
 - Context: Tab Tracking & Pilot.
-- Code: `src/background/runtime-state/tracking-continuity.ts:trackingContinuity`, `src/types/runtime/tracking.ts:TrackingContinuitySnapshot`.
+- Code: `src/background/tab-tracking/tracking-continuity.ts:trackingContinuity`, `src/types/runtime/tracking.ts:TrackingContinuitySnapshot`.
 
 ### Use case
 

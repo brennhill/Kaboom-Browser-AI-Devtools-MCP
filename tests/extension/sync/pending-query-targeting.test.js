@@ -108,10 +108,10 @@ describe('pending query targeting', () => {
 
     bgModule = {
       ...(await import('../../../extension/background/pending-queries.js')),
-      ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
+      ...(await import('../../../extension/background/tab-tracking/pilot-state.js')),
       ...(await import('../../../extension/background/runtime-state/startup-state.js'))
     }
-    ;({ resetPilotCacheForTesting } = await import('../../../extension/background/runtime-state/pilot-state.js'))
+    ;({ resetPilotCacheForTesting } = await import('../../../extension/background/tab-tracking/pilot-state.js'))
     bgModule.markInitComplete()
     resetPilotCacheForTesting(true)
   })

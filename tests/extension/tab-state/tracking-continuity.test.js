@@ -4,7 +4,7 @@ import { test } from 'node:test'
 
 import {
   TrackingContinuity
-} from '../../../extension/background/runtime-state/tracking-continuity.js'
+} from '../../../extension/background/tab-tracking/tracking-continuity.js'
 
 test('cross-origin navigation retains stable tracked tab through recovery phases', () => {
   const machine = new TrackingContinuity()

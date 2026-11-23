@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import {
   ContentReadinessBarrier,
   requiresContentReadiness
-} from '../../../extension/background/runtime-state/content-readiness.js'
+} from '../../../extension/background/tab-tracking/content-readiness.js'
 
 test('only content-script commands are gated', () => {
   for (const command of ['dom', 'a11y', 'dom_action', 'upload', 'get_markdown']) {

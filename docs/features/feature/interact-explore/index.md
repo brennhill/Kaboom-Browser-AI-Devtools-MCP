@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-11-21
+last_reviewed: 2026-11-23
 code_paths:
   - src/content/provenance/collect.ts
   - src/lib/provenance/classify.ts
@@ -57,7 +57,7 @@ code_paths:
   - src/background/dom/cdp/cdp-ax-tree.ts
   - src/background/exec/browser-actions.ts
   - src/background/runtime-state/csp-state.ts
-  - src/background/runtime-state/content-readiness.ts
+  - src/background/tab-tracking/content-readiness.ts
   - src/background/commands/registry.ts
   - src/background/dom/cdp/cdp-dispatch.ts
   - src/background/dom/cdp/cdp-gestures.ts
