@@ -1,8 +1,8 @@
 ---
 doc_type: product-spec
 feature_id: feature-page-structure-detection
-status: proposed
-last_reviewed: 2026-11-21
+status: shipped
+last_reviewed: 2026-11-23
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

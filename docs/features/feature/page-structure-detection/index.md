@@ -1,10 +1,10 @@
 ---
 doc_type: feature_index
 feature_id: feature-page-structure-detection
-status: proposed
+status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-07
+last_reviewed: 2026-11-23
 code_paths:
   - src/background/commands/analyze.ts
   - internal/tools/analyze/handler/navigation.go

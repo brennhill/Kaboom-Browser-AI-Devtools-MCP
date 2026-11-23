@@ -1,12 +1,12 @@
 ---
 feature: Enhanced CLI Configuration Management
-status: proposed
+status: shipped
 tool: configure
 mode: cli
 version: 0.8.1
 doc_type: product-spec
 feature_id: feature-enhanced-cli-config
-last_reviewed: 2026-11-21
+last_reviewed: 2026-11-23
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---

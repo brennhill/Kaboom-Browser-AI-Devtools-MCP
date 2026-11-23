@@ -1,10 +1,10 @@
 ---
 doc_type: feature_index
 feature_id: feature-error-bundling
-status: proposed
+status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-11-23
 code_paths:
   - internal/tools/observe/timeline/correlation.go
   - src/lib/ai-context/ai-context-parsing.ts
