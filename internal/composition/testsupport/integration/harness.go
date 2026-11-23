@@ -294,6 +294,12 @@ func stopServer(t *testing.T, binary string, port int, stateDirectory, registry 
 	if err := command.Run(); err != nil && ctx.Err() == nil {
 		t.Logf("graceful test daemon cleanup on port %d: %v", port, err)
 	}
+	// The port lookup can fail (no listener yet, or already released while the
+	// daemon still flushes); the PID file in the test's own state dir is the
+	// fallback so the daemon cannot outlive cleanup.
+	if pid := daemonPIDFromState(stateDirectory, port); pid > 0 {
+		owners = append(owners, pid)
+	}
 	if remaining, err := procctl.FindProcessOnPort(port); err != nil {
 		t.Logf("test daemon owner lookup on port %d: %v", port, err)
 	} else {
@@ -308,7 +314,25 @@ func stopServer(t *testing.T, binary string, port int, stateDirectory, registry 
 		}
 	}
 	waitForExit(t, owners, 3*time.Second)
-	procctl.RemovePIDFile(port)
+	// Remove the PID file from the test's state dir, never the host's ~/.kaboom.
+	if err := os.Remove(statecfg.PIDFileIn(stateDirectory, port)); err != nil && !os.IsNotExist(err) {
+		t.Logf("remove test daemon pid file on port %d: %v", port, err)
+	}
+}
+
+// daemonPIDFromState reads the daemon PID recorded under the test's state
+// directory; 0 when absent or unreadable.
+func daemonPIDFromState(stateDirectory string, port int) int {
+	data, err := os.ReadFile(statecfg.PIDFileIn(stateDirectory, port)) // #nosec G304 -- test-owned state dir
+	if err != nil {
+		// EXPECTED_ABSENCE: a daemon that never started or already removed its PID file leaves none; the port lookup still runs.
+		return 0
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil || pid <= 0 {
+		return 0
+	}
+	return pid
 }
 
 // waitForExit polls until every pid has exited or the deadline passes, so a

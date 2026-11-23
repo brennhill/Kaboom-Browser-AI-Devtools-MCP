@@ -93,3 +93,14 @@ func TestRuntimePathsUnderRoot(t *testing.T) {
 		t.Fatalf("EvidenceDir() = %q, want %q", evidenceDir, want)
 	}
 }
+
+func TestPIDFileInUsesGivenRoot(t *testing.T) {
+	root := t.TempDir()
+	if got, want := PIDFileIn(root, 7890), filepath.Join(root, "run", "kaboom-7890.pid"); got != want {
+		t.Fatalf("PIDFileIn = %q, want %q", got, want)
+	}
+	t.Setenv(StateDirEnv, root)
+	if got, err := PIDFile(7890); err != nil || got != PIDFileIn(root, 7890) {
+		t.Fatalf("PIDFile = %q, %v; want it to match PIDFileIn under the resolved root", got, err)
+	}
+}

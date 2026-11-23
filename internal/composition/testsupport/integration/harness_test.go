@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/instance/registry"
+	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/paths"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/terminal/adapters"
 )
 
@@ -171,5 +172,25 @@ func TestFreePortInBandReservesTheTerminalPort(t *testing.T) {
 	defer func() { _ = blocker.Close() }()
 	if got := freePortInBand(base, base+portStride-1); got != 0 {
 		t.Fatalf("returned %d although its terminal port %d is held", got, base+terminal.PortOffset)
+	}
+}
+
+// Regression: when the port-owner lookup fails, cleanup must still find the
+// daemon through the PID file in the TEST's state directory (not the host's
+// ~/.kaboom), or the daemon outlives cleanup and the state dir removal fails.
+func TestDaemonPIDFromStateReadsTestStateDirectory(t *testing.T) {
+	stateDirectory := t.TempDir()
+	pidFile := statecfg.PIDFileIn(stateDirectory, 7891)
+	if err := os.MkdirAll(filepath.Dir(pidFile), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(pidFile, []byte("4242\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := daemonPIDFromState(stateDirectory, 7891); got != 4242 {
+		t.Fatalf("daemonPIDFromState = %d, want 4242", got)
+	}
+	if got := daemonPIDFromState(stateDirectory, 7892); got != 0 {
+		t.Fatalf("daemonPIDFromState for missing file = %d, want 0", got)
 	}
 }
