@@ -677,27 +677,6 @@
         }
       }
 
-      /* Orange pulse highlight for "click here to record" guidance */
-      .record-highlight .feature-section {
-        animation: record-highlight-pulse 1.2s ease-in-out infinite;
-        border: 2px solid #ea580c;
-      }
-
-      .record-highlight .record-label {
-        color: #ea580c !important;
-        font-weight: 600;
-      }
-
-      @keyframes record-highlight-pulse {
-        0%,
-        100% {
-          box-shadow: 0 0 6px 1px rgba(234, 88, 12, 0.3);
-        }
-        50% {
-          box-shadow: 0 0 16px 4px rgba(234, 88, 12, 0.6);
-        }
-      }
-
       /* Collapsible Advanced Capture */
       details.advanced-capture summary {
         font-size: 11px;

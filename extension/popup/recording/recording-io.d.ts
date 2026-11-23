@@ -27,4 +27,18 @@ export declare function handleStopClick(els: RecordingElements, state: Recording
     path?: string;
     error?: string;
 } | undefined) => void): void;
+/** Screen-recording state as shown by the popup (mirror or live owner). */
+export interface PopupRecordingSnapshot {
+    readonly active: boolean;
+    readonly name: string;
+    readonly startTime: number;
+}
+/**
+ * Ask the background recording owner for the live state (rule 18: the storage
+ * mirror goes stale if its writer dies without flushing). Returns null when the
+ * owner cannot answer, so the caller keeps the mirror instead of guessing.
+ */
+export declare function queryLiveRecordingInfo(): Promise<PopupRecordingSnapshot | null>;
+/** The live owner's answer wins; without one, the mirror stands. */
+export declare function reconcileRecordingState(mirror: PopupRecordingSnapshot | null, live: PopupRecordingSnapshot | null): PopupRecordingSnapshot | null;
 //# sourceMappingURL=recording-io.d.ts.map

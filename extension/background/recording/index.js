@@ -591,6 +591,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
         startRecording,
         stopRecording,
         isActive: () => recordingState.active,
+        getRecordingInfo,
         getTabId: () => recordingState.tabId,
         setInactive: () => {
             recordingState.active = false;

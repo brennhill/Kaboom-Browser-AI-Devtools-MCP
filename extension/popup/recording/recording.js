@@ -14,7 +14,7 @@ import { onStorageChanged } from '../../lib/storage/changes.js';
 import { removeLocal } from '../../lib/storage/local.js';
 import { readLocalState } from '../../lib/storage/validated.js';
 import { reportStateRecovery, resolveStateRecovery } from '../../lib/storage/recovery.js';
-import { sendRecordingGestureDecision, handleStartClick, handleStopClick } from './recording-io.js';
+import { sendRecordingGestureDecision, handleStartClick, handleStopClick, queryLiveRecordingInfo, reconcileRecordingState } from './recording-io.js';
 function isAudioMode(value) {
     return value === '' || value === 'tab' || value === 'mic' || value === 'both';
 }
@@ -22,8 +22,7 @@ function isPendingRecordingIntent(value) {
     if (typeof value !== 'object' || value === null || Array.isArray(value))
         return false;
     const intent = value;
-    return ((intent.highlight === undefined || typeof intent.highlight === 'boolean') &&
-        (intent.name === undefined || typeof intent.name === 'string') &&
+    return ((intent.name === undefined || typeof intent.name === 'string') &&
         (intent.fps === undefined || typeof intent.fps === 'number') &&
         (intent.audio === undefined || isAudioMode(intent.audio)) &&
         (intent.tabId === undefined || typeof intent.tabId === 'number') &&
@@ -47,7 +46,6 @@ function recordingDiagnostic(detail) {
 }
 const START_LABEL = 'Record screen';
 const STOP_LABEL = 'Stop recording';
-const HIGHLIGHT_LABEL = '\u25CF \u00AB Click here to record';
 const RECENT_RECORDING_START_MS = 8000;
 const TOP_NOTICE_DURATION_MS = 4000;
 const LOG = `${KABOOM_RECORDING_LOG_PREFIX} Popup:`;
@@ -58,30 +56,9 @@ const AUDIO_LABELS = {
     both: 'Video + tab + mic'
 };
 let topNoticeTimer = null;
-function getRecordSection(els) {
-    const closest = els.row.closest;
-    if (typeof closest !== 'function')
-        return null;
-    return closest.call(els.row, '.section');
-}
-function applyRecordHighlight(els) {
-    const section = getRecordSection(els);
-    if (section)
-        section.classList.add('record-highlight');
-    els.label.textContent = HIGHLIGHT_LABEL;
-}
-function removeRecordHighlight(els) {
-    const section = getRecordSection(els);
-    if (section)
-        section.classList.remove('record-highlight');
-    if (els.label.textContent === HIGHLIGHT_LABEL) {
-        els.label.textContent = START_LABEL;
-    }
-}
 // #lizard forgives
 function showRecording(els, state, name, startTime) {
     const wasRecording = state.isRecording;
-    removeRecordHighlight(els);
     state.isRecording = true;
     els.row.classList.add('is-recording');
     els.label.textContent = STOP_LABEL;
@@ -102,7 +79,6 @@ function showRecording(els, state, name, startTime) {
 }
 function showIdle(els, state) {
     state.isRecording = false;
-    removeRecordHighlight(els);
     els.row.classList.remove('is-recording');
     els.label.textContent = START_LABEL;
     els.statusEl.textContent = '';
@@ -135,7 +111,7 @@ function setApprovalPendingState(els, approvalEls, state, pending) {
         if (typeof removeAttr === 'function')
             removeAttr.call(els.row, 'aria-disabled');
     };
-    const approvalPending = Boolean(pending && !pending.highlight && !state.isRecording);
+    const approvalPending = Boolean(pending && !state.isRecording);
     if (approvalPending) {
         if (approvalEls.detail && pending)
             approvalEls.detail.textContent = describePendingRecording(pending);
@@ -245,16 +221,7 @@ export function setupRecordingUI() {
     const state = { isRecording: false, timerInterval: null };
     let pendingRecordingIntent = null;
     const updatePendingRecording = (pendingValue) => {
-        const pending = pendingValue;
-        if (pending?.highlight && !state.isRecording) {
-            applyRecordHighlight(els);
-            pendingRecordingIntent = null;
-            setApprovalPendingState(els, approvalEls, state, null);
-            return;
-        }
-        pendingRecordingIntent = pending && !pending.highlight ? pending : null;
-        if (!pendingRecordingIntent && !state.isRecording)
-            removeRecordHighlight(els);
+        pendingRecordingIntent = pendingValue ?? null;
         setApprovalPendingState(els, approvalEls, state, pendingRecordingIntent);
     };
     // The background recording owner clears StorageKey.PENDING_RECORDING once the
@@ -272,11 +239,15 @@ export function setupRecordingUI() {
         diagnostic: recordingDiagnostic('Saved screen recording was invalid or unreadable; idle state is active.')
     }).then(async (rec) => {
         console.log(LOG, 'recording state from storage:', rec);
-        if (rec?.active && rec.name && rec.startTime) {
-            console.log(LOG, 'resuming recording UI for', rec.name);
-            showRecording(els, state, rec.name, rec.startTime);
+        const mirror = rec ? { active: rec.active === true, name: rec.name ?? '', startTime: rec.startTime ?? 0 } : null;
+        const current = reconcileRecordingState(mirror, await queryLiveRecordingInfo());
+        if (current?.active && current.name && current.startTime) {
+            console.log(LOG, 'resuming recording UI for', current.name);
+            showRecording(els, state, current.name, current.startTime);
         }
-        // Check for highlight request from hover launcher
+        else if (rec?.active) {
+            console.warn(LOG, 'stored recording mirror says active but the live recorder is idle; showing idle');
+        }
         const pendingValue = await readLocalState({
             key: StorageKey.PENDING_RECORDING,
             fallback: null,
@@ -377,7 +348,6 @@ export function setupRecordingUI() {
             console.log(LOG, 'record row click ignored while approval is pending');
             return;
         }
-        removeRecordHighlight(els);
         if (state.isRecording) {
             handleStopClick(els, state, showIdle, showSaveResult);
         }

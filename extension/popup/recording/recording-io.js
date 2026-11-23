@@ -98,4 +98,31 @@ export function handleStopClick(els, state, showIdle, showSaveResult) {
         showSaveResult(els.saveInfoEl, resp);
     });
 }
+function isLiveRecordingInfo(value) {
+    const v = value;
+    return (!!v && typeof v.active === 'boolean' && typeof v.name === 'string' && typeof v.startTime === 'number');
+}
+/**
+ * Ask the background recording owner for the live state (rule 18: the storage
+ * mirror goes stale if its writer dies without flushing). Returns null when the
+ * owner cannot answer, so the caller keeps the mirror instead of guessing.
+ */
+export async function queryLiveRecordingInfo() {
+    try {
+        const message = { type: 'screen_recording_info' };
+        const response = await chrome.runtime.sendMessage(message);
+        if (isLiveRecordingInfo(response))
+            return response;
+        console.warn(LOG, 'live recording state reply was malformed; keeping stored state', response);
+        return null;
+    }
+    catch (err) {
+        console.warn(LOG, 'live recording state query failed; keeping stored state:', errorMessage(err));
+        return null;
+    }
+}
+/** The live owner's answer wins; without one, the mirror stands. */
+export function reconcileRecordingState(mirror, live) {
+    return live ?? mirror;
+}
 //# sourceMappingURL=recording-io.js.map

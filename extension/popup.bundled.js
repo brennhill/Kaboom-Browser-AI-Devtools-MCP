@@ -693,6 +693,26 @@
       showSaveResult2(els.saveInfoEl, resp);
     });
   }
+  function isLiveRecordingInfo(value) {
+    const v = value;
+    return !!v && typeof v.active === "boolean" && typeof v.name === "string" && typeof v.startTime === "number";
+  }
+  async function queryLiveRecordingInfo() {
+    try {
+      const message = { type: "screen_recording_info" };
+      const response = await chrome.runtime.sendMessage(message);
+      if (isLiveRecordingInfo(response))
+        return response;
+      console.warn(LOG, "live recording state reply was malformed; keeping stored state", response);
+      return null;
+    } catch (err) {
+      console.warn(LOG, "live recording state query failed; keeping stored state:", errorMessage(err));
+      return null;
+    }
+  }
+  function reconcileRecordingState(mirror, live) {
+    return live ?? mirror;
+  }
 
   // extension/popup/recording/recording.js
   function isAudioMode(value) {
@@ -702,7 +722,7 @@
     if (typeof value !== "object" || value === null || Array.isArray(value))
       return false;
     const intent = value;
-    return (intent.highlight === void 0 || typeof intent.highlight === "boolean") && (intent.name === void 0 || typeof intent.name === "string") && (intent.fps === void 0 || typeof intent.fps === "number") && (intent.audio === void 0 || isAudioMode(intent.audio)) && (intent.tabId === void 0 || typeof intent.tabId === "number") && (intent.url === void 0 || typeof intent.url === "string");
+    return (intent.name === void 0 || typeof intent.name === "string") && (intent.fps === void 0 || typeof intent.fps === "number") && (intent.audio === void 0 || isAudioMode(intent.audio)) && (intent.tabId === void 0 || typeof intent.tabId === "number") && (intent.url === void 0 || typeof intent.url === "string");
   }
   function isPopupRecordingState(value) {
     return typeof value === "object" && value !== null && (typeof value.active === "boolean" || value.active === void 0) && (typeof value.name === "string" || value.name === void 0) && (typeof value.startTime === "number" || value.startTime === void 0);
@@ -716,7 +736,6 @@
   }
   var START_LABEL = "Record screen";
   var STOP_LABEL = "Stop recording";
-  var HIGHLIGHT_LABEL = "\u25CF \xAB Click here to record";
   var RECENT_RECORDING_START_MS = 8e3;
   var TOP_NOTICE_DURATION_MS = 4e3;
   var LOG2 = `${KABOOM_RECORDING_LOG_PREFIX} Popup:`;
@@ -727,29 +746,8 @@
     both: "Video + tab + mic"
   };
   var topNoticeTimer = null;
-  function getRecordSection(els) {
-    const closest = els.row.closest;
-    if (typeof closest !== "function")
-      return null;
-    return closest.call(els.row, ".section");
-  }
-  function applyRecordHighlight(els) {
-    const section = getRecordSection(els);
-    if (section)
-      section.classList.add("record-highlight");
-    els.label.textContent = HIGHLIGHT_LABEL;
-  }
-  function removeRecordHighlight(els) {
-    const section = getRecordSection(els);
-    if (section)
-      section.classList.remove("record-highlight");
-    if (els.label.textContent === HIGHLIGHT_LABEL) {
-      els.label.textContent = START_LABEL;
-    }
-  }
   function showRecording(els, state, name, startTime) {
     const wasRecording = state.isRecording;
-    removeRecordHighlight(els);
     state.isRecording = true;
     els.row.classList.add("is-recording");
     els.label.textContent = STOP_LABEL;
@@ -770,7 +768,6 @@
   }
   function showIdle(els, state) {
     state.isRecording = false;
-    removeRecordHighlight(els);
     els.row.classList.remove("is-recording");
     els.label.textContent = START_LABEL;
     els.statusEl.textContent = "";
@@ -803,7 +800,7 @@
       if (typeof removeAttr === "function")
         removeAttr.call(els.row, "aria-disabled");
     };
-    const approvalPending = Boolean(pending && !pending.highlight && !state.isRecording);
+    const approvalPending = Boolean(pending && !state.isRecording);
     if (approvalPending) {
       if (approvalEls.detail && pending)
         approvalEls.detail.textContent = describePendingRecording(pending);
@@ -912,16 +909,7 @@
     const state = { isRecording: false, timerInterval: null };
     let pendingRecordingIntent = null;
     const updatePendingRecording = (pendingValue) => {
-      const pending = pendingValue;
-      if (pending?.highlight && !state.isRecording) {
-        applyRecordHighlight(els);
-        pendingRecordingIntent = null;
-        setApprovalPendingState(els, approvalEls, state, null);
-        return;
-      }
-      pendingRecordingIntent = pending && !pending.highlight ? pending : null;
-      if (!pendingRecordingIntent && !state.isRecording)
-        removeRecordHighlight(els);
+      pendingRecordingIntent = pendingValue ?? null;
       setApprovalPendingState(els, approvalEls, state, pendingRecordingIntent);
     };
     const clearPendingRecordingIntent = () => {
@@ -935,9 +923,13 @@
       diagnostic: recordingDiagnostic("Saved screen recording was invalid or unreadable; idle state is active.")
     }).then(async (rec) => {
       console.log(LOG2, "recording state from storage:", rec);
-      if (rec?.active && rec.name && rec.startTime) {
-        console.log(LOG2, "resuming recording UI for", rec.name);
-        showRecording(els, state, rec.name, rec.startTime);
+      const mirror = rec ? { active: rec.active === true, name: rec.name ?? "", startTime: rec.startTime ?? 0 } : null;
+      const current = reconcileRecordingState(mirror, await queryLiveRecordingInfo());
+      if (current?.active && current.name && current.startTime) {
+        console.log(LOG2, "resuming recording UI for", current.name);
+        showRecording(els, state, current.name, current.startTime);
+      } else if (rec?.active) {
+        console.warn(LOG2, "stored recording mirror says active but the live recorder is idle; showing idle");
       }
       const pendingValue = await readLocalState({
         key: StorageKey.PENDING_RECORDING,
@@ -1031,7 +1023,6 @@
         console.log(LOG2, "record row click ignored while approval is pending");
         return;
       }
-      removeRecordHighlight(els);
       if (state.isRecording) {
         handleStopClick(els, state, showIdle, showSaveResult);
       } else {
