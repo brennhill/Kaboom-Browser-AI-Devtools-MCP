@@ -4,7 +4,7 @@ status: implemented
 version: 0.7.12
 doc_type: tech-spec
 feature_id: feature-reproduction-scripts
-last_reviewed: 2026-11-21
+last_reviewed: 2026-11-23
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -297,7 +297,7 @@ func selectorRole(selectors map[string]any) (role, name string) {
 3. **TestReproduction_EmptyActions**, **TestReproduction_LastN**, **TestReproduction_DefaultFormat**
 4. Per-step `TestPlaywrightStep_*` cases
 
-`internal/recording/reproduction/reproduction_locators_test.go` covers fallback locators and environment pinning; `internal/recording/reproduction/golden_test.go` compares Playwright output against golden files. `internal/tools/interact/reproduction_test.go` covers selector parsing for reproduction.
+`internal/recording/reproduction/reproduction_locators_test.go` covers fallback locators and environment pinning; `internal/recording/reproduction/golden_test.go` compares Playwright output against golden files. `internal/recording/actionlog/reproselector_test.go` covers selector parsing for reproduction.
 
 ### Integration Test
 

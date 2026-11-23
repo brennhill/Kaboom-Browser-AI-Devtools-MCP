@@ -141,8 +141,6 @@ Each row is a cross-context operation. The **owner** decides the outcome. The
   event recordings currently record lifecycle and metadata but not actions.
   The target is an ingestion handoff from Observation Capture to Event
   Recording.
-- **Gap:** `internal/recording/actionlog/` imports `internal/tools/interact`
-  (Tool Surface). The target moves the shared action types to a leaf package.
 
 ## Enforcement
 

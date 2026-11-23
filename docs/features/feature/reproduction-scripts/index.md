@@ -4,7 +4,7 @@ feature_id: feature-reproduction-scripts
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-11-21
+last_reviewed: 2026-11-23
 code_paths:
   - internal/tools/generate/handler/dispatcher.go
   - internal/tools/generate/handler/deps.go
@@ -19,7 +19,8 @@ code_paths:
 test_paths:
   - internal/tools/generate/handler/toolgenerate_test.go
   - scripts/tests/workflows/cat-29-reproduction.sh
-  - internal/tools/interact/reproduction_test.go
+  - internal/recording/actionlog/reproselector.go
+  - internal/recording/actionlog/reproselector_test.go
   - internal/recording/reproduction/reproduction_test.go
   - internal/recording/reproduction/reproduction_locators_test.go
   - internal/recording/reproduction/golden_test.go
@@ -64,7 +65,7 @@ last_verified_date: 2026-03-05
 - The dispatcher receives the canonical capture owner through explicit generate
   composition rather than a ToolHandler-satisfied host interface.
 - Page-side reproduction capture: `src/lib/page/reproduction.ts`
-- Go behavior coverage: `internal/tools/interact/reproduction_test.go`
+- Go behavior coverage: `internal/recording/actionlog/reproselector_test.go`
 - Reproduction evidence reads a detached snapshot from the canonical enhanced-
   action store; the capture root does not provide an action forwarding API.
 
