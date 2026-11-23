@@ -117,6 +117,10 @@ func buildMetadata[T Sequenced](entries []T, backwardWalk bool, countBeforeLimit
 	}
 	metadata.OldestTimestamp = entries[0].GetTimestamp()
 	metadata.NewestTimestamp = entries[len(entries)-1].GetTimestamp()
+	// Direction-explicit cursors (kaboom-s1l4): after_cursor from CursorOlder
+	// pages back with no overlap; before_cursor from CursorNewer polls forward.
+	metadata.CursorOlder = BuildCursor(entries[0].GetTimestamp(), entries[0].GetSequence())
+	metadata.CursorNewer = BuildCursor(entries[len(entries)-1].GetTimestamp(), entries[len(entries)-1].GetSequence())
 	cursorEntry := entries[len(entries)-1]
 	if backwardWalk {
 		cursorEntry = entries[0]
@@ -312,6 +316,8 @@ func NormalizeTimestamp(ts any) string {
 // CursorPaginationMetadata contains metadata for cursor-based pagination responses.
 type CursorPaginationMetadata struct {
 	Cursor          string `json:"cursor,omitempty"`           // Composite cursor of last returned entry
+	CursorOlder     string `json:"cursor_older,omitempty"`     // Oldest returned entry: pass as after_cursor
+	CursorNewer     string `json:"cursor_newer,omitempty"`     // Newest returned entry: pass as before_cursor (exclusive) or since_cursor (inclusive)
 	Count           int    `json:"count"`                      // Number of entries in this page
 	HasMore         bool   `json:"has_more"`                   // More entries available
 	OldestTimestamp string `json:"oldest_timestamp,omitempty"` // Oldest entry in buffer

@@ -44,6 +44,36 @@ func TestWebSocketEventsPageWithAfterCursor(t *testing.T) {
 	assertIDs(t, third, "m2", "m1")
 }
 
+// Regression (kaboom-s1l4): cursor_older pages back with no overlap, and
+// cursor_newer polls forward via before_cursor (since_cursor is inclusive).
+func TestWebSocketEventsCursorOlderDoesNotOverlap(t *testing.T) {
+	t.Parallel()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	base := time.Date(2026, 11, 23, 10, 0, 0, 0, time.UTC)
+	var events []types.WebSocketEvent
+	for i := 1; i <= 4; i++ {
+		events = append(events, types.WebSocketEvent{ID: fmt.Sprintf("m%d", i), Event: "message",
+			Timestamp: base.Add(time.Duration(i) * time.Second).Format(time.RFC3339)})
+	}
+	cap.Telemetry().AddWebSocketEvents(events)
+	deps := testsupport.Deps(cap)
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 3}
+
+	first := testsupport.ExtractMCPJSON(t, GetWSEvents(deps, req, json.RawMessage(`{"limit":2}`)))
+	meta := first["metadata"].(map[string]any)
+	older, _ := meta["cursor_older"].(string)
+	newer, _ := meta["cursor_newer"].(string)
+	if older == "" || newer == "" || meta["cursor"] != newer {
+		t.Fatalf("metadata = %v, want cursor_older, cursor_newer, and cursor == cursor_newer", meta)
+	}
+	second := testsupport.ExtractMCPJSON(t, GetWSEvents(deps, req, json.RawMessage(`{"limit":2,"after_cursor":"`+older+`"}`)))
+	assertIDs(t, second, "m2", "m1")
+	cap.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{{ID: "m5", Event: "message", Timestamp: base.Add(5 * time.Second).Format(time.RFC3339)}})
+	fresh := testsupport.ExtractMCPJSON(t, GetWSEvents(deps, req, json.RawMessage(`{"before_cursor":"`+newer+`"}`)))
+	assertIDs(t, fresh, "m5")
+}
+
 func TestWebSocketEventsRejectMalformedCursor(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
