@@ -417,3 +417,32 @@ test('getValidAliases returns one alias per client', () => {
   // Should have exactly one per unique client ID
   assert.equal(aliases.length, CLIENT_DEFINITIONS.length);
 });
+
+// Regression (kaboom-8tty): detection searched PATH by spawning where/which with
+// a 3s timeout, so a slow Windows host reported installed CLIs as missing. The
+// lookup is now in-process and cannot time out.
+test('commandExistsOnPath finds an executable in a custom PATH without spawning', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-path-'));
+  const exe = path.join(dir, 'fakecli');
+  fs.writeFileSync(exe, '#!/bin/sh\n');
+  fs.chmodSync(exe, 0o755);
+  assert.equal(commandExistsOnPath('fakecli', { PATH: dir }, 'linux'), true);
+  assert.equal(commandExistsOnPath('absentcli', { PATH: dir }, 'linux'), false);
+});
+
+test('commandExistsOnPath honours PATHEXT on Windows', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-pathext-'));
+  fs.writeFileSync(path.join(dir, 'fakecli.CMD'), '@echo off\r\n');
+  const env = { Path: dir, PATHEXT: '.COM;.EXE;.CMD' };
+  assert.equal(commandExistsOnPath('fakecli', env, 'win32'), true);
+  assert.equal(commandExistsOnPath('absentcli', env, 'win32'), false);
+});
+
+test('commandExistsOnPath ignores directories and non-executable files on POSIX', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-noexec-'));
+  fs.mkdirSync(path.join(dir, 'adir'));
+  fs.writeFileSync(path.join(dir, 'plain'), 'x');
+  fs.chmodSync(path.join(dir, 'plain'), 0o644);
+  assert.equal(commandExistsOnPath('adir', { PATH: dir }, 'linux'), false);
+  if (process.platform !== 'win32') assert.equal(commandExistsOnPath('plain', { PATH: dir }, 'linux'), false);
+});
