@@ -258,7 +258,15 @@ async function exerciseFailedReadinessRollback(activePath, backupPath, candidate
   const rejected = startDaemon(activePath, blockedPort, env)
   const health = await waitForPortHealth(blockedPort, 500)
   await new Promise((resolve) => blocker.close(resolve))
-  await waitForChildExit(rejected, 5000)
+  try {
+    await waitForChildExit(rejected, 5000)
+  } catch (exitErr) {
+    // Still failing loudly: a replacement that will not exit is a real defect.
+    // Kill it first so its locked executable cannot turn the report into a
+    // cleanup EPERM on active-kaboom.exe (kaboom-e9ai).
+    await crashDaemon(rejected)
+    throw exitErr
+  }
   if (health) fail('replacement unexpectedly became ready on a blocked service port')
   rollbackReplacement(activePath, backupPath)
 }
@@ -697,6 +705,7 @@ async function main() {
   // the test HOME would differ from what Go's EvalSymlinks reports for it.
   const tmpRoot = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-upgrade-regression-')))
   cleanupHost = () => removeTmpRoot(tmpRoot)
+  let stageFailed = false
   const { homeDir, stateDir, binDir, identityPath, preferencesPath, continuityBefore } = prepareHostState(tmpRoot)
 
   const envBase = {
@@ -767,6 +776,9 @@ async function main() {
     evidence.scenarios.push({ name: 'identity_continuity', status: 'passed' })
 
     await stageUninstallCleanup(ctx)
+  } catch (stageErr) {
+    stageFailed = true
+    throw stageErr
   } finally {
     stopDaemon(packed.wrapper, port, envWithShims)
     stopDaemon(oldBinary, port, envWithShims)
@@ -778,7 +790,13 @@ async function main() {
       }
     }
     persistEvidence()
-    cleanupHost()
+    // A stage failure is the error worth reporting; a cleanup EPERM after it
+    // (a still-running sandbox process) is logged but must not replace it.
+    if (stageFailed) {
+      runCleanupReportingErrors()
+    } else {
+      cleanupHost()
+    }
     cleanupHost = () => {}
   }
 }

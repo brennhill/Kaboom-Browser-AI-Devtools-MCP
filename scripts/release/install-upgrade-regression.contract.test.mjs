@@ -86,6 +86,13 @@ test('upgrade regression always restores its disposable host', () => {
   assert.match(source, /rmSync\(tmpRoot,\s*\{\s*recursive:\s*true/, 'must remove the disposable host after UAT')
 })
 
+test('upgrade regression cleanup failure never masks the stage failure', () => {
+  const source = fs.readFileSync(scriptPath, 'utf8')
+  const finallyBlock = source.slice(source.indexOf('} finally {', source.indexOf('async function main()')))
+  assert.match(source, /catch \(stageErr\) \{\s*stageFailed = true\s*throw stageErr/, 'main must record that a stage failed')
+  assert.match(finallyBlock, /if \(stageFailed\) \{\s*runCleanupReportingErrors\(\)/, 'after a stage failure, cleanup errors are only logged')
+})
+
 test('upgrade identity accepts the canonical operational health name', () => {
   assert.equal(resolveDaemonServiceName({ name: 'kaboom-browser-devtools' }), 'kaboom-browser-devtools')
   assert.equal(resolveDaemonServiceName({ service_name: 'legacy-snake' }), 'legacy-snake')
