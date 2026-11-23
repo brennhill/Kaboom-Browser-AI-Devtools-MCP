@@ -8,79 +8,6 @@ import (
 	"testing"
 )
 
-func TestParseSelectorForReproduction_TextSelector(t *testing.T) {
-	t.Parallel()
-	result := ParseSelectorForReproduction("text=Submit")
-	if result["text"] != "Submit" {
-		t.Errorf("text=Submit should parse to text:Submit, got %v", result)
-	}
-}
-
-func TestParseSelectorForReproduction_RoleSelector(t *testing.T) {
-	t.Parallel()
-	result := ParseSelectorForReproduction("role=button")
-	roleMap, ok := result["role"].(map[string]any)
-	if !ok || roleMap["role"] != "button" {
-		t.Errorf("role=button should parse to role:{role:button}, got %v", result)
-	}
-}
-
-func TestParseSelectorForReproduction_LabelSelector(t *testing.T) {
-	t.Parallel()
-	result := ParseSelectorForReproduction("label=Name")
-	if result["ariaLabel"] != "Name" {
-		t.Errorf("label=Name should parse to ariaLabel:Name, got %v", result)
-	}
-}
-
-func TestParseSelectorForReproduction_AriaLabelSelector(t *testing.T) {
-	t.Parallel()
-	result := ParseSelectorForReproduction("aria-label=Close")
-	if result["ariaLabel"] != "Close" {
-		t.Errorf("aria-label=Close should parse to ariaLabel:Close, got %v", result)
-	}
-}
-
-func TestParseSelectorForReproduction_PlaceholderSelector(t *testing.T) {
-	t.Parallel()
-	result := ParseSelectorForReproduction("placeholder=Email")
-	if result["ariaLabel"] != "Email" {
-		t.Errorf("placeholder=Email should parse to ariaLabel:Email, got %v", result)
-	}
-}
-
-func TestParseSelectorForReproduction_UnknownPrefixToCSS(t *testing.T) {
-	t.Parallel()
-	result := ParseSelectorForReproduction("data-testid=main")
-	if result["cssPath"] != "data-testid=main" {
-		t.Errorf("unknown prefix should fall back to cssPath, got %v", result)
-	}
-}
-
-func TestParseSelectorForReproduction_IDSelector(t *testing.T) {
-	t.Parallel()
-	result := ParseSelectorForReproduction("#main")
-	if result["id"] != "main" {
-		t.Errorf("#main should parse to id:main, got %v", result)
-	}
-}
-
-func TestParseSelectorForReproduction_ComplexCSSSelector(t *testing.T) {
-	t.Parallel()
-	result := ParseSelectorForReproduction("#main .btn")
-	if result["cssPath"] != "#main .btn" {
-		t.Errorf("complex CSS should parse to cssPath, got %v", result)
-	}
-}
-
-func TestParseSelectorForReproduction_PlainCSSSelector(t *testing.T) {
-	t.Parallel()
-	result := ParseSelectorForReproduction("div.container")
-	if result["cssPath"] != "div.container" {
-		t.Errorf("plain CSS should parse to cssPath, got %v", result)
-	}
-}
-
 func TestTruncateToLen_Short(t *testing.T) {
 	t.Parallel()
 	if got := TruncateToLen("short", 10); got != "short" {
@@ -165,25 +92,6 @@ func TestDOMPrimitiveActions_Contains(t *testing.T) {
 	for _, action := range expected {
 		if !DOMPrimitiveActions[action] {
 			t.Errorf("DOMPrimitiveActions missing %q", action)
-		}
-	}
-}
-
-func TestDOMActionToReproType_Mappings(t *testing.T) {
-	t.Parallel()
-	cases := map[string]string{
-		"click":     "click",
-		"type":      "input",
-		"select":    "select",
-		"check":     "click",
-		"key_press": "keypress",
-		"scroll_to": "scroll_element",
-		"focus":     "focus",
-		"hover":     "hover",
-	}
-	for action, expected := range cases {
-		if got := DOMActionToReproType[action]; got != expected {
-			t.Errorf("DOMActionToReproType[%q] = %q, want %q", action, got, expected)
 		}
 	}
 }

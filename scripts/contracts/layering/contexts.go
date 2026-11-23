@@ -57,7 +57,7 @@ func boundedContexts() []boundedContext {
 			packages: []string{"internal/recording"},
 			excluded: []string{"internal/recording/replay", "internal/recording/sequence"},
 			forbidden: []string{
-				"net/http", "internal/tools/mcp", "internal/page/app", "internal/analysis/app",
+				"net/http", "internal/tools", "internal/page/app", "internal/analysis/app",
 				"internal/browsercommand", "internal/browsercommand/query",
 				"internal/sync/runtime", "internal/ingestion/http",
 			},

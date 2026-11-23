@@ -10,7 +10,6 @@ Key types:
   - WorkflowStep: records a single step's outcome within a workflow trace.
 
 Key functions:
-  - ParseSelectorForReproduction: converts semantic selectors (text=, role=) into structured maps.
   - ValidateStateSaveParams: validates save_state parameters.
   - ValidateStateLoadParams: validates load_state parameters.
   - BuildWorkflowTraceEnvelope: creates normalized stage-level trace metadata.

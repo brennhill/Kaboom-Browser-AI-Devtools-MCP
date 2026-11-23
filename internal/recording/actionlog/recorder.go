@@ -8,7 +8,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
-	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
 // Recorder owns normalization of AI actions before they enter telemetry.
@@ -42,13 +41,13 @@ func (r *Recorder) RecordEnhanced(action types.EnhancedAction) {
 
 // RecordDOMPrimitive converts an interact primitive into reproduction metadata.
 func (r *Recorder) RecordDOMPrimitive(action, selector, text, value string) {
-	reproType, ok := act.DOMActionToReproType[action]
+	reproType, ok := reproTypeForDOMAction(action)
 	if !ok {
 		r.Record("dom_"+action, "", map[string]any{"selector": selector})
 		return
 	}
 	enhanced := types.EnhancedAction{
-		Type: reproType, Selectors: act.ParseSelectorForReproduction(selector),
+		Type: reproType, Selectors: parseSelectorForReproduction(selector),
 	}
 	switch action {
 	case "type":
