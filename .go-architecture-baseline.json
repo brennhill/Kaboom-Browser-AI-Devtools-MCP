@@ -2240,6 +2240,10 @@
     "internal/platform/httpx/response.go": {
       "mutable_globals": 0,
       "exports": 2
+    },
+    "internal/tools/observe/core/cursor.go": {
+      "mutable_globals": 0,
+      "exports": 2
     }
   }
 }

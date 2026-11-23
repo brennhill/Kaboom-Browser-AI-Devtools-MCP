@@ -25,6 +25,9 @@ type entry struct {
 type Snapshot struct {
 	Actions    []types.EnhancedAction
 	Timestamps []time.Time
+	// TotalAdded is read under the same lock as Actions so cursor sequences
+	// derived from it always line up with the returned actions.
+	TotalAdded int64
 }
 
 // State is allocation-free enhanced-action metadata.
@@ -75,6 +78,7 @@ func (s *Store) Snapshot() Snapshot {
 	snapshot := Snapshot{
 		Actions:    make([]types.EnhancedAction, s.entries.Len()),
 		Timestamps: make([]time.Time, s.entries.Len()),
+		TotalAdded: s.totalAdded,
 	}
 	for i := range snapshot.Actions {
 		retained := s.entries.At(i)

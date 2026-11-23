@@ -7,6 +7,7 @@ package session
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/pagination"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 // Supports optional "type" filter to return only actions of a specific type.
 func GetEnhancedActions(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
+		core.CursorArgs
 		Limit   int    `json:"limit"`
 		LastN   int    `json:"last_n"`
 		URL     string `json:"url"`
@@ -32,16 +34,27 @@ func GetEnhancedActions(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMes
 	mcp.LenientUnmarshal(args, &params)
 	params.Limit = core.ClampLimit(params.Limit, 100)
 
-	allActions := deps.Telemetry.Actions().Snapshot().Actions
-	filtered := buffers.ReverseFilterLimit(allActions, func(a types.EnhancedAction) bool {
+	snapshot := deps.Telemetry.Actions().Snapshot()
+	allActions := snapshot.Actions
+	matching := make([]pagination.ActionEntryWithSequence, 0, len(allActions))
+	for _, entry := range pagination.EnrichActionEntries(allActions, snapshot.TotalAdded) {
+		a := entry.Entry
 		if params.Type != "" && a.Type != params.Type {
-			return false
+			continue
 		}
 		if params.URL != "" && !core.ContainsIgnoreCase(a.URL, params.URL) {
-			return false
+			continue
 		}
-		return true
-	}, params.Limit)
+		matching = append(matching, entry)
+	}
+	page, pageMeta, err := core.PageNewestFirst(matching, params.CursorArgs, params.Limit)
+	if err != nil {
+		return mcp.Fail(req, mcp.ErrInvalidParam, err.Error(), "Check cursor format or use restart_on_eviction:true")
+	}
+	filtered := make([]types.EnhancedAction, len(page))
+	for i, entry := range page {
+		filtered[i] = entry.Entry
+	}
 
 	// last_n: slice to only the N most recent entries (already sorted newest-first).
 	if params.LastN > 0 && len(filtered) > params.LastN {
@@ -52,7 +65,7 @@ func GetEnhancedActions(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMes
 		newestTS = time.UnixMilli(allActions[len(allActions)-1].Timestamp)
 	}
 
-	responseMeta := core.BuildResponseMetadata(deps.Extension, newestTS)
+	responseMeta := core.BuildPaginatedResponseMetadata(deps.Extension, newestTS, pageMeta)
 	if params.Summary {
 		return mcp.Succeed(req, "Enhanced actions", buildActionsSummary(filtered, responseMeta))
 	}
@@ -297,7 +310,7 @@ func GetTabs(deps core.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSON
 	})
 }
 
-func buildActionsSummary(actions []types.EnhancedAction, meta core.ResponseMetadata) map[string]any {
+func buildActionsSummary(actions []types.EnhancedAction, meta map[string]any) map[string]any {
 	byType := make(map[string]int)
 	var firstTS, lastTS int64
 	hasTS := false
