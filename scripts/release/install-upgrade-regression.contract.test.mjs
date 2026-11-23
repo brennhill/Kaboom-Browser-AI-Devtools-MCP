@@ -89,8 +89,12 @@ test('upgrade regression always restores its disposable host', () => {
 test('upgrade regression cleanup failure never masks the stage failure', () => {
   const source = fs.readFileSync(scriptPath, 'utf8')
   const finallyBlock = source.slice(source.indexOf('} finally {', source.indexOf('async function main()')))
-  assert.match(source, /catch \(stageErr\) \{\s*stageFailed = true\s*throw stageErr/, 'main must record that a stage failed')
-  assert.match(finallyBlock, /if \(stageFailed\) \{\s*runCleanupReportingErrors\(\)/, 'after a stage failure, cleanup errors are only logged')
+  assert.match(source, /stagesPassed = true\s*\} finally \{/, 'main must record that every stage passed')
+  assert.match(
+    finallyBlock,
+    /stagesPassed \? cleanupHost\(\) : runCleanupReportingErrors\(\)/,
+    'after a stage failure, cleanup errors are only logged'
+  )
 })
 
 test('upgrade identity accepts the canonical operational health name', () => {
