@@ -24,6 +24,9 @@ type eventEntry struct {
 type Snapshot struct {
 	Events     []types.WebSocketEvent
 	Timestamps []time.Time
+	// TotalAdded is read under the same lock as Events so cursor sequences
+	// derived from it always line up with the returned events.
+	TotalAdded int64
 }
 
 // State is allocation-free WebSocket retention and connection metadata.
@@ -131,6 +134,7 @@ func (s *Store) Snapshot() Snapshot {
 	snapshot := Snapshot{
 		Events:     make([]types.WebSocketEvent, s.events.Len()),
 		Timestamps: make([]time.Time, s.events.Len()),
+		TotalAdded: s.totalAdded,
 	}
 	for i := range snapshot.Events {
 		entry := s.events.At(i)

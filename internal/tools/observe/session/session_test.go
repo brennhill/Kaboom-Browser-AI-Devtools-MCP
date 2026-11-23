@@ -118,7 +118,7 @@ func TestBuildActionsSummary_ByType(t *testing.T) {
 		{Type: "type", Timestamp: now + 2000},
 		{Type: "navigate", Timestamp: now + 3000},
 	}
-	result := buildActionsSummary(actions, core.ResponseMetadata{})
+	result := buildActionsSummary(actions, map[string]any{})
 
 	total, _ := result["total"].(int)
 	if total != 4 {
@@ -145,7 +145,7 @@ func TestBuildActionsSummary_TimeRange(t *testing.T) {
 		{Type: "click", Timestamp: t1},
 		{Type: "click", Timestamp: t2},
 	}
-	result := buildActionsSummary(actions, core.ResponseMetadata{})
+	result := buildActionsSummary(actions, map[string]any{})
 
 	timeRange, ok := result["time_range"].(map[string]string)
 	if !ok {
@@ -163,7 +163,7 @@ func TestBuildActionsSummary_EpochTimestamp(t *testing.T) {
 		{Type: "click", Timestamp: 0},
 		{Type: "click", Timestamp: 1000},
 	}
-	result := buildActionsSummary(actions, core.ResponseMetadata{})
+	result := buildActionsSummary(actions, map[string]any{})
 	if _, ok := result["time_range"]; !ok {
 		t.Error("expected time_range even with epoch timestamp 0")
 	}

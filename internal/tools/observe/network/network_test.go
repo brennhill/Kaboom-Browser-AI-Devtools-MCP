@@ -423,7 +423,7 @@ func TestBuildWSEventsSummary_ByDirection(t *testing.T) {
 		{Direction: "incoming", ID: "conn1", Event: "message"},
 		{Direction: "outgoing", ID: "conn1", Event: "message"},
 	}
-	result := buildWSEventsSummary(events, core.ResponseMetadata{})
+	result := buildWSEventsSummary(events, map[string]any{})
 
 	byDir, ok := result["by_direction"].(map[string]int)
 	if !ok {
@@ -444,7 +444,7 @@ func TestBuildWSEventsSummary_UniqueConnections(t *testing.T) {
 		{Direction: "incoming", ID: "conn2", Event: "message"},
 		{Direction: "incoming", ID: "conn1", Event: "message"},
 	}
-	result := buildWSEventsSummary(events, core.ResponseMetadata{})
+	result := buildWSEventsSummary(events, map[string]any{})
 
 	connCount, _ := result["connection_count"].(int)
 	if connCount != 2 {

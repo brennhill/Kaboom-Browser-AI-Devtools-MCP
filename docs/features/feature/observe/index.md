@@ -4,8 +4,9 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-11-21
+last_reviewed: 2026-11-23
 code_paths:
+  - internal/tools/observe/core/cursor.go
   - internal/page/screenshotframe/wire_screenshot.go
   - src/lib/screenshot/coordinate-frame.ts
   - src/lib/screenshot/image-size.ts
@@ -78,6 +79,8 @@ code_paths:
   - src/background/push-handler.ts
   - src/lib/tabs/tab-focus.ts
 test_paths:
+  - internal/tools/observe/network/ws_cursor_test.go
+  - internal/tools/observe/session/actions_cursor_test.go
   - internal/page/screenshotframe/wire_screenshot_test.go
   - internal/annotation/adapters/http/screenshot_frame_test.go
   - tests/extension/capture/screenshot-coordinate-frame.test.js

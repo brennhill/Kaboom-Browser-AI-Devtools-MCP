@@ -8,6 +8,7 @@ package network
 import (
 	"context"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/pagination"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"time"
@@ -127,6 +128,7 @@ func applyBodyPathTransform(filtered []types.NetworkBody, bodyPath string) {
 }
 
 type wsEventsParams struct {
+	core.CursorArgs
 	Limit        int    `json:"limit"`
 	URL          string `json:"url"`
 	ConnectionID string `json:"connection_id"`
@@ -142,16 +144,28 @@ func GetWSEvents(deps core.Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 
 	params.Limit = core.ClampLimit(params.Limit, 100)
 
-	allEvents := deps.Telemetry.WebSockets().Snapshot().Events
-	filtered := buffers.ReverseFilterLimit(allEvents, func(evt types.WebSocketEvent) bool {
-		return wsEventMatches(evt, params)
-	}, params.Limit)
+	snapshot := deps.Telemetry.WebSockets().Snapshot()
+	allEvents := snapshot.Events
+	matching := make([]pagination.WebSocketEntryWithSequence, 0, len(allEvents))
+	for _, entry := range pagination.EnrichWebSocketEntries(allEvents, snapshot.TotalAdded) {
+		if wsEventMatches(entry.Entry, params) {
+			matching = append(matching, entry)
+		}
+	}
+	page, pageMeta, err := core.PageNewestFirst(matching, params.CursorArgs, params.Limit)
+	if err != nil {
+		return mcp.Fail(req, mcp.ErrInvalidParam, err.Error(), "Check cursor format or use restart_on_eviction:true")
+	}
+	filtered := make([]types.WebSocketEvent, len(page))
+	for i, entry := range page {
+		filtered[i] = entry.Entry
+	}
 	var newestTS time.Time
 	if len(allEvents) > 0 {
 		newestTS, _ = time.Parse(time.RFC3339, allEvents[len(allEvents)-1].Timestamp)
 	}
 
-	responseMeta := core.BuildResponseMetadata(deps.Extension, newestTS)
+	responseMeta := core.BuildPaginatedResponseMetadata(deps.Extension, newestTS, pageMeta)
 	if params.Summary {
 		summary := buildWSEventsSummary(filtered, responseMeta)
 		if paramHint != "" {
@@ -528,7 +542,7 @@ func statusGroup(status int) string {
 
 // buildWSEventsSummary returns {total, by_direction, by_event_type, connection_count, metadata}.
 
-func buildWSEventsSummary(events []types.WebSocketEvent, meta core.ResponseMetadata) map[string]any {
+func buildWSEventsSummary(events []types.WebSocketEvent, meta map[string]any) map[string]any {
 	byDirection := make(map[string]int)
 	byEvent := make(map[string]int)
 	connIDs := make(map[string]bool)
