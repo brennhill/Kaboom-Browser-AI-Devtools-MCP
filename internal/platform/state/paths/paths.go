@@ -77,7 +77,17 @@ func CrashLogFile() (string, error) {
 
 // PIDFile returns the PID file path for the given server port.
 func PIDFile(port int) (string, error) {
-	return InRoot("run", "kaboom-"+strconv.Itoa(port)+".pid")
+	root, err := RootDir()
+	if err != nil {
+		return "", err
+	}
+	return PIDFileIn(root, port), nil
+}
+
+// PIDFileIn returns the PID file path for port under an explicit state root,
+// for callers (test harnesses) managing a daemon whose root is not their own.
+func PIDFileIn(root string, port int) string {
+	return filepath.Join(root, "run", "kaboom-"+strconv.Itoa(port)+".pid")
 }
 
 // RecordingsDir returns the recordings directory.
