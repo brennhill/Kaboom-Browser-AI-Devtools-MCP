@@ -1,21 +1,19 @@
-// Purpose: Package util — shared utility functions for binary detection, JSON responses, timestamps, URLs, and safe goroutines.
-// Why: Centralizes cross-cutting helpers to avoid duplication across internal packages.
+// Purpose: Package util — small context-free helpers for text, URLs, media filenames, timestamps, and safe goroutines.
+// Why: Centralizes leaf helpers with no domain owner. Domain-owned helpers live with their context
+// (binary detection: observation/binaryformat; JSON HTTP responses: platform/httpx; detached processes: lifecycle/procctl).
 
 /*
-Package util provides shared utility functions used across internal packages.
+Package util provides small context-free helper functions.
 
 Key functions:
-  - DetectBinaryFormat: detects binary payload formats (MessagePack, CBOR, Protobuf, BSON) via heuristics.
-  - JSONResponse: writes a JSON HTTP response with proper content type and status code.
-  - ParseTimestamp: parses RFC3339/RFC3339Nano timestamp strings.
-  - ExtractURLPath: extracts the path component from a URL string.
+  - ParseTimestamp / FormatDuration: timestamp parsing and duration formatting.
+  - ExtractURLPath / ExtractOrigin: URL component helpers.
+  - SanitizeForFilename / SplitDataURL / DecodeDataURL / BuildScreenshotFilename: media-file helpers.
+  - Truncate / SortedMapKeys: string helpers.
   - SafeGo: launches a goroutine with panic recovery for background tasks.
 
 File layout:
-  - binary.go: format-detection entry point plus all four per-format detectors.
-  - response.go: HTTP JSON response and method-guard helpers.
-  - time.go: timestamp parsing and duration formatting.
-  - strings.go: string and string-keyed-map helpers.
-  - url.go, media.go, safego.go, proc_*.go: URL, media-file, goroutine and process helpers.
+  - response.go: SafeGo and time helpers.
+  - media.go: media-file, string, and URL helpers.
 */
 package util

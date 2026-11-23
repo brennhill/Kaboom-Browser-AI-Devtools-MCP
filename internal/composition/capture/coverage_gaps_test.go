@@ -184,7 +184,7 @@ func TestDetectAndSetBinaryFormat_PNG_ResponseBody(t *testing.T) {
 	c := NewCapture()
 	c.Telemetry().AddNetworkBodies([]types.NetworkBody{{ResponseBody: pngMagic}})
 	if c.Telemetry().NetworkBodies().Snapshot().Bodies[0].BinaryFormat == "" {
-		t.Skip("PNG detection not triggered — util.DetectBinaryFormat may need longer header")
+		t.Skip("PNG detection not triggered — binaryformat.DetectBinaryFormat may need longer header")
 	}
 }
 

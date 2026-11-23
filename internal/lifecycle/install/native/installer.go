@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/procctl"
 	"io"
 	"net/http"
 	"os"
@@ -22,7 +23,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/incident"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/identity"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -111,7 +111,7 @@ func openExtensionFolder(extDir string) bool {
 	}
 	cmd := exec.Command(name, args...)
 	cmd.Stdout, cmd.Stderr, cmd.Stdin = nil, nil, nil
-	util.SetDetachedProcess(cmd)
+	procctl.SetDetachedProcess(cmd)
 	if err := cmd.Start(); err != nil {
 		return false
 	}
@@ -297,7 +297,7 @@ func startDaemonSilently(exe string) {
 	cmd.Stdin = nil
 
 	// Platform-specific detachment (Unix/Windows)
-	util.SetDetachedProcess(cmd)
+	procctl.SetDetachedProcess(cmd)
 
 	if err := cmd.Start(); err != nil {
 		diag.Printf(" ⚠️  (could not start background server: %v)\n", err)

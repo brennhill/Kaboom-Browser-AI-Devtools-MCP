@@ -4,11 +4,11 @@
 package pipelinetest
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/binaryformat"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 	"testing"
 
 	cap "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/composition/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 )
 
 // Integration tests for binary format detection in network/websocket
@@ -198,7 +198,7 @@ func BenchmarkDetectBinaryFormat(b *testing.B) {
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				util.DetectBinaryFormat(tc.data)
+				binaryformat.DetectBinaryFormat(tc.data)
 			}
 		})
 	}

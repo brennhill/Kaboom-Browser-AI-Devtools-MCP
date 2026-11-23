@@ -7,6 +7,7 @@ package mediaapi
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/httpx"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -155,18 +156,18 @@ func storeAnnotationSessionInStore(store *annotation.Store, body *drawModeReques
 // when the user finishes a draw mode session.
 func (h *Handler) HandleDrawModeComplete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		httpx.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxPostBodySize)
 	var body drawModeRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 	if body.TabID <= 0 {
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "tab_id is required and must be > 0"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "tab_id is required and must be > 0"})
 		return
 	}
 
@@ -174,7 +175,7 @@ func (h *Handler) HandleDrawModeComplete(w http.ResponseWriter, r *http.Request)
 	if body.ScreenshotDataURL != "" {
 		path, err := saveDrawScreenshot(body.ScreenshotDataURL, body.TabID)
 		if err != nil {
-			util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Failed to resolve screenshots directory"})
+			httpx.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Failed to resolve screenshots directory"})
 			return
 		}
 		screenshotPath = path
@@ -210,5 +211,5 @@ func (h *Handler) HandleDrawModeComplete(w http.ResponseWriter, r *http.Request)
 	// Auto-push annotations to AI client via push pipeline
 	pushapi.DeliverAnnotations(h.pushRouter, body.PageURL, body.TabID, body.AnnotSessionName, parsedAnnotations)
 
-	util.JSONResponse(w, http.StatusOK, result)
+	httpx.JSONResponse(w, http.StatusOK, result)
 }

@@ -7,12 +7,12 @@ package testpages
 import (
 	"bufio"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/httpx"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/wsframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
@@ -30,7 +30,7 @@ const wsIdleTimeout = 60 * time.Second
 func HandlerWS(w http.ResponseWriter, r *http.Request) {
 	key := r.Header.Get("Sec-WebSocket-Key")
 	if key == "" || strings.ToLower(r.Header.Get("Upgrade")) != "websocket" {
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{
 			"error":   "bad_request",
 			"message": "websocket upgrade required",
 		})
@@ -39,7 +39,7 @@ func HandlerWS(w http.ResponseWriter, r *http.Request) {
 
 	hj, ok := w.(http.Hijacker)
 	if !ok {
-		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{
+		httpx.JSONResponse(w, http.StatusInternalServerError, map[string]string{
 			"error":   "internal_error",
 			"message": "server does not support hijacking",
 		})
@@ -48,7 +48,7 @@ func HandlerWS(w http.ResponseWriter, r *http.Request) {
 
 	conn, bufrw, err := hj.Hijack()
 	if err != nil {
-		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{
+		httpx.JSONResponse(w, http.StatusInternalServerError, map[string]string{
 			"error":   "internal_error",
 			"message": err.Error(),
 		})

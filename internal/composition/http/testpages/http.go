@@ -7,14 +7,13 @@ package testpages
 import (
 	"embed"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/httpx"
 	"html"
 	"io/fs"
 	"net/http"
 	"path"
 	"strings"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 )
 
 //go:embed pages
@@ -36,7 +35,7 @@ func Handler() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
-			util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+			httpx.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 			return
 		}
 
@@ -77,7 +76,7 @@ func Handler() http.HandlerFunc {
 func serveTestIndex(w http.ResponseWriter) {
 	entries, err := fs.ReadDir(testPagesFS, "pages")
 	if err != nil {
-		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{
+		httpx.JSONResponse(w, http.StatusInternalServerError, map[string]string{
 			"error":   "internal_error",
 			"message": "failed to read test pages",
 		})

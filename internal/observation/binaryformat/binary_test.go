@@ -1,5 +1,5 @@
 // binary_test.go — Tests binary detection behavior, edge cases, and coverage branches.
-package util
+package binaryformat
 
 import "testing"
 

@@ -7,6 +7,7 @@ package httpingest
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/httpx"
 	"io"
 	"net/http"
 	"os"
@@ -17,7 +18,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/perf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 )
 
@@ -41,13 +41,13 @@ func New(deps Dependencies) *Handlers { return &Handlers{deps: deps} }
 // decodeIngestJSON enforces the POST method, bounds the body, and decodes the
 // JSON payload, writing the standard error responses. It reports decode success.
 func (h *Handlers) decodeIngestJSON(w http.ResponseWriter, r *http.Request, handlerName string, payload any) bool {
-	if !util.RequireMethod(w, r, http.MethodPost) {
+	if !httpx.RequireMethod(w, r, http.MethodPost) {
 		return false
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
 	if err := json.NewDecoder(r.Body).Decode(payload); err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] %s: Invalid JSON - %v\n", handlerName, err)
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return false
 	}
 	return true
@@ -62,26 +62,26 @@ func (h *Handlers) HandleNetworkBodies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.deps.Telemetry.AddNetworkBodies(payload.Bodies)
-	util.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok", "count": len(payload.Bodies)})
+	httpx.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok", "count": len(payload.Bodies)})
 }
 
 func (h *Handlers) HandleNetworkWaterfall(w http.ResponseWriter, r *http.Request) {
-	if !util.RequireMethod(w, r, http.MethodPost) {
+	if !httpx.RequireMethod(w, r, http.MethodPost) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
 	var payload types.NetworkWaterfallPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleNetworkWaterfall: Invalid JSON - %v\n", err)
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 	h.deps.Telemetry.NetworkWaterfall().Add(payload.Entries, payload.PageURL)
-	util.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok", "count": len(payload.Entries)})
+	httpx.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok", "count": len(payload.Entries)})
 }
 
 func (h *Handlers) HandleQueryResult(w http.ResponseWriter, r *http.Request) {
-	if !util.RequireMethod(w, r, http.MethodPost) {
+	if !httpx.RequireMethod(w, r, http.MethodPost) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
@@ -95,7 +95,7 @@ func (h *Handlers) HandleQueryResult(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleQueryResult: Invalid JSON - %v\n", err)
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 	outcome := h.deps.Commands.SubmitResult(browsercommand.Result{
@@ -107,7 +107,7 @@ func (h *Handlers) HandleQueryResult(w http.ResponseWriter, r *http.Request) {
 		// 200; keep that, but do not let the dropped result pass silently.
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleQueryResult: result without id or correlation_id dropped (%s)\n", outcome)
 	}
-	util.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok"})
+	httpx.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok"})
 }
 
 //nolint:dupl // decode and error paths are shared via decodeIngestJSON; the residual wrapper differs only in payload field and telemetry sink, which cannot be unified without dynamic JSON tags (a behavior change).
@@ -119,11 +119,11 @@ func (h *Handlers) HandleEnhancedActions(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	h.deps.Telemetry.AddEnhancedActions(payload.Actions)
-	util.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok", "count": len(payload.Actions)})
+	httpx.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok", "count": len(payload.Actions)})
 }
 
 func (h *Handlers) HandleWebSocketEvents(w http.ResponseWriter, r *http.Request) {
-	if !util.RequireMethod(w, r, http.MethodPost) {
+	if !httpx.RequireMethod(w, r, http.MethodPost) {
 		return
 	}
 	body, ok := h.readIngestBody(w, r)
@@ -134,7 +134,7 @@ func (h *Handlers) HandleWebSocketEvents(w http.ResponseWriter, r *http.Request)
 		Events []types.WebSocketEvent `json:"events"`
 	}
 	if err := json.Unmarshal(body, &payload); err != nil {
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 	if !h.recordAndRecheck(w, len(payload.Events)) {
@@ -145,7 +145,7 @@ func (h *Handlers) HandleWebSocketEvents(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *Handlers) HandleWebSocketStatus(w http.ResponseWriter, _ *http.Request) {
-	util.JSONResponse(w, http.StatusOK, h.deps.Telemetry.WebSockets().Status(types.WebSocketStatusFilter{}))
+	httpx.JSONResponse(w, http.StatusOK, h.deps.Telemetry.WebSockets().Status(types.WebSocketStatusFilter{}))
 }
 
 func (h *Handlers) HandleRecordingStorage(w http.ResponseWriter, r *http.Request) {
@@ -157,51 +157,51 @@ func (h *Handlers) HandleRecordingStorage(w http.ResponseWriter, r *http.Request
 	case http.MethodPost:
 		h.handleStorageRecalculate(w)
 	default:
-		util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		httpx.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 	}
 }
 
 func (h *Handlers) handleStorageGet(w http.ResponseWriter) {
 	info, err := h.deps.Recordings.GetStorageInfo()
 	if err != nil {
-		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		httpx.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	util.JSONResponse(w, http.StatusOK, info)
+	httpx.JSONResponse(w, http.StatusOK, info)
 }
 
 func (h *Handlers) handleStorageDelete(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("recording_id")
 	if id == "" {
 		fmt.Fprintln(os.Stderr, "[Kaboom] HandleRecordingStorage: Missing recording_id query parameter")
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Missing recording_id query parameter"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Missing recording_id query parameter"})
 		return
 	}
 	if err := h.deps.Recordings.DeleteRecording(id); err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleRecordingStorage: Failed to delete recording %s - %v\n", id, err)
-		util.JSONResponse(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		httpx.JSONResponse(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
-	util.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok", "deleted": id})
+	httpx.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok", "deleted": id})
 }
 
 func (h *Handlers) handleStorageRecalculate(w http.ResponseWriter) {
 	if err := h.deps.Recordings.RecalculateStorageUsed(); err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleRecordingStorage: Failed to recalculate storage - %v\n", err)
-		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		httpx.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
 	info, err := h.deps.Recordings.GetStorageInfo()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleRecordingStorage: Failed to get storage info - %v\n", err)
-		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		httpx.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	util.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok", "storage": info})
+	httpx.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok", "storage": info})
 }
 
 func (h *Handlers) HandlePerformanceSnapshots(w http.ResponseWriter, r *http.Request) {
-	if !util.RequireMethod(w, r, http.MethodPost) {
+	if !httpx.RequireMethod(w, r, http.MethodPost) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
@@ -209,11 +209,11 @@ func (h *Handlers) HandlePerformanceSnapshots(w http.ResponseWriter, r *http.Req
 		Snapshots []performance.PerformanceSnapshot `json:"snapshots"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 	h.deps.Performance.Add(payload.Snapshots)
-	util.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok", "count": len(payload.Snapshots)})
+	httpx.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok", "count": len(payload.Snapshots)})
 }
 
 func (h *Handlers) readIngestBody(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
@@ -241,7 +241,7 @@ func (h *Handlers) recordAndRecheck(w http.ResponseWriter, count int) bool {
 
 func (h *Handlers) HandleHealth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		httpx.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

@@ -7,6 +7,7 @@ package syncruntime
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/httpx"
 	"net/http"
 	"os"
 	"strings"
@@ -199,18 +200,18 @@ func (h *Handler) HandleSync(w http.ResponseWriter, r *http.Request) {
 		CaptureOverrides:     h.buildCaptureOverrides(),
 	}
 
-	util.JSONResponse(w, http.StatusOK, resp)
+	httpx.JSONResponse(w, http.StatusOK, resp)
 }
 
 func (h *Handler) decodeSyncRequest(w http.ResponseWriter, r *http.Request) (SyncRequest, bool) {
-	if !util.RequireMethod(w, r, "POST") {
+	if !httpx.RequireMethod(w, r, "POST") {
 		return SyncRequest{}, false
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxSyncPostBody)
 	var req SyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return SyncRequest{}, false
 	}
 	return req, true
@@ -339,7 +340,7 @@ func (h *Handler) emitSyncSnapshotEvent(req SyncRequest, state syncConnectionSta
 // It deliberately adopts nothing: no session, no generation, no settings, no
 // commands, and no evidence that an extension is connected.
 func (h *Handler) respondProbeSync(w http.ResponseWriter, now time.Time) {
-	util.JSONResponse(w, http.StatusOK, SyncResponse{
+	httpx.JSONResponse(w, http.StatusOK, SyncResponse{
 		Ack:              true,
 		Commands:         []SyncCommand{},
 		NextPollMs:       1000,
@@ -356,7 +357,7 @@ func (h *Handler) rejectStaleGeneration(w http.ResponseWriter, req SyncRequest, 
 		"current_generation":  currentGeneration,
 		"bridge":              bridge,
 	})
-	util.JSONResponse(w, http.StatusConflict, map[string]any{
+	httpx.JSONResponse(w, http.StatusConflict, map[string]any{
 		"ack":                   false,
 		"error":                 "stale_connection_generation",
 		"connection_generation": currentGeneration,
