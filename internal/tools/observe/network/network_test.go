@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/browsercommand/commandtest"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/core"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/testsupport"
 	"strings"
 	"sync"
@@ -318,50 +317,39 @@ func TestWaterfallSummaryEntry_ShortURL(t *testing.T) {
 	}
 }
 
-func TestFilterWaterfallSummaryEntries(t *testing.T) {
-	t.Parallel()
-	entries := []types.NetworkWaterfallEntry{
-		{URL: "https://example.com/a", InitiatorType: "fetch", Duration: 10.0},
-		{URL: "https://example.com/b", InitiatorType: "script", Duration: 20.0},
-		{URL: "https://other.com/c", InitiatorType: "img", Duration: 30.0},
-	}
+func waterfallSummaryPayload(t *testing.T, args string) map[string]any {
+	t.Helper()
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	cap.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
+		{Name: "a", URL: "https://example.com/a", InitiatorType: "fetch", Duration: 10.0, StartTime: 1},
+		{Name: "b", URL: "https://example.com/b", InitiatorType: "script", Duration: 20.0, StartTime: 2},
+		{Name: "c", URL: "https://other.com/c", InitiatorType: "img", Duration: 30.0, StartTime: 3},
+	}, "https://page.test/")
+	deps := testsupport.Deps(cap)
+	return testsupport.ExtractMCPJSON(t, GetNetworkWaterfall(deps, mcp.JSONRPCRequest{ID: 1}, json.RawMessage(args)))
+}
 
-	result := filterWaterfallSummaryEntries(entries, "", 10)
-	if len(result) != 3 {
-		t.Errorf("expected 3 entries, got %d", len(result))
+func TestWaterfallSummaryModeReturnsCompactEntries(t *testing.T) {
+	t.Parallel()
+	entries, _ := waterfallSummaryPayload(t, `{"summary":true}`)["entries"].([]any)
+	if len(entries) != 3 {
+		t.Fatalf("expected 3 entries, got %d", len(entries))
 	}
-	// Each entry should have exactly 3 fields
-	for i, entry := range result {
-		if len(entry) != 3 {
-			t.Errorf("entry %d: expected 3 fields, got %d", i, len(entry))
+	for i, entry := range entries {
+		if fields := entry.(map[string]any); len(fields) != 3 {
+			t.Errorf("entry %d: expected 3 fields, got %d (%v)", i, len(fields), fields)
 		}
 	}
 }
 
-func TestFilterWaterfallSummaryEntries_WithFilter(t *testing.T) {
+func TestWaterfallSummaryModeAppliesURLFilterAndLimit(t *testing.T) {
 	t.Parallel()
-	entries := []types.NetworkWaterfallEntry{
-		{URL: "https://example.com/a", InitiatorType: "fetch", Duration: 10.0},
-		{URL: "https://other.com/b", InitiatorType: "script", Duration: 20.0},
+	if entries, _ := waterfallSummaryPayload(t, `{"summary":true,"url":"example"}`)["entries"].([]any); len(entries) != 2 {
+		t.Errorf("expected 2 filtered entries, got %d", len(entries))
 	}
-
-	result := filterWaterfallSummaryEntries(entries, "example", 10)
-	if len(result) != 1 {
-		t.Errorf("expected 1 filtered entry, got %d", len(result))
-	}
-}
-
-func TestFilterWaterfallSummaryEntries_WithLimit(t *testing.T) {
-	t.Parallel()
-	entries := []types.NetworkWaterfallEntry{
-		{URL: "https://example.com/a", InitiatorType: "fetch", Duration: 10.0},
-		{URL: "https://example.com/b", InitiatorType: "script", Duration: 20.0},
-		{URL: "https://example.com/c", InitiatorType: "img", Duration: 30.0},
-	}
-
-	result := filterWaterfallSummaryEntries(entries, "", 2)
-	if len(result) != 2 {
-		t.Errorf("expected 2 entries with limit, got %d", len(result))
+	if entries, _ := waterfallSummaryPayload(t, `{"summary":true,"limit":2}`)["entries"].([]any); len(entries) != 2 {
+		t.Errorf("expected 2 entries with limit, got %d", len(entries))
 	}
 }
 
@@ -377,7 +365,7 @@ func TestBuildNetworkBodiesSummary_StatusGrouping(t *testing.T) {
 		{URL: "http://a.com/api3", Method: "POST", Status: 404},
 		{URL: "http://a.com/api4", Method: "GET", Status: 500},
 	}
-	result := buildNetworkBodiesSummary(bodies, core.ResponseMetadata{})
+	result := buildNetworkBodiesSummary(bodies, map[string]any{})
 
 	byStatus, ok := result["by_status_group"].(map[string]int)
 	if !ok {
@@ -401,7 +389,7 @@ func TestBuildNetworkBodiesSummary_RecentURLs(t *testing.T) {
 		{URL: longURL, Method: "GET", Status: 200},
 		{URL: "http://short.com", Method: "GET", Status: 200},
 	}
-	result := buildNetworkBodiesSummary(bodies, core.ResponseMetadata{})
+	result := buildNetworkBodiesSummary(bodies, map[string]any{})
 
 	recentURLs, ok := result["recent_urls"].([]string)
 	if !ok {

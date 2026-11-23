@@ -5,6 +5,7 @@
 package pagination
 
 import (
+	"time"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 )
 
@@ -166,4 +167,46 @@ func SerializeWebSocketEntryWithSequence(enriched WebSocketEntryWithSequence) ma
 		result["tab_id"] = enriched.Entry.TabID
 	}
 	return result
+}
+
+// NetworkBodyEntryWithSequence pairs a captured network body with its cursor sequence.
+type NetworkBodyEntryWithSequence struct {
+	Entry     types.NetworkBody
+	Sequence  int64
+	Timestamp string
+}
+
+func (entry NetworkBodyEntryWithSequence) GetSequence() int64   { return entry.Sequence }
+func (entry NetworkBodyEntryWithSequence) GetTimestamp() string { return entry.Timestamp }
+
+// EnrichNetworkBodyEntries assigns sequences to the UNFILTERED body list.
+func EnrichNetworkBodyEntries(bodies []types.NetworkBody, totalAdded int64) []NetworkBodyEntryWithSequence {
+	enriched := make([]NetworkBodyEntryWithSequence, len(bodies))
+	baseSequence := totalAdded - int64(len(bodies)) + 1
+	for index, body := range bodies {
+		enriched[index] = NetworkBodyEntryWithSequence{Entry: body, Sequence: baseSequence + int64(index), Timestamp: body.Timestamp}
+	}
+	return enriched
+}
+
+// WaterfallEntryWithSequence pairs a resource timing with its cursor sequence.
+type WaterfallEntryWithSequence struct {
+	Entry     types.NetworkWaterfallEntry
+	Sequence  int64
+	Timestamp string
+}
+
+func (entry WaterfallEntryWithSequence) GetSequence() int64   { return entry.Sequence }
+func (entry WaterfallEntryWithSequence) GetTimestamp() string { return entry.Timestamp }
+
+// EnrichWaterfallEntries assigns sequences to the UNFILTERED waterfall list.
+func EnrichWaterfallEntries(entries []types.NetworkWaterfallEntry, totalAdded int64) []WaterfallEntryWithSequence {
+	enriched := make([]WaterfallEntryWithSequence, len(entries))
+	baseSequence := totalAdded - int64(len(entries)) + 1
+	for index, entry := range entries {
+		enriched[index] = WaterfallEntryWithSequence{
+			Entry: entry, Sequence: baseSequence + int64(index), Timestamp: entry.Timestamp.UTC().Format(time.RFC3339Nano),
+		}
+	}
+	return enriched
 }

@@ -79,6 +79,7 @@ code_paths:
   - src/background/push-handler.ts
   - src/lib/tabs/tab-focus.ts
 test_paths:
+  - internal/tools/observe/network/network_cursor_test.go
   - internal/tools/observe/network/ws_cursor_test.go
   - internal/tools/observe/session/actions_cursor_test.go
   - internal/page/screenshotframe/wire_screenshot_test.go

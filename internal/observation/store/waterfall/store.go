@@ -44,6 +44,9 @@ type Store struct {
 	entries ringstore.Store[types.NetworkWaterfallEntry]
 	dropped int64
 	deduped int64
+	// totalAdded counts retained (non-duplicate) entries ever pushed, so cursor
+	// sequences stay monotonic across eviction.
+	totalAdded int64
 
 	// Dedup index for the page currently being observed. The browser reports a
 	// snapshot, not a stream — observe(network_waterfall) re-queries the page
@@ -90,6 +93,7 @@ func (s *Store) addAt(entries []types.NetworkWaterfallEntry, pageURL string, now
 		}
 
 		entry.Timestamp = now
+		s.totalAdded++
 		if _, overwritten := s.entries.Push(entry); overwritten {
 			s.dropped++
 		}
@@ -140,6 +144,23 @@ func (s *Store) Pressure() pressure.Stats {
 	return stats
 }
 
+// Snapshot is detached resource timings with the monotonic total read under the same lock.
+type Snapshot struct {
+	Entries    []types.NetworkWaterfallEntry
+	TotalAdded int64
+}
+
+// Snapshot returns detached resource timings and the total ever retained.
+func (s *Store) Snapshot() Snapshot {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	entries := s.entries.Snapshot()
+	for i := range entries {
+		entries[i] = cloneEntry(entries[i])
+	}
+	return Snapshot{Entries: entries, TotalAdded: s.totalAdded}
+}
+
 // Entries returns a detached snapshot of resource timings.
 func (s *Store) Entries() []types.NetworkWaterfallEntry {
 	s.mu.RLock()
@@ -174,6 +195,7 @@ func (s *Store) Clear() int {
 	defer s.mu.Unlock()
 	count := s.entries.Len()
 	s.entries.Clear()
+	s.totalAdded = 0
 	// The dedup index has to go with the entries. Keeping it would suppress the
 	// very next snapshot as "already seen" and leave the buffer permanently
 	// empty — a clear must not be a mute.
