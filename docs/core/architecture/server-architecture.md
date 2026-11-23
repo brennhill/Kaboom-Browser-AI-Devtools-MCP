@@ -137,10 +137,6 @@ Each row is a cross-context operation. The **owner** decides the outcome. The
   composition root holds `*capture.Capture` (jdm5.5). Every tool, health,
   guard and API package takes the owners it uses, and the `capture-root`
   layering rule enforces it. Per-client dispatcher helpers were deleted.
-- **Gap:** `RecordingManager.AddRecordingAction` has no production caller, so
-  event recordings currently record lifecycle and metadata but not actions.
-  The target is an ingestion handoff from Observation Capture to Event
-  Recording.
 
 ## Enforcement
 

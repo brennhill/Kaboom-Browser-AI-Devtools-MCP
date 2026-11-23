@@ -4,7 +4,7 @@ status: in-progress
 version: 0.7.12
 doc_type: tech-spec
 feature_id: feature-flow-recording
-last_reviewed: 2026-11-21
+last_reviewed: 2026-11-23
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -334,7 +334,8 @@ The diff compares two recordings (`internal/recording/logdiff/compare.go`: actio
 
 - Page-side action capture already exists in `src/lib/page/actions.ts` (`handleClick`, input/scroll handlers) calling `recordEnhancedAction` in `src/lib/page/reproduction.ts`; these feed the general `observe({what: 'actions'})` buffer.
 - `src/background/recording/` is the **video** (tab capture) recording module, not flow-event recording.
-- **Not built:** recording-specific metadata (screenshot_path per action) and forwarding captured actions into the active flow recording. On the server, `RecordingManager.AddRecordingAction` exists but has no production caller, so recordings currently stay empty unless actions are added programmatically (tests).
+- **Built (2026-11-23):** every AI `interact` action is forwarded into the active flow recording. `actionlog.Recorder` (the single funnel for interact actions) feeds `RecordingManager.RecordIfActive` while a recording is active; actions without a reproduction type are kept with a `dom_` prefix. Typed text (`type`/`input`) is redacted unless `sensitive_data_enabled`.
+- **Not built:** recording-specific metadata (screenshot_path per action, x/y), and forwarding *human* browser actions (captured by the extension into telemetry) into the flow recording.
 
 ### Server Recording Storage (Go)
 
@@ -674,7 +675,7 @@ configure({what: 'test_boundary_end', test_id: 'replay-1'})
 
 ## Remaining Implementation Order
 
-1. Wire extension action capture into the active flow recording (call path to `AddRecordingAction`), with recording metadata (selector, x/y, screenshot_path)
+1. Wire human (extension-captured) actions into the active flow recording, with recording metadata (x/y, screenshot_path). AI interact actions are already wired.
 2. Drive playback through the extension (real clicks/typing, network-idle waits, screenshots on error)
 3. Accept inline `actions` arrays for LLM-generated variations
 4. Optional: WebSocket push stream if HTTP timing jitter proves to matter

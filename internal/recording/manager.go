@@ -261,6 +261,17 @@ func (r *RecordingManager) StopRecording(recordingID string) (int, int64, error)
 	return actionCount, duration, nil
 }
 
+// RecordIfActive appends action to the active recording. It reports false with
+// no error when no recording is active (the common case for interact actions).
+func (r *RecordingManager) RecordIfActive(action RecordingAction) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.activeRecordingID == "" {
+		return false, nil
+	}
+	return true, r.appendActionLocked(action)
+}
+
 // AddRecordingAction adds an action to the current recording.
 func (r *RecordingManager) AddRecordingAction(action RecordingAction) error {
 	r.mu.Lock()
@@ -269,6 +280,11 @@ func (r *RecordingManager) AddRecordingAction(action RecordingAction) error {
 	if r.activeRecordingID == "" {
 		return fmt.Errorf("not_recording: No active recording")
 	}
+	return r.appendActionLocked(action)
+}
+
+// appendActionLocked redacts and appends action; r.mu must be held.
+func (r *RecordingManager) appendActionLocked(action RecordingAction) error {
 
 	recording := r.recordings[r.activeRecordingID]
 	if recording == nil {
@@ -277,8 +293,9 @@ func (r *RecordingManager) AddRecordingAction(action RecordingAction) error {
 
 	// Redact sensitive data if needed.
 	if !recording.SensitiveDataEnabled {
-		// Redact text on type actions.
-		if action.Type == "type" && action.Text != "" {
+		// Redact typed text. Interact typing arrives as the reproduction type
+		// "input"; legacy callers use "type".
+		if (action.Type == "type" || action.Type == "input") && action.Text != "" {
 			action.Text = "[redacted]"
 		}
 	}

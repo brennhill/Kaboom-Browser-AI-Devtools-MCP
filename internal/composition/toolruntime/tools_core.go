@@ -338,6 +338,9 @@ func initToolHandlerCore(state ServerState, captureStore *capture.Capture) *Tool
 		actionTelemetry = captureStore.Telemetry()
 	}
 	handler.actionRecorder = actionlog.New(actionTelemetry)
+	if captureStore != nil {
+		handler.actionRecorder.SetFlowSink(captureStore.Recordings())
+	}
 	return handler
 }
 

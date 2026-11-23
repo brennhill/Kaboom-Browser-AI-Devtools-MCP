@@ -84,3 +84,26 @@ func TestStartRecordingReportsAlreadyRecordingDistinctly(t *testing.T) {
 		t.Fatalf("error %v must name the active recording id %q", err, first)
 	}
 }
+
+// Regression (kaboom-fpup): interact typing reaches flow recordings as the
+// reproduction type "input", so redaction must cover it as well as "type".
+func TestRecordIfActiveRedactsTypedTextUnlessSensitiveEnabled(t *testing.T) {
+	manager := NewRecordingManager()
+	if recorded, err := manager.RecordIfActive(RecordingAction{Type: "input", Text: "secret"}); recorded || err != nil {
+		t.Fatalf("RecordIfActive with no recording = %v, %v; want false, nil", recorded, err)
+	}
+	id, err := manager.StartRecording("redact", "https://example.com", false)
+	if err != nil {
+		t.Fatalf("StartRecording: %v", err)
+	}
+	for _, kind := range []string{"type", "input"} {
+		if recorded, err := manager.RecordIfActive(RecordingAction{Type: kind, Text: "secret"}); !recorded || err != nil {
+			t.Fatalf("RecordIfActive(%s) = %v, %v", kind, recorded, err)
+		}
+	}
+	for _, action := range manager.recordings[id].Actions {
+		if action.Text != "[redacted]" {
+			t.Fatalf("%s action text = %q, want [redacted]", action.Type, action.Text)
+		}
+	}
+}
