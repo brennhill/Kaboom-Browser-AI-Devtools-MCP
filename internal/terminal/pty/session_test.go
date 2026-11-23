@@ -1,3 +1,5 @@
+//go:build darwin || linux
+
 // session_test.go — Tests for PTY session spawn, I/O roundtrip, resize, and cleanup.
 
 package pty

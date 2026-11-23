@@ -1,3 +1,5 @@
+//go:build darwin || linux
+
 // Purpose: Tests runtime clocks, diagnostics, buffered writes, and reaping lifecycle.
 // Docs: docs/features/feature/terminal/index.md
 

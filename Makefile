@@ -303,6 +303,8 @@ check-wire-decode:
 check-tagged-builds:
 	@go vet -tags=integration ./cmd/... ./internal/...
 	@echo "OK: integration-tagged packages compile"
+	@GOOS=windows go vet ./cmd/... ./internal/... ./scripts/...
+	@echo "OK: packages and tests compile for GOOS=windows"
 
 # Only lowers existing allowances; intentional growth requires reviewed baseline edits.
 go-architecture-baseline-update:
