@@ -160,7 +160,7 @@ export interface VersionMismatchMessage {
 /**
  * Union of all background-bound messages
  */
-export type BackgroundMessage = GetTabIdMessage | WsEventMessage | EnhancedActionMessage | NetworkBodyMessage | PerformanceSnapshotMessage | CaptureDiagnosticMessage | LogMessage | GetStatusMessage | ClearLogsMessage | ReportStateRecoveryMessage | SetLogLevelMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | GetAiWebPilotEnabledMessage | GetTrackingStateMessage | TrackingContentReadyMessage | TrackingContinuityChangedMessage | GetDiagnosticStateMessage | CaptureScreenshotMessage | TrackUiFeatureMessage | GetDebugLogMessage | ClearDebugLogMessage | SetServerUrlMessage | DrawModeCaptureScreenshotMessage | DrawModeCompletedMessage | PushChatMessage | ScreenRecordingStartMessage | ScreenRecordingStopMessage | RecordingGestureGrantedMessage | RecordingGestureDeniedMessage | OpenPopupForRecordingMessage | OpenTerminalPanelMessage | CloseTerminalPanelMessage | QaScanRequestedMessage;
+export type BackgroundMessage = GetTabIdMessage | WsEventMessage | EnhancedActionMessage | NetworkBodyMessage | PerformanceSnapshotMessage | CaptureDiagnosticMessage | LogMessage | GetStatusMessage | ClearLogsMessage | ReportStateRecoveryMessage | SetLogLevelMessage | SetBooleanSettingMessage | SetWebSocketCaptureModeMessage | GetAiWebPilotEnabledMessage | GetTrackingStateMessage | TrackingContentReadyMessage | TrackingContinuityChangedMessage | GetDiagnosticStateMessage | CaptureScreenshotMessage | TrackUiFeatureMessage | GetDebugLogMessage | ClearDebugLogMessage | SetServerUrlMessage | DrawModeCaptureScreenshotMessage | DrawModeCompletedMessage | PushChatMessage | ScreenRecordingStartMessage | ScreenRecordingStopMessage | ScreenRecordingInfoMessage | RecordingGestureGrantedMessage | RecordingGestureDeniedMessage | OpenPopupForRecordingMessage | OpenTerminalPanelMessage | CloseTerminalPanelMessage | QaScanRequestedMessage;
 /**
  * Draw mode: content script requests screenshot capture
  */
@@ -200,6 +200,18 @@ interface ScreenRecordingStartMessage {
  */
 interface ScreenRecordingStopMessage {
     readonly type: 'screen_recording_stop';
+}
+/**
+ * Popup asks the background recording owner for the live recording state, so
+ * the popup never trusts the StorageKey.RECORDING mirror alone (rule 18).
+ */
+export interface ScreenRecordingInfoMessage {
+    readonly type: 'screen_recording_info';
+}
+export interface ScreenRecordingInfoResponse {
+    readonly active: boolean;
+    readonly name: string;
+    readonly startTime: number;
 }
 /**
  * Popup approval for MCP-initiated screen recording request.

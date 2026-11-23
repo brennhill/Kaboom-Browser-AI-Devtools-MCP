@@ -3,9 +3,11 @@
  * Docs: docs/features/feature/flow-recording/index.md
  */
 import type { ScreenRecordingHandlers } from '../ui/keyboard-shortcuts.js';
+import type { ScreenRecordingInfoResponse } from '../../types/runtime-messages.js';
 /** Dependencies injected by recording.ts to avoid circular imports. */
 export interface RecordingListenerDeps extends Omit<ScreenRecordingHandlers, 'isRecording'> {
     isActive: () => boolean;
+    getRecordingInfo: () => ScreenRecordingInfoResponse;
     getTabId: () => number;
     setInactive: () => void;
     clearRecordingState: () => Promise<void>;

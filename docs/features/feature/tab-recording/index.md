@@ -4,7 +4,7 @@ feature_id: feature-tab-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-11-21
+last_reviewed: 2026-11-23
 code_paths:
   - internal/composition/toolruntime/tools_interact_dispatch.go
   - internal/tools/schema/interact/actions.go
@@ -59,6 +59,7 @@ code_paths:
   - src/popup/recording/recording-io.ts
   - src/background/recording/listeners.ts
 test_paths:
+  - tests/extension/recording-ui/popup-recording-reconcile.test.js
   - internal/screenrec/state_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - internal/tools/interact/dispatch/handler_test.go

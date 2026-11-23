@@ -10,6 +10,7 @@ import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { persist } from '../../lib/storage/io.js'
 import { removeLocal, setLocal } from '../../lib/storage/local.js'
+import type { ScreenRecordingInfoMessage } from '../../types/runtime-messages.js'
 
 export interface RecordingElements {
   row: HTMLElement
@@ -155,4 +156,44 @@ export function handleStopClick(
       showSaveResult(els.saveInfoEl, resp)
     }
   )
+}
+
+/** Screen-recording state as shown by the popup (mirror or live owner). */
+export interface PopupRecordingSnapshot {
+  readonly active: boolean
+  readonly name: string
+  readonly startTime: number
+}
+
+function isLiveRecordingInfo(value: unknown): value is PopupRecordingSnapshot {
+  const v = value as Partial<PopupRecordingSnapshot> | null
+  return (
+    !!v && typeof v.active === 'boolean' && typeof v.name === 'string' && typeof v.startTime === 'number'
+  )
+}
+
+/**
+ * Ask the background recording owner for the live state (rule 18: the storage
+ * mirror goes stale if its writer dies without flushing). Returns null when the
+ * owner cannot answer, so the caller keeps the mirror instead of guessing.
+ */
+export async function queryLiveRecordingInfo(): Promise<PopupRecordingSnapshot | null> {
+  try {
+    const message: ScreenRecordingInfoMessage = { type: 'screen_recording_info' }
+    const response: unknown = await chrome.runtime.sendMessage(message)
+    if (isLiveRecordingInfo(response)) return response
+    console.warn(LOG, 'live recording state reply was malformed; keeping stored state', response)
+    return null
+  } catch (err) {
+    console.warn(LOG, 'live recording state query failed; keeping stored state:', errorMessage(err))
+    return null
+  }
+}
+
+/** The live owner's answer wins; without one, the mirror stands. */
+export function reconcileRecordingState(
+  mirror: PopupRecordingSnapshot | null,
+  live: PopupRecordingSnapshot | null
+): PopupRecordingSnapshot | null {
+  return live ?? mirror
 }

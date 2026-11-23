@@ -45,7 +45,7 @@
     "src/background/init.ts:initializeExtensionAsync:225": 253,
     "src/background/recording/index.ts:startOffscreenRecording:312": 82,
     "src/background/recording/index.ts:stopRecording:589": 132,
-    "src/background/recording/listeners.ts:installRecordingListeners:57": 190,
+    "src/background/recording/listeners.ts:installRecordingListeners:59": 167,
     "src/background/sync/batchers.ts:createBatcherWithCircuitBreaker:88": 249,
     "src/background/sync/circuit-breaker.ts:createCircuitBreaker:60": 171,
     "src/background/sync/sync-manager.ts:startSyncClient:94": 145,
@@ -67,6 +67,6 @@
     "src/offscreen/recording-worker.ts:(anonymous):308": 104,
     "src/offscreen/recording-worker.ts:handleStartRecording:70": 185,
     "src/offscreen/recording-worker.ts:handleStopRecording:260": 155,
-    "src/popup/recording/recording.ts:setupRecordingUI:260": 173
+    "src/popup/recording/recording.ts:setupRecordingUI:237": 167
   }
 }

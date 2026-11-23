@@ -247,6 +247,7 @@ export type BackgroundMessage =
   | PushChatMessage
   | ScreenRecordingStartMessage
   | ScreenRecordingStopMessage
+  | ScreenRecordingInfoMessage
   | RecordingGestureGrantedMessage
   | RecordingGestureDeniedMessage
   | OpenPopupForRecordingMessage
@@ -297,6 +298,20 @@ interface ScreenRecordingStartMessage {
  */
 interface ScreenRecordingStopMessage {
   readonly type: 'screen_recording_stop'
+}
+
+/**
+ * Popup asks the background recording owner for the live recording state, so
+ * the popup never trusts the StorageKey.RECORDING mirror alone (rule 18).
+ */
+export interface ScreenRecordingInfoMessage {
+  readonly type: 'screen_recording_info'
+}
+
+export interface ScreenRecordingInfoResponse {
+  readonly active: boolean
+  readonly name: string
+  readonly startTime: number
 }
 
 /**
