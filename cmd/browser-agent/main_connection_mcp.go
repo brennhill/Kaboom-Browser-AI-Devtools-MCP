@@ -171,6 +171,11 @@ func startBinaryUpgradeWatcher(server *Server, port int, ctx context.Context) {
 			process, _ := os.FindProcess(os.Getpid())
 			_ = process.Signal(syscall.SIGTERM)
 		},
+		func(err error) {
+			server.logLifecycle("binary_upgrade_verify_failed", port, map[string]any{
+				"current_version": version, "error": err.Error(),
+			})
+		},
 	))
 }
 

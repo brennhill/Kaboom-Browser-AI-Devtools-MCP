@@ -29,6 +29,7 @@ const (
 type binaryVersionVerifier func(path string, timeout time.Duration) (string, error)
 
 type binaryWatcherConfig struct {
+	onVerifyFailure       func(error)
 	resolveExecutablePath func() (string, error)
 	watchInterval         time.Duration
 	upgradeGracePeriod    time.Duration
@@ -78,6 +79,8 @@ type State struct {
 	versionCheckTimeout time.Duration
 	verifyVersion       binaryVersionVerifier
 	now                 func() time.Time
+	// onVerifyFailure receives version-check failures so they are logged, not dropped.
+	onVerifyFailure func(error)
 }
 
 // UpgradeInfo returns the current upgrade detection state (thread-safe).
@@ -125,6 +128,9 @@ func (s *State) checkForUpgrade(currentVersion string) bool {
 	}
 	newVer, err := verifyVersion(s.execPath, s.versionCheckTimeout)
 	if err != nil {
+		if s.onVerifyFailure != nil {
+			s.onVerifyFailure(err)
+		}
 		return false
 	}
 
@@ -220,8 +226,8 @@ func parseVersionCommandOutput(stdout string, stderr string) (string, error) {
 //  2. If changed: run --version, parse output
 //  3. If newer: set upgrade_pending, call onUpgrade
 //  4. After grace period: call triggerShutdown
-func Start(ctx context.Context, currentVersion string, onUpgrade func(string), triggerShutdown func()) *State {
-	return startBinaryWatcherWithConfig(ctx, currentVersion, onUpgrade, triggerShutdown, binaryWatcherConfig{})
+func Start(ctx context.Context, currentVersion string, onUpgrade func(string), triggerShutdown func(), onVerifyFailure func(error)) *State {
+	return startBinaryWatcherWithConfig(ctx, currentVersion, onUpgrade, triggerShutdown, binaryWatcherConfig{onVerifyFailure: onVerifyFailure})
 }
 
 func startBinaryWatcherWithConfig(
@@ -247,6 +253,7 @@ func startBinaryWatcherWithConfig(
 		versionCheckTimeout: cfg.versionCheckTimeout,
 		verifyVersion:       cfg.verifyVersion,
 		now:                 cfg.now,
+		onVerifyFailure:     cfg.onVerifyFailure,
 	}
 
 	util.SafeGo(func() {

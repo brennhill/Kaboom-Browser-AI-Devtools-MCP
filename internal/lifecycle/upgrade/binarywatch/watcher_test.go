@@ -6,8 +6,10 @@ package binarywatch
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -229,7 +231,7 @@ func TestStartBinaryWatcher_ContextCancellation(t *testing.T) {
 func TestStartBinaryWatcher_DisabledByEnvVar(t *testing.T) {
 	t.Setenv("KABOOM_NO_AUTO_UPGRADE", "1")
 
-	s := Start(context.Background(), "0.7.5", func(string) {}, func() {})
+	s := Start(context.Background(), "0.7.5", func(string) {}, func() {}, func(error) {})
 	if s != nil {
 		t.Fatal("Start should return nil when disabled")
 	}
@@ -396,4 +398,20 @@ func TestBinaryWatcherState_ThreadSafety(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func TestCheckForUpgrade_ReportsVerifyFailure(t *testing.T) {
+	t.Parallel()
+	var reported error
+	s := &State{
+		execPath:        "/unused",
+		verifyVersion:   func(string, time.Duration) (string, error) { return "", errors.New("text file busy") },
+		onVerifyFailure: func(err error) { reported = err },
+	}
+	if s.checkForUpgrade("0.7.5") {
+		t.Fatal("checkForUpgrade must not report an upgrade when verification fails")
+	}
+	if reported == nil || !strings.Contains(reported.Error(), "text file busy") {
+		t.Fatalf("onVerifyFailure got %v, want the verification error", reported)
+	}
 }
