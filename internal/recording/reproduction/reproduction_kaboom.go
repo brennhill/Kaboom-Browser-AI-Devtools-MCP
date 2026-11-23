@@ -37,10 +37,18 @@ func writeKaboomHeader(b *strings.Builder, actions []types.EnhancedAction, opts 
 		time.Now().Format(time.RFC3339), len(actions), startURL)
 	writeEnvironmentPin(b, actions, "# ")
 	b.WriteString("\n")
+	writeKaboomFixtures(b, opts)
 }
 
 func writeKaboomSteps(b *strings.Builder, actions []types.EnhancedAction, opts Params) {
-	stepNum := 0
+	stepNum, checkpoint := 0, 0
+	writeCheckpoint := func() {
+		checkpoint++
+		for _, step := range kaboomCheckpointSteps(opts, checkpoint) {
+			stepNum++
+			fmt.Fprintf(b, "%d. %s\n", stepNum, step)
+		}
+	}
 	var prevTs int64
 	for _, action := range actions {
 		WritePauseComment(b, prevTs, action.Timestamp, "   [%ds pause]\n")
@@ -59,6 +67,12 @@ func writeKaboomSteps(b *strings.Builder, actions []types.EnhancedAction, opts P
 		// The step names one locator. The other two are listed under it so a replay that
 		// cannot resolve the first has somewhere to go instead of failing the step.
 		writeFallbackLocators(b, buildLocators(action), "   ", "", renderLocatorHuman)
+		if wantsCheckpoint(opts, action) {
+			writeCheckpoint()
+		}
+	}
+	if opts.IncludeScreenshots || opts.VisualAssertions {
+		writeCheckpoint()
 	}
 }
 

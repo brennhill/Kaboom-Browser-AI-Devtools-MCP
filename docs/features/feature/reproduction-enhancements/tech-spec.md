@@ -295,7 +295,7 @@ By default, only `on_error` is true (screenshots on errors are the highest-value
 
 Current state (reviewed 2026-11-21): the base generators ship, the enhancements in this spec do not.
 
-- Reproduction scripts: `internal/recording/reproduction/reproduction.go` (`Params`, dispatch on `output_format`), `internal/recording/reproduction/reproduction_playwright.go`, `internal/recording/reproduction/reproduction_kaboom.go`; tests in `internal/recording/reproduction/reproduction_test.go` and `internal/recording/reproduction/golden_test.go`.
+- Reproduction scripts: `internal/recording/reproduction/reproduction.go` (`Params`, dispatch on `output_format`), `internal/recording/reproduction/reproduction_playwright.go`, `internal/recording/reproduction/reproduction_kaboom.go`; tests in `internal/recording/reproduction/reproduction_test.go` and `internal/recording/reproduction/reproduction_output_test.go`.
 - Test generation: `internal/tools/generate/testgen/generate.go`; tests in `internal/tools/generate/testgen/entrypoints_test.go`.
 - Schema: `internal/tools/schema/generate.go` already advertises `include_screenshots`, `generate_fixtures` and `visual_assertions` for `generate({what:"reproduction"})`, but the generator ignores them (`IncludeScreenshots` is parsed and unused; the other two are not parsed).
 - Screenshots: the shipped path is `observe({what:"screenshot"})`; the auto-capture configuration, `capture_screenshot` tool and Markdown bug report are not built.

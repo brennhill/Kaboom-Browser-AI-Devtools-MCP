@@ -36,9 +36,11 @@ func writePlaywrightHeader(b *strings.Builder, actions []types.EnhancedAction, o
 		testName = "reproduction: " + ChopString(opts.ErrorMessage, 80)
 	}
 	fmt.Fprintf(b, "test('%s', async ({ page }) => {\n", EscapeJS(testName))
+	writePlaywrightFixtures(b, opts)
 }
 
 func writePlaywrightSteps(b *strings.Builder, actions []types.EnhancedAction, opts Params) {
+	checkpoint := 0
 	var prevTs int64
 	for _, action := range actions {
 		WritePauseComment(b, prevTs, action.Timestamp, "  // [%ds pause]\n")
@@ -52,6 +54,13 @@ func writePlaywrightSteps(b *strings.Builder, actions []types.EnhancedAction, op
 		// re-render that breaks it leaves a repair path in the artifact itself.
 		writeFallbackLocators(b, buildLocators(action), "  // ",
 			"locator fallbacks ("+fallbackOrderLabel+"):", renderLocatorCode)
+		if wantsCheckpoint(opts, action) {
+			checkpoint++
+			writePlaywrightCheckpoint(b, opts, checkpoint)
+		}
+	}
+	if opts.IncludeScreenshots || opts.VisualAssertions {
+		writePlaywrightCheckpoint(b, opts, checkpoint+1)
 	}
 }
 

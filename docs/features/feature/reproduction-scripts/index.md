@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-11-23
 code_paths:
+  - internal/recording/reproduction/reproduction_utils.go
   - internal/tools/generate/handler/dispatcher.go
   - internal/tools/generate/handler/deps.go
   - internal/recording/reproduction/reproduction.go
@@ -13,17 +14,16 @@ code_paths:
   - internal/recording/reproduction/reproduction_playwright.go
   - internal/recording/reproduction/reproduction_selectors.go
   - internal/recording/reproduction/reproduction_locators.go
-  - internal/recording/reproduction/reproduction_utils.go
   - src/lib/page/reproduction.ts
   - internal/observation/store/actions/store.go
 test_paths:
+  - internal/recording/reproduction/reproduction_output_test.go
   - internal/tools/generate/handler/toolgenerate_test.go
   - scripts/tests/workflows/cat-29-reproduction.sh
   - internal/recording/actionlog/reproselector.go
   - internal/recording/actionlog/reproselector_test.go
   - internal/recording/reproduction/reproduction_test.go
   - internal/recording/reproduction/reproduction_locators_test.go
-  - internal/recording/reproduction/golden_test.go
   - scripts/contracts/goarchitecturetests/contracts_test.go
   - tests/extension/reproduction/reproduction-script-fixture.js
   - tests/extension/reproduction/reproduction-script-generation.test.js

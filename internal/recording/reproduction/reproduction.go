@@ -17,7 +17,12 @@ type Params struct {
 	LastN              int    `json:"last_n"`
 	BaseURL            string `json:"base_url"`
 	IncludeScreenshots bool   `json:"include_screenshots"`
+	GenerateFixtures   bool   `json:"generate_fixtures"`
+	VisualAssertions   bool   `json:"visual_assertions"`
 	ErrorMessage       string `json:"error_message"`
+	// Fixtures are the captured network responses the caller supplies when
+	// GenerateFixtures is set; they are not part of the wire arguments.
+	Fixtures []types.NetworkBody `json:"-"`
 }
 
 // Result is the response payload.

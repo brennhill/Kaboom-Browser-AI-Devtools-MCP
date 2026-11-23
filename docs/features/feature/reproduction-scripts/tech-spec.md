@@ -85,9 +85,19 @@ type Params struct {
     OutputFormat      string `json:"output_format"`      // "kaboom-agentic-browser" (default) | "playwright"
     LastN             int    `json:"last_n"`             // optional: filter to last N actions
     BaseURL           string `json:"base_url"`           // optional: rewrite origins
-    IncludeScreenshots bool  `json:"include_screenshots"` // optional: screenshot steps (playwright)
+    IncludeScreenshots bool  `json:"include_screenshots"` // optional: screenshot after each navigation + at end
+    GenerateFixtures  bool   `json:"generate_fixtures"`  // optional: stub captured network responses
+    VisualAssertions  bool   `json:"visual_assertions"`  // optional: toHaveScreenshot checkpoints
     ErrorMessage      string `json:"error_message"`      // optional: error context
+    Fixtures          []types.NetworkBody `json:"-"`     // filled by the dispatcher when generate_fixtures
 }
+```
+
+**Options** (`reproduction_utils.go`, both output formats):
+- `include_screenshots` / `visual_assertions` add a checkpoint after every navigation and one at the end: Playwright emits `page.screenshot({ path: 'repro-step-N.png' })` / `expect(page).toHaveScreenshot('repro-step-N.png')`; the Kaboom format adds numbered "Take a screenshot" / "Compare the page against baseline" steps.
+- `generate_fixtures` reads captured network bodies: one fixture per method+URL (latest capture wins, at most 50), truncated captures skipped and counted. Playwright installs `page.route(...)` before the first step, fulfilling only the captured method and falling back otherwise; the Kaboom format lists `METHOD URL -> status` in a header section. `base_url` rewrites fixture URLs too.
+
+```go
 
 type Result struct {
     Script      string              `json:"script"`
@@ -297,7 +307,7 @@ func selectorRole(selectors map[string]any) (role, name string) {
 3. **TestReproduction_EmptyActions**, **TestReproduction_LastN**, **TestReproduction_DefaultFormat**
 4. Per-step `TestPlaywrightStep_*` cases
 
-`internal/recording/reproduction/reproduction_locators_test.go` covers fallback locators and environment pinning; `internal/recording/reproduction/golden_test.go` compares Playwright output against golden files. `internal/recording/actionlog/reproselector_test.go` covers selector parsing for reproduction.
+`internal/recording/reproduction/reproduction_locators_test.go` covers fallback locators and environment pinning; `internal/recording/reproduction/reproduction_output_test.go` compares Playwright output against golden files. `internal/recording/actionlog/reproselector_test.go` covers selector parsing for reproduction.
 
 ### Integration Test
 

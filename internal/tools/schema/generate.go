@@ -52,15 +52,15 @@ func generateToolSchema() mcp.MCPTool {
 				},
 				"include_screenshots": map[string]any{
 					"type":        "boolean",
-					"description": "Add screenshot calls (reproduction)",
+					"description": "Add a screenshot after each navigation and at the end (reproduction)",
 				},
 				"generate_fixtures": map[string]any{
 					"type":        "boolean",
-					"description": "Generate network fixtures (reproduction)",
+					"description": "Stub captured network responses (page.route in playwright; listed in kaboom format). Truncated captures are skipped (reproduction)",
 				},
 				"visual_assertions": map[string]any{
 					"type":        "boolean",
-					"description": "Add visual assertions (reproduction)",
+					"description": "Assert the page matches a baseline screenshot after each navigation and at the end (reproduction)",
 				},
 				"test_name": map[string]any{
 					"type":        "string",

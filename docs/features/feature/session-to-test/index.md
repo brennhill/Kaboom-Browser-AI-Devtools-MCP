@@ -26,7 +26,7 @@ code_paths:
   - src/types/wire/wire-enhanced-action.ts
 test_paths:
   - internal/recording/reproduction/reproduction_locators_test.go
-  - internal/recording/reproduction/golden_test.go
+  - internal/recording/reproduction/reproduction_output_test.go
   - internal/recording/reproduction/testdata/reproduction-playwright.golden.txt
   - internal/observation/store/actions/store_test.go
   - tests/extension/session-to-test/cdp-env-pin.test.js
