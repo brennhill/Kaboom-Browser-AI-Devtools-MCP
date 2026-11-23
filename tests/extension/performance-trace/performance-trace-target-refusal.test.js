@@ -122,7 +122,7 @@ async function startTrace(params) {
   const syncClient = { queueCommandResult: mock.fn() }
   const { handlePendingQuery } = await import('../../../extension/background/pending-queries.js')
   const { markInitComplete } = await import('../../../extension/background/runtime-state/startup-state.js')
-  const { resetPilotCacheForTesting } = await import('../../../extension/background/runtime-state/pilot-state.js')
+  const { resetPilotCacheForTesting } = await import('../../../extension/background/tab-tracking/pilot-state.js')
   markInitComplete()
   resetPilotCacheForTesting(true)
   await handlePendingQuery(

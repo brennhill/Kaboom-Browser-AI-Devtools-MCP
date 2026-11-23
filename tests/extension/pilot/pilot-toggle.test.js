@@ -120,7 +120,7 @@ const createMockElement = (id) => ({
 let mockDocument
 
 async function resetPilotCacheForTesting(value) {
-  const { resetPilotCacheForTesting } = await import('../../../extension/background/runtime-state/pilot-state.js')
+  const { resetPilotCacheForTesting } = await import('../../../extension/background/tab-tracking/pilot-state.js')
   resetPilotCacheForTesting(value)
 }
 
@@ -207,7 +207,7 @@ describe('AI Web Pilot Command Gating', () => {
       callback({ aiWebPilotEnabled: false })
     })
 
-    const { isAiWebPilotEnabled } = await import('../../../extension/background/runtime-state/pilot-state.js')
+    const { isAiWebPilotEnabled } = await import('../../../extension/background/tab-tracking/pilot-state.js')
     await resetPilotCacheForTesting(false)
     const enabled = await isAiWebPilotEnabled()
     assert.strictEqual(enabled, false, 'Should return false when toggle is off')
@@ -218,7 +218,7 @@ describe('AI Web Pilot Command Gating', () => {
       callback({}) // No value set
     })
 
-    const { isAiWebPilotEnabled } = await import('../../../extension/background/runtime-state/pilot-state.js')
+    const { isAiWebPilotEnabled } = await import('../../../extension/background/tab-tracking/pilot-state.js')
     await resetPilotCacheForTesting(false)
     const enabled = await isAiWebPilotEnabled()
     assert.strictEqual(enabled, false, 'Should return false when toggle is undefined')
@@ -229,7 +229,7 @@ describe('AI Web Pilot Command Gating', () => {
       callback({ aiWebPilotEnabled: true })
     })
 
-    const { isAiWebPilotEnabled } = await import('../../../extension/background/runtime-state/pilot-state.js')
+    const { isAiWebPilotEnabled } = await import('../../../extension/background/tab-tracking/pilot-state.js')
     // Reset module-level cache (persists across Node.js cached imports)
     await resetPilotCacheForTesting(true)
 
@@ -419,7 +419,7 @@ describe('AI Web Pilot Single Source of Truth Architecture', () => {
   })
 
   test('background should receive setAiWebPilotEnabled message and update cache', async () => {
-    const { isAiWebPilotEnabled } = await import('../../../extension/background/runtime-state/pilot-state.js')
+    const { isAiWebPilotEnabled } = await import('../../../extension/background/tab-tracking/pilot-state.js')
     await resetPilotCacheForTesting(false)
 
     // Verify cache starts as false

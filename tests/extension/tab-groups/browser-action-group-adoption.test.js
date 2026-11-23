@@ -13,7 +13,7 @@ import assert from 'node:assert'
 import { createTabGroupsWorld, installWorld, TAB_GROUP_ID_NONE } from './tab-groups-fixture.js'
 
 const groupModule = await import('../../../extension/background/tab-groups/driven-tab-group.js')
-const pilotState = await import('../../../extension/background/runtime-state/pilot-state.js')
+const pilotState = await import('../../../extension/background/tab-tracking/pilot-state.js')
 const connectionGeneration = await import('../../../extension/background/runtime-state/connection-generation.js')
 const { handleBrowserAction } = await import('../../../extension/background/exec/browser-actions.js')
 const { persistTrackedTab } = await import('../../../extension/background/commands/helpers.js')

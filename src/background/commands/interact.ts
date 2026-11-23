@@ -8,7 +8,7 @@
 // Handles: subtitle, highlight, browser_action, dom_action, upload,
 //          execute, screen_recording_start, screen_recording_stop, state_*.
 
-import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js'
+import { isAiWebPilotEnabled } from '../tab-tracking/pilot-state.js'
 import { executeDOMAction } from '../dom/dom-dispatch.js'
 import { executeCDPAction } from '../dom/cdp/cdp-dispatch.js'
 import { executeUpload } from '../exec/upload-handler.js'

@@ -4,9 +4,9 @@
  */
 
 import { debugLog, DebugCategory } from '../debug.js'
-import { reportStateRecovery, resolveStateRecovery } from './state-recovery.js'
+import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js'
 import { trackingContinuity } from './tracking-continuity.js'
-import { getConnectionGeneration } from './connection-generation.js'
+import { getConnectionGeneration } from '../runtime-state/connection-generation.js'
 
 export interface ContentReadinessAcknowledgement {
   readonly ready: true

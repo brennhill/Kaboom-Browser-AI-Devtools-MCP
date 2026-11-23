@@ -16,7 +16,7 @@ import { resetSyncClientConnection, checkConnectionAndUpdate } from './orchestra
 import { sharedServerCircuitBreaker, logBatcher, wsBatcher, enhancedActionBatcher, networkBodyBatcher, perfBatcher, handleLogMessage, handleClearLogs } from './orchestration/stream-runtime.js';
 import { getServerUrl, isDebugMode, isScreenshotOnError, getCurrentLogLevel, setServerUrl, setCurrentLogLevel, setScreenshotOnError } from './runtime-state/settings-state.js';
 import { getConnectionStatus } from './runtime-state/connection-state.js';
-import { isAiWebPilotEnabled, isAiWebPilotCacheInitialized, getPilotInitCallback, setAiWebPilotEnabledCache, setAiWebPilotCacheInitialized, setPilotInitCallback } from './runtime-state/pilot-state.js';
+import { isAiWebPilotEnabled, isAiWebPilotCacheInitialized, getPilotInitCallback, setAiWebPilotEnabledCache, setAiWebPilotCacheInitialized, setPilotInitCallback } from './tab-tracking/pilot-state.js';
 import { EXTENSION_SESSION_ID, markInitComplete } from './runtime-state/startup-state.js';
 import { isSourceMapEnabled, setSourceMapEnabled, canTakeScreenshot, recordScreenshot, clearSourceMapCache, getMemoryPressureState, isNetworkBodyCaptureDisabled, clearScreenshotTimestamps } from './caches/cache-limits.js';
 import { flushErrorGroups, cleanupStaleErrorGroups } from './caches/error-groups.js';
@@ -27,7 +27,7 @@ import { installContextMenus } from './ui/context-menus.js';
 import { saveSetting, loadDebugModeState, loadAiWebPilotState, loadSavedSettings } from './ui/settings-storage.js';
 import { forwardToAllContentScripts, sendTabToast } from './ui/content-script-bridge.js';
 import { getActiveTab } from './ui/tracked-tab-state.js';
-import { trackingContinuity } from './runtime-state/tracking-continuity.js';
+import { trackingContinuity } from './tab-tracking/tracking-continuity.js';
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js';
 import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js';
 import { installMessageListener } from './message-handlers.js';

@@ -20,7 +20,7 @@ import {
   updateTrackedTabDetails
 } from '../lib/tabs/tracked-tab-storage.js'
 import { reportStateRecovery, resolveStateRecovery } from './runtime-state/state-recovery.js'
-import { trackingContinuity } from './runtime-state/tracking-continuity.js'
+import { trackingContinuity } from './tab-tracking/tracking-continuity.js'
 
 // =============================================================================
 // CONSTANTS - Rate Limiting & DoS Protection

@@ -5,7 +5,7 @@
 import { initReady } from '../runtime-state/startup-state.js';
 import { DebugCategory } from '../debug.js';
 import { errorMessage } from '../../lib/error-utils.js';
-import { contentReadiness, requiresContentReadiness } from '../runtime-state/content-readiness.js';
+import { contentReadiness, requiresContentReadiness } from '../tab-tracking/content-readiness.js';
 import { getConnectionGeneration, isConnectionGenerationCurrent } from '../runtime-state/connection-generation.js';
 import { reportStateRecovery, resolveStateRecovery } from '../runtime-state/state-recovery.js';
 import { debugLog, sendResult, sendAsyncResult, requiresTargetTab, resolveTargetTab, parseQueryParamsObject, withTargetContext, actionToast, isBrowserEscapeAction } from './helpers.js';

@@ -4,7 +4,7 @@
  */
 import { waitForTabLoad, getActiveTab } from '../ui/tracked-tab-state.js';
 import { debugLog, DebugCategory } from '../debug.js';
-import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js';
+import { isAiWebPilotEnabled } from '../tab-tracking/pilot-state.js';
 import { broadcastTrackingState } from '../message-routing/pilot-handler.js';
 import { setLastCSPStatus } from '../runtime-state/csp-state.js';
 import { executeWithWorldRouting, probeCSPStatus } from './query-execution.js';
@@ -12,7 +12,7 @@ import { ASYNC_COMMAND_TIMEOUT_MS } from '../../lib/constants.js';
 import { persistTrackedTab } from '../commands/helpers.js';
 import { errorMessage } from '../../lib/error-utils.js';
 import { focusTabAndWindow } from '../../lib/tabs/tab-focus.js';
-import { contentReadiness } from '../runtime-state/content-readiness.js';
+import { contentReadiness } from '../tab-tracking/content-readiness.js';
 import { delay } from '../../lib/timeout-utils.js';
 import { adoptTabIntoDrivenGroup, noteDrivenTabClosed } from '../tab-groups/driven-tab-group.js';
 // =============================================================================

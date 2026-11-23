@@ -4,7 +4,7 @@
 import { getTrackedTabInfo, getActiveTab } from '../ui/tracked-tab-state.js';
 import { clearTrackedTab, setTrackedTab } from '../../lib/tabs/tracked-tab-storage.js';
 import { DebugCategory } from '../debug.js';
-import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js';
+import { isAiWebPilotEnabled } from '../tab-tracking/pilot-state.js';
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js';
 import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js';
 import { delay } from '../../lib/timeout-utils.js';

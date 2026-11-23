@@ -152,11 +152,11 @@ describe('Bug #5: Async Execute Command Await', () => {
 
     bgModule = {
       ...(await import('../../../extension/background/pending-queries.js')),
-      ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
+      ...(await import('../../../extension/background/tab-tracking/pilot-state.js')),
       ...(await import('../../../extension/background/runtime-state/startup-state.js')),
       ...(await import('../../../extension/background/caches/snapshots.js'))
     }
-    ;({ resetPilotCacheForTesting } = await import('../../../extension/background/runtime-state/pilot-state.js'))
+    ;({ resetPilotCacheForTesting } = await import('../../../extension/background/tab-tracking/pilot-state.js'))
     bgModule.markInitComplete()
     resetPilotCacheForTesting(true)
   })
@@ -320,7 +320,7 @@ describe('Bug #5: Async Browser Action Await (regression test)', () => {
     )
     bgModule = {
       ...(await import('../../../extension/background/pending-queries.js')),
-      ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
+      ...(await import('../../../extension/background/tab-tracking/pilot-state.js')),
       ...(await import('../../../extension/background/runtime-state/startup-state.js'))
     }
     bgModule.markInitComplete()
@@ -387,7 +387,7 @@ describe('Bug #5: Extension Stability Under Load', () => {
     )
     bgModule = {
       ...(await import('../../../extension/background/pending-queries.js')),
-      ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
+      ...(await import('../../../extension/background/tab-tracking/pilot-state.js')),
       ...(await import('../../../extension/background/runtime-state/startup-state.js'))
     }
     bgModule.markInitComplete()
@@ -491,7 +491,7 @@ describe('Bug #5: Error Handling Robustness', () => {
     )
     bgModule = {
       ...(await import('../../../extension/background/pending-queries.js')),
-      ...(await import('../../../extension/background/runtime-state/pilot-state.js')),
+      ...(await import('../../../extension/background/tab-tracking/pilot-state.js')),
       ...(await import('../../../extension/background/runtime-state/startup-state.js'))
     }
     bgModule.markInitComplete()

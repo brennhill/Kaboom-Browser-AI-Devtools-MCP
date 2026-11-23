@@ -1,0 +1,5 @@
+old	new	context	note
+src/background/runtime-state/tracking-continuity.ts	src/background/tab-tracking/tracking-continuity.ts	Tab Tracking & Pilot	2 src + 1 test importer
+src/background/runtime-state/content-readiness.ts	src/background/tab-tracking/content-readiness.ts	Tab Tracking & Pilot	2 src + 1 test importer
+src/background/runtime-state/pilot-state.ts	src/background/tab-tracking/pilot-state.ts	Tab Tracking & Pilot	5 src + 8 test importers
+src/lib/tabs	src/lib/tabs	Tab Tracking & Pilot	kept in place — shared by background, content and popup entry points (lib/ is the cross-entrypoint layer); rename to lib/tab-tracking only if name parity matters
