@@ -1,3 +1,5 @@
+//go:build darwin || linux
+
 // manager_test.go — Tests for PTY session manager lifecycle, auth tokens, and concurrent access.
 
 package pty
