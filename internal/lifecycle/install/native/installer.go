@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/process/detach"
 	"io"
 	"net/http"
 	"os"
@@ -111,7 +111,7 @@ func openExtensionFolder(extDir string) bool {
 	}
 	cmd := exec.Command(name, args...)
 	cmd.Stdout, cmd.Stderr, cmd.Stdin = nil, nil, nil
-	procctl.SetDetachedProcess(cmd)
+	detach.SetDetachedProcess(cmd)
 	if err := cmd.Start(); err != nil {
 		return false
 	}
@@ -297,7 +297,7 @@ func startDaemonSilently(exe string) {
 	cmd.Stdin = nil
 
 	// Platform-specific detachment (Unix/Windows)
-	procctl.SetDetachedProcess(cmd)
+	detach.SetDetachedProcess(cmd)
 
 	if err := cmd.Start(); err != nil {
 		diag.Printf(" ⚠️  (could not start background server: %v)\n", err)

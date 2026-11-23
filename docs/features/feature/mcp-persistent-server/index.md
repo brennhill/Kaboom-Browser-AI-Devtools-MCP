@@ -102,8 +102,8 @@ code_paths:
   - internal/platform/diag/debug_file.go
   - internal/annotation/adapters/http/screenshots.go
   - internal/platform/identity/mcp.go
-  - internal/lifecycle/procctl/detach_unix.go
-  - internal/lifecycle/procctl/detach_windows.go
+  - internal/lifecycle/process/detach/detach_unix.go
+  - internal/lifecycle/process/detach/detach_windows.go
 test_paths:
   - internal/composition/toolruntime/composition_test.go
   - internal/tools/observe/handler/dispatcher_commands_test.go

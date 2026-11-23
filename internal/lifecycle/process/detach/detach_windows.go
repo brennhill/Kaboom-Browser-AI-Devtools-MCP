@@ -5,7 +5,7 @@
 // Why: Enables persistent background process launch without tying child lifetime to console session state.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package procctl
+package detach
 
 import (
 	"os/exec"

@@ -48,7 +48,7 @@ func TestBuildRetainsDetachedProcessBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(source), "procctl.SetDetachedProcess(cmd)") {
+	if !strings.Contains(string(source), "detach.SetDetachedProcess(cmd)") {
 		t.Fatal("Build must detach the persistent daemon process")
 	}
 }

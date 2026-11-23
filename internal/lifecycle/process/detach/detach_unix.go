@@ -5,7 +5,7 @@
 // Why: Enables daemonized subprocess lifecycle behavior without inheriting parent process groups.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package procctl
+package detach
 
 import (
 	"os/exec"

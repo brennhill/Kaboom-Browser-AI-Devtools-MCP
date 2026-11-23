@@ -2177,17 +2177,17 @@
       "mutable_globals": 0,
       "exports": 8
     },
-    "internal/lifecycle/procctl/detach_unix.go": {
+    "internal/lifecycle/process/detach/detach_unix.go": {
       "mutable_globals": 0,
       "exports": 1
     },
-    "internal/lifecycle/procctl/detach_windows.go": {
+    "internal/lifecycle/process/detach/detach_windows.go": {
       "mutable_globals": 0,
       "exports": 1
     },
     "internal/platform/util/response.go": {
       "mutable_globals": 0,
-      "exports": 5
+      "exports": 3
     },
     "internal/analysis/verification/contract.go": {
       "mutable_globals": 0,
@@ -2236,6 +2236,10 @@
     "scripts/uat/human/runlog/runlog.go": {
       "mutable_globals": 0,
       "exports": 18
+    },
+    "internal/platform/httpx/response.go": {
+      "mutable_globals": 0,
+      "exports": 2
     }
   }
 }

@@ -6,7 +6,7 @@ package cli
 
 import (
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/process/detach"
 	"io"
 	"os"
 	"os/exec"
@@ -195,7 +195,7 @@ func EnsureDaemon(port int, rc RuntimeConfig) (string, error) {
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	cmd.Stdin = nil
-	procctl.SetDetachedProcess(cmd)
+	detach.SetDetachedProcess(cmd)
 
 	if err := cmd.Start(); err != nil {
 		return "", fmt.Errorf("failed to start daemon: %w", err)

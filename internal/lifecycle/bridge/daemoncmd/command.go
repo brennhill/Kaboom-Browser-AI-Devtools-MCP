@@ -5,7 +5,7 @@ package daemoncmd
 
 import (
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/process/detach"
 	"os"
 	"os/exec"
 
@@ -36,6 +36,6 @@ func Build(port int, logFile string, maxEntries int, processArgv0 func(string) s
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	cmd.Stdin = nil
-	procctl.SetDetachedProcess(cmd)
+	detach.SetDetachedProcess(cmd)
 	return cmd, nil
 }

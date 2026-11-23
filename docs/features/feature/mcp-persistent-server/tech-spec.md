@@ -11,7 +11,7 @@ last_verified_date: 2026-03-05
 
 ## Architecture
 - Startup/bridge orchestration: `cmd/browser-agent/bridge*.go`
-- Cross-platform process helpers: `internal/lifecycle/procctl/detach_unix.go`, `internal/lifecycle/procctl/detach_windows.go`
+- Cross-platform process helpers: `internal/lifecycle/process/detach/detach_unix.go`, `internal/lifecycle/process/detach/detach_windows.go`
 - Startup convergence/leadership: `bridge_startup_orchestration.go`, lock/state helpers
 
 ## Constraints

@@ -1,7 +1,7 @@
 //go:build !windows
 
 // detach_unix_test.go — Tests detached child-process setup on Unix.
-package procctl
+package detach
 
 import (
 	"os/exec"
