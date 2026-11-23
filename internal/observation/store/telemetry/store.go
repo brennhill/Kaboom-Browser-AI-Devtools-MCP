@@ -4,6 +4,7 @@
 package telemetrystore
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/binaryformat"
 	"sync"
 	"time"
 
@@ -105,7 +106,7 @@ func setBinaryFormat(payload string, name *string, confidence *float64) bool {
 	if *name != "" || payload == "" {
 		return false
 	}
-	format := util.DetectBinaryFormat([]byte(payload))
+	format := binaryformat.DetectBinaryFormat([]byte(payload))
 	if format == nil {
 		return false
 	}

@@ -6,13 +6,12 @@ package screenrec
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/httpx"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 )
 
 // maxRevealRequestBytes caps the /recordings/reveal JSON request body. It mirrors
@@ -58,13 +57,13 @@ func isPathInAnyDir(absPath string, dirs []string) bool {
 func validateRevealPath(w http.ResponseWriter, rawPath string) string {
 	dirs := ReadDirs()
 	if len(dirs) == 0 {
-		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Could not resolve recordings directory"})
+		httpx.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Could not resolve recordings directory"})
 		return ""
 	}
 
 	absPath, status, errMsg := resolveRevealPath(rawPath, dirs)
 	if status != 0 {
-		util.JSONResponse(w, status, map[string]string{"error": errMsg})
+		httpx.JSONResponse(w, status, map[string]string{"error": errMsg})
 		return ""
 	}
 
@@ -103,7 +102,7 @@ func revealInFileManager(absPath string) error {
 // HandleReveal handles POST /recordings/reveal — opens Finder/Explorer to the file.
 func HandleReveal(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		httpx.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
@@ -112,11 +111,11 @@ func HandleReveal(w http.ResponseWriter, r *http.Request) {
 		Path string `json:"path"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 	if body.Path == "" {
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Missing path"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Missing path"})
 		return
 	}
 
@@ -126,9 +125,9 @@ func HandleReveal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := revealInFileManager(absPath); err != nil {
-		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Failed to reveal file: " + err.Error()})
+		httpx.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Failed to reveal file: " + err.Error()})
 		return
 	}
 
-	util.JSONResponse(w, http.StatusOK, map[string]string{"status": "revealed", "path": absPath})
+	httpx.JSONResponse(w, http.StatusOK, map[string]string{"status": "revealed", "path": absPath})
 }

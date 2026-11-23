@@ -6,7 +6,7 @@
 // single closed unit behind one entry point (DetectBinaryFormat), they share the
 // binaryMarker table type, and no detector is reachable or useful on its own.
 
-package util
+package binaryformat
 
 import "fmt"
 

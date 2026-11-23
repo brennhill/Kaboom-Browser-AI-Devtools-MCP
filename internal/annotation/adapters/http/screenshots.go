@@ -7,6 +7,7 @@ package mediaapi
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/httpx"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -88,7 +89,7 @@ func saveImageToScreenshotsDir(filename string, imageData []byte) (string, int, 
 // If query_id is provided, resolves the pending query directly (on-demand screenshot flow).
 func (h *Handler) HandleScreenshot(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		httpx.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
@@ -105,24 +106,24 @@ func (h *Handler) HandleScreenshot(w http.ResponseWriter, r *http.Request) {
 		CoordinateFrameError string                               `json:"coordinate_frame_error"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 	if status, msg := h.checkScreenshotRateLimit(r.Header.Get("X-Kaboom-Client"), body.QueryID); status != 0 {
-		util.JSONResponse(w, status, map[string]string{"error": msg})
+		httpx.JSONResponse(w, status, map[string]string{"error": msg})
 		return
 	}
 
 	imageData, err := util.DecodeDataURL(body.DataURL)
 	if err != nil {
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
 	filename := util.BuildScreenshotFilename(body.URL, body.CorrelationID)
 	savePath, status, saveErr := saveImageToScreenshotsDir(filename, imageData)
 	if status != 0 {
-		util.JSONResponse(w, status, map[string]string{"error": saveErr})
+		httpx.JSONResponse(w, status, map[string]string{"error": saveErr})
 		return
 	}
 
@@ -163,7 +164,7 @@ func (h *Handler) HandleScreenshot(w http.ResponseWriter, r *http.Request) {
 		_, _ = h.pushRouter.DeliverPush(ev)
 	}
 
-	util.JSONResponse(w, http.StatusOK, result)
+	httpx.JSONResponse(w, http.StatusOK, result)
 }
 
 // addCoordinateFrame attaches the frame that makes a screenshot addressable, or the

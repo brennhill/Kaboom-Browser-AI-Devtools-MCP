@@ -5,11 +5,11 @@ package daemoncmd
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/process/detach"
 	"os"
 	"os/exec"
 
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/paths"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 )
 
 // Build constructs the daemon command with persistent stdio and runtime options.
@@ -36,6 +36,6 @@ func Build(port int, logFile string, maxEntries int, processArgv0 func(string) s
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	cmd.Stdin = nil
-	util.SetDetachedProcess(cmd)
+	detach.SetDetachedProcess(cmd)
 	return cmd, nil
 }

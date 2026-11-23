@@ -4,7 +4,7 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-11-21
+last_reviewed: 2026-11-23
 code_paths:
   - internal/lifecycle/listenport/store.go
   - internal/lifecycle/runtimeflags/flags.go
@@ -102,8 +102,8 @@ code_paths:
   - internal/platform/diag/debug_file.go
   - internal/annotation/adapters/http/screenshots.go
   - internal/platform/identity/mcp.go
-  - internal/platform/util/proc_unix.go
-  - internal/platform/util/proc_windows.go
+  - internal/lifecycle/process/detach/detach_unix.go
+  - internal/lifecycle/process/detach/detach_windows.go
 test_paths:
   - internal/composition/toolruntime/composition_test.go
   - internal/tools/observe/handler/dispatcher_commands_test.go

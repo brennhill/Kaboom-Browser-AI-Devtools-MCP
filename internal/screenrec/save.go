@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/httpx"
 	"io"
 	"net/http"
 	"os"
@@ -19,7 +20,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle/doctor/statediag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/state/file"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
 
@@ -50,16 +50,16 @@ func parseVideoUpload(w http.ResponseWriter, r *http.Request, diagnostics stated
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		parseErr := strings.ToLower(err.Error())
 		if strings.Contains(parseErr, "request body too large") {
-			util.JSONResponse(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "RECORDING_SAVE: Upload exceeds 1GB limit"})
+			httpx.JSONResponse(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "RECORDING_SAVE: Upload exceeds 1GB limit"})
 			return nil
 		}
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "RECORDING_SAVE: Failed to parse multipart form"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "RECORDING_SAVE: Failed to parse multipart form"})
 		return nil
 	}
 
 	videoFile, _, err := r.FormFile("video")
 	if err != nil {
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "RECORDING_SAVE: Missing 'video' field"})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "RECORDING_SAVE: Missing 'video' field"})
 		return nil
 	}
 
@@ -68,7 +68,7 @@ func parseVideoUpload(w http.ResponseWriter, r *http.Request, diagnostics stated
 		if closeErr := videoFile.Close(); closeErr != nil {
 			reportSavedVideoRecovery(diagnostics, "A rejected screen-recording upload could not close its temporary input cleanly.")
 		}
-		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": metaErr})
+		httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": metaErr})
 		return nil
 	}
 
@@ -197,7 +197,7 @@ func handleSaveWithOperations(
 	ops videoDiskOperations,
 ) {
 	if r.Method != "POST" {
-		util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		httpx.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, MaxUploadSizeBytes)
@@ -219,14 +219,14 @@ func handleSaveWithOperations(
 
 	dir, err := Dir()
 	if err != nil {
-		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		httpx.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
 
 	videoPath, writeErr := writeVideoToDiskWithOperations(dir, &upload.meta, upload.videoFile, ops)
 	if writeErr != nil {
 		reportSavedVideoRecovery(diagnostics, "A screen recording could not be committed as a complete video and metadata pair; incomplete files were removed.")
-		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": writeErr.Error()})
+		httpx.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": writeErr.Error()})
 		return
 	}
 	statediag.Resolve(diagnostics, "saved_video_state")
@@ -249,7 +249,7 @@ func handleSaveWithOperations(
 		}
 	}
 
-	util.JSONResponse(w, http.StatusOK, map[string]any{
+	httpx.JSONResponse(w, http.StatusOK, map[string]any{
 		"status": "saved",
 		"name":   upload.meta.Name,
 		"path":   videoPath,

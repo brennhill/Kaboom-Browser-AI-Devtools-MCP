@@ -4,13 +4,13 @@ feature_id: feature-binary-format-detection
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-08-06
+last_reviewed: 2026-11-23
 code_paths:
   - internal/observation/store/telemetry/store.go
-  - internal/platform/util/binary.go
+  - internal/observation/binaryformat/binary.go
 test_paths:
-  - internal/platform/util/binary_test.go
-  - internal/platform/util/binary_protobuf_bson_test.go
+  - internal/observation/binaryformat/binary_test.go
+  - internal/observation/binaryformat/binary_protobuf_bson_test.go
   - internal/observation/testsupport/pipeline/binary_format_integration_test.go
 last_verified_version: 0.9.0
 last_verified_date: 2026-08-04

@@ -1,5 +1,5 @@
 // binary_protobuf_bson_test.go — Tests binary formats, invariants, and fuzz safety.
-package util
+package binaryformat
 
 import (
 	"testing"

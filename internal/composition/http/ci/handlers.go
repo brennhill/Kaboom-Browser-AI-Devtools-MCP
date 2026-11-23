@@ -5,13 +5,13 @@ package ciapi
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/httpx"
 	"io"
 	"net/http"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/observation/store/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/util"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/sync/runtime"
 )
 
@@ -37,14 +37,14 @@ type Resetter interface {
 func Snapshot(logs Logs, captured Capture) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+			httpx.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 			return
 		}
 		var sinceTime time.Time
 		if since := r.URL.Query().Get("since"); since != "" {
 			parsed, err := time.Parse(time.RFC3339Nano, since)
 			if err != nil {
-				util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid since timestamp"})
+				httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid since timestamp"})
 				return
 			}
 			sinceTime = parsed
@@ -63,7 +63,7 @@ func Snapshot(logs Logs, captured Capture) http.HandlerFunc {
 				testID = activeIDs[0]
 			}
 		}
-		util.JSONResponse(w, http.StatusOK, SnapshotResponse{
+		httpx.JSONResponse(w, http.StatusOK, SnapshotResponse{
 			Timestamp:       time.Now().UTC().Format(time.RFC3339Nano),
 			TestID:          testID,
 			Logs:            entries,
@@ -79,13 +79,13 @@ func Snapshot(logs Logs, captured Capture) http.HandlerFunc {
 func Clear(logs Logs, resetter Resetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost && r.Method != http.MethodDelete {
-			util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+			httpx.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 			return
 		}
 		previousCount := logs.EntryCount()
 		logs.ClearEntries()
 		resetter.ClearAll()
-		util.JSONResponse(w, http.StatusOK, map[string]any{"cleared": true, "entries_removed": previousCount})
+		httpx.JSONResponse(w, http.StatusOK, map[string]any{"cleared": true, "entries_removed": previousCount})
 	}
 }
 
@@ -93,25 +93,25 @@ func Clear(logs Logs, resetter Resetter) http.HandlerFunc {
 func TestBoundary(captured Capture) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+			httpx.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 			return
 		}
 		body, err := io.ReadAll(io.LimitReader(r.Body, 1024))
 		if err != nil {
-			util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Failed to read body"})
+			httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Failed to read body"})
 			return
 		}
 		var req TestBoundaryRequest
 		if err := json.Unmarshal(body, &req); err != nil {
-			util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+			httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 			return
 		}
 		if req.TestID == "" {
-			util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "test_id is required"})
+			httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "test_id is required"})
 			return
 		}
 		if req.Action != "start" && req.Action != "end" {
-			util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "action must be 'start' or 'end'"})
+			httpx.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "action must be 'start' or 'end'"})
 			return
 		}
 		if req.Action == "start" {
@@ -119,7 +119,7 @@ func TestBoundary(captured Capture) http.HandlerFunc {
 		} else {
 			captured.Extension().SetTestBoundaryEnd(req.TestID)
 		}
-		util.JSONResponse(w, http.StatusOK, map[string]any{
+		httpx.JSONResponse(w, http.StatusOK, map[string]any{
 			"test_id": req.TestID, "action": req.Action, "timestamp": time.Now().UTC().Format(time.RFC3339Nano),
 		})
 	}
