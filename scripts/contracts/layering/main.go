@@ -765,7 +765,7 @@ func main() {
 		os.Exit(1)
 	}
 	matrixFailures, sizeFailures, ownershipFailures := 0, 0, 0
-	if violations := evaluateMatrix(merged); len(violations) > 0 {
+	if violations := append(evaluateMatrix(merged), contextRootViolations(merged)...); len(violations) > 0 {
 		matrixFailures = len(violations)
 		for _, v := range violations {
 			fmt.Fprintf(os.Stderr, "❌ layering: %s\n", v)
