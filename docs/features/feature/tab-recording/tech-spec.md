@@ -1,7 +1,7 @@
 ---
 doc_type: tech-spec
 feature_id: feature-tab-recording
-last_reviewed: 2026-07-25
+last_reviewed: 2026-11-23
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -299,7 +299,7 @@ New section below existing toggles:
 - Stop: send `{type: "screen_recording_stop"}` to background
 - Timer: `setInterval` updates display every second while recording
 
-### 4. Go Server: Recording Endpoint (`cmd/browser-agent/tools_recording.go`)
+### 4. Go Server: Recording Endpoint (`internal/screenrec/ (recording save + listing)`)
 
 New file, ~200 LOC:
 
@@ -340,7 +340,7 @@ func (h *Handler) handleRecordingSave(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-### 5. Go Server: Observe Handler (`cmd/browser-agent/tools_observe.go`)
+### 5. Go Server: Observe Handler (`internal/tools/observe/handler/dispatcher.go`)
 
 New case in observe dispatch:
 
@@ -674,8 +674,8 @@ Extension:
   extension/popup.js                (MODIFY — add recording UI logic)
 
 Go Server:
-  cmd/browser-agent/tools_recording.go (NEW — ~150 LOC, save endpoint + types)
-  cmd/browser-agent/tools_observe.go   (MODIFY — add saved_videos case)
+  internal/screenrec/ (recording save + listing) (NEW — ~150 LOC, save endpoint + types)
+  internal/tools/observe/handler/dispatcher.go   (MODIFY — add saved_videos case)
   cmd/browser-agent/tools_interact.go  (MODIFY — add screen_recording_start/screen_recording_stop dispatch)
   cmd/browser-agent/server.go          (MODIFY — register /recordings/save route)
 ```
