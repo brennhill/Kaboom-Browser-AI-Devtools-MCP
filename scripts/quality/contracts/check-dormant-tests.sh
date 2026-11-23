@@ -93,7 +93,7 @@ while IFS= read -r file; do
 
   [ -n "$suspicious" ] || continue
 
-  if echo "$DORMANT_ALLOWLIST" | grep -qxF "$file"; then
+  if grep -qxF "$file" <<<"$DORMANT_ALLOWLIST"; then
     continue
   fi
 
@@ -116,7 +116,7 @@ done < <(grep -rl '^//go:build' --include='*_test.go' . 2>/dev/null |
 # ---------------------------------------------------------------------------
 while IFS= read -r file; do
   [ -n "$file" ] || continue
-  if echo "$DORMANT_ALLOWLIST" | grep -qxF "$file"; then
+  if grep -qxF "$file" <<<"$DORMANT_ALLOWLIST"; then
     continue
   fi
   echo "❌ $file is a Go test disabled by file extension."
@@ -135,7 +135,7 @@ done < <(find . -name '*_test.go.*' \
 ACTIVE_JS_TESTS=$(bash scripts/uat/runners/test-js-sharded.sh --list)
 while IFS= read -r file; do
   [ -n "$file" ] || continue
-  if ! echo "$ACTIVE_JS_TESTS" | grep -qxF "$file"; then
+  if ! grep -qxF "$file" <<<"$ACTIVE_JS_TESTS"; then
     echo "❌ $file is a Node test absent from scripts/uat/runners/test-js-sharded.sh."
     echo "   Add its root/extension to the canonical inventory or remove the stale test."
     echo
