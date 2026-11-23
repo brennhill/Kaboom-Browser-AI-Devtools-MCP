@@ -715,3 +715,12 @@ describe('comprehensive UAT harness regressions', () => {
     assert.equal(result.status, 143)
   })
 })
+
+// Regression (kaboom-6b7e): under `set -o pipefail`, `echo "$BIG" | grep -q` fails when grep
+// exits on its first match while echo is still writing (SIGPIPE), so check-dormant-tests.sh
+// intermittently reported tracked tests as missing. Membership checks must not pipe into grep -q.
+test('check-dormant-tests never pipes a variable into grep -q under pipefail', () => {
+  const script = readFileSync(join(__dirname, '..', '..', '..', 'scripts', 'quality', 'contracts', 'check-dormant-tests.sh'), 'utf8')
+  assert.match(script, /set -euo pipefail/)
+  assert.doesNotMatch(script, /echo "\$[A-Z_]+" \| grep -q/, 'use a here-string (grep -q ... <<<"$VAR") instead')
+})
