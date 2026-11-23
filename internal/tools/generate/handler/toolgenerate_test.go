@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/reproduction"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/mcp"
 )
@@ -194,4 +195,23 @@ func extractQuoted(s string) []string {
 		out = append(out, parts[i])
 	}
 	return out
+}
+
+func TestReproductionGenerateFixturesUsesCapturedBodies(t *testing.T) {
+	d := newGenDeps()
+	d.cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "navigate", ToURL: "https://app.test/", Timestamp: 1}})
+	d.cap.Telemetry().AddNetworkBodies([]types.NetworkBody{{Method: "GET", URL: "https://app.test/api", Status: 200, ResponseBody: "{}"}})
+	dispatcher := NewDispatcher(d.deps(), fakeTestGenerator{})
+
+	type result struct {
+		Script string `json:"script"`
+	}
+	with := parseResultJSON[result](t, dispatcher.Handle(genReq(), json.RawMessage(`{"what":"reproduction","output_format":"playwright","generate_fixtures":true}`)))
+	if !strings.Contains(with.Script, "page.route('https://app.test/api'") {
+		t.Fatalf("generate_fixtures must install a route for the captured body:\n%s", with.Script)
+	}
+	without := parseResultJSON[result](t, dispatcher.Handle(genReq(), json.RawMessage(`{"what":"reproduction","output_format":"playwright"}`)))
+	if strings.Contains(without.Script, "page.route(") {
+		t.Fatalf("fixtures must be opt-in:\n%s", without.Script)
+	}
 }

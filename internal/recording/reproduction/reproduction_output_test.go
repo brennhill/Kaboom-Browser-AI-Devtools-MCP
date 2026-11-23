@@ -1,7 +1,7 @@
-// Purpose: Golden-file snapshot tests for reproduction script generation output stability.
+// Purpose: Reproduction script output tests — golden-file stability and the optional extras (kaboom-ziws).
 // Docs: docs/features/feature/reproduction-scripts/index.md
 
-// golden_test.go — Golden file validation for Playwright reproduction scripts.
+// reproduction_output_test.go — Golden file validation and option output for reproduction scripts.
 package reproduction
 
 import (
@@ -9,6 +9,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/platform/types"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -97,5 +98,61 @@ func TestGoldenReproductionPlaywright(t *testing.T) {
 			t.Fatalf("Run with UPDATE_GOLDEN=1 to update golden files")
 		}
 		t.Logf("Reproduction golden file validation passed (%d bytes)", len(normalizedScript))
+	}
+}
+
+func optionActions() []types.EnhancedAction {
+	return []types.EnhancedAction{
+		{Type: "navigate", ToURL: "https://app.test/login", Timestamp: 1000},
+		{Type: "click", Selectors: map[string]any{"cssPath": "#go"}, Timestamp: 2000},
+	}
+}
+
+func TestPlaywrightIncludeScreenshots(t *testing.T) {
+	script := GeneratePlaywrightScript(optionActions(), Params{OutputFormat: "playwright", IncludeScreenshots: true})
+	if got := strings.Count(script, "await page.screenshot("); got != 2 {
+		t.Fatalf("want a screenshot after the navigation and at the end, got %d:\n%s", got, script)
+	}
+	plain := GeneratePlaywrightScript(optionActions(), Params{OutputFormat: "playwright"})
+	if strings.Contains(plain, "page.screenshot(") {
+		t.Fatalf("screenshots must be opt-in:\n%s", plain)
+	}
+}
+
+func TestPlaywrightVisualAssertions(t *testing.T) {
+	script := GeneratePlaywrightScript(optionActions(), Params{OutputFormat: "playwright", VisualAssertions: true})
+	if got := strings.Count(script, "await expect(page).toHaveScreenshot("); got != 2 {
+		t.Fatalf("want visual assertions after the navigation and at the end, got %d:\n%s", got, script)
+	}
+}
+
+func TestPlaywrightGenerateFixtures(t *testing.T) {
+	fixtures := []types.NetworkBody{
+		{Method: "GET", URL: "https://app.test/api/user", Status: 200, ContentType: "application/json", ResponseBody: `{"name":"old"}`},
+		{Method: "GET", URL: "https://app.test/api/user", Status: 200, ContentType: "application/json", ResponseBody: `{"name":"new"}`},
+		{Method: "GET", URL: "https://app.test/api/big", Status: 200, ResponseBody: "partial", ResponseTruncated: true},
+	}
+	script := GeneratePlaywrightScript(optionActions(), Params{OutputFormat: "playwright", GenerateFixtures: true, Fixtures: fixtures})
+	if got := strings.Count(script, "await page.route("); got != 1 {
+		t.Fatalf("want one route for the deduplicated user API (truncated skipped), got %d:\n%s", got, script)
+	}
+	if !strings.Contains(script, `{"name":"new"}`) || strings.Contains(script, "old") {
+		t.Fatalf("latest response must win:\n%s", script)
+	}
+	if !strings.Contains(script, "skipped 1 truncated") {
+		t.Fatalf("skipped truncated fixtures must be noted:\n%s", script)
+	}
+	if strings.Index(script, "page.route(") > strings.Index(script, "page.goto(") {
+		t.Fatalf("routes must be installed before the first navigation:\n%s", script)
+	}
+}
+
+func TestKaboomFormatHonoursOptions(t *testing.T) {
+	fixtures := []types.NetworkBody{{Method: "GET", URL: "https://app.test/api/user", Status: 200, ResponseBody: "{}"}}
+	script := GenerateKaboomScript(optionActions(), Params{IncludeScreenshots: true, VisualAssertions: true, GenerateFixtures: true, Fixtures: fixtures})
+	for _, want := range []string{"Take a screenshot", "Compare the page against baseline", "# Network fixtures", "GET https://app.test/api/user -> 200"} {
+		if !strings.Contains(script, want) {
+			t.Fatalf("kaboom script missing %q:\n%s", want, script)
+		}
 	}
 }

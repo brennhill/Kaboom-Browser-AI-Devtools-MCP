@@ -126,6 +126,9 @@ func (h *Dispatcher) getReproductionScript(req mcp.JSONRPCRequest, args json.Raw
 	}
 	allActions := h.deps.Telemetry.Actions().Snapshot().Actions
 	actions := reproduction.FilterLastN(allActions, params.LastN)
+	if params.GenerateFixtures {
+		params.Fixtures = h.deps.Telemetry.NetworkBodies().Snapshot().Bodies
+	}
 	script := reproduction.GenerateScript(actions, params)
 	result := reproduction.BuildResult(script, params, actions, allActions)
 	return mcp.Succeed(req, fmt.Sprintf("Reproduction script (%s, %d actions)", params.OutputFormat, len(actions)), result)
