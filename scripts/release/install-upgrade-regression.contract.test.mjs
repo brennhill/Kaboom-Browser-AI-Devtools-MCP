@@ -88,12 +88,23 @@ test('upgrade regression always restores its disposable host', () => {
 
 test('upgrade regression cleanup failure never masks the stage failure', () => {
   const source = fs.readFileSync(scriptPath, 'utf8')
-  const finallyBlock = source.slice(source.indexOf('} finally {', source.indexOf('async function main()')))
-  assert.match(source, /stagesPassed = true\s*\} finally \{/, 'main must record that every stage passed')
+  const teardown = source.slice(source.indexOf('async function teardownSandbox('))
+  assert.match(source, /stagesPassed = true\s*\} finally \{\s*await teardownSandbox\(ctx, stagesPassed\)/)
   assert.match(
-    finallyBlock,
+    teardown,
     /stagesPassed \? cleanupHost\(\) : runCleanupReportingErrors\(\)/,
     'after a stage failure, cleanup errors are only logged'
+  )
+})
+
+test('upgrade regression never leaves a running kaboom process locking the sandbox', () => {
+  const source = fs.readFileSync(scriptPath, 'utf8')
+  const teardown = source.slice(source.indexOf('async function teardownSandbox('))
+  assert.match(teardown, /await crashDaemon\(ctx\.daemon\)/, 'teardown must tree-kill and await the stage daemon')
+  assert.match(
+    source,
+    /waitForChildExit\(rejected, 5000\)\.finally\(\(\) => crashDaemon\(rejected\)\)/,
+    'a stuck rollback replacement must be killed'
   )
 })
 

@@ -9,6 +9,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { spawn, spawnSync } from 'node:child_process'
 import { resolveDaemonServiceName } from './daemon-health-identity.mjs'
+import { pidAlive, waitForChildExit } from './sandbox-process.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -124,16 +125,6 @@ function tryRun(cmd, args, options = {}) {
   })
 }
 
-function pidAlive(pid) {
-  if (!pid || pid <= 0) return false
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch {
-    return false
-  }
-}
-
 async function waitForPortHealth(port, timeoutMs = 20000) {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
@@ -157,44 +148,6 @@ async function expectDoctorIncident(port, code, correlation) {
   if (!payload.includes(code) || !payload.includes(correlation)) {
     fail('expected Doctor incident was absent', `code=${code} correlation=${correlation}`)
   }
-}
-
-async function waitForChildExit(child, timeoutMs = 10000) {
-  if (!child) return true
-  if (child.exitCode !== null || child.signalCode !== null) return true
-
-  await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      // On Windows, process handles can miss/lag exit events after external taskkill.
-      // Treat "pid is already gone" as a successful exit to avoid false negatives.
-      if (!pidAlive(child.pid)) {
-        cleanup()
-        resolve()
-        return
-      }
-      cleanup()
-      reject(new Error(`child ${child.pid} did not exit within ${timeoutMs}ms`))
-    }, timeoutMs)
-
-    const onExit = () => {
-      cleanup()
-      resolve()
-    }
-    const onError = (err) => {
-      cleanup()
-      reject(err)
-    }
-    const cleanup = () => {
-      clearTimeout(timer)
-      child.off('exit', onExit)
-      child.off('error', onError)
-    }
-
-    child.on('exit', onExit)
-    child.on('error', onError)
-  })
-
-  return true
 }
 
 function getFreePort() {
@@ -771,19 +724,23 @@ async function main() {
     await stageUninstallCleanup(ctx)
     stagesPassed = true
   } finally {
-    stopDaemon(packed.wrapper, port, envWithShims)
-    stopDaemon(oldBinary, port, envWithShims)
-    if (ctx.daemon && ctx.daemon.pid && pidAlive(ctx.daemon.pid)) {
-      try {
-        process.kill(ctx.daemon.pid)
-      } catch {
-        // Best effort cleanup.
-      }
-    }
-    persistEvidence()
-    stagesPassed ? cleanupHost() : runCleanupReportingErrors()
-    cleanupHost = () => {}
+    await teardownSandbox(ctx, stagesPassed)
   }
+}
+
+// teardownSandbox stops every sandbox daemon (tree-killing a survivor and waiting
+// for it to exit, so no kaboom process keeps an exe locked), then removes the
+// host. After a stage failure a cleanup error is only logged, never replacing it.
+async function teardownSandbox(ctx, stagesPassed) {
+  stopDaemon(ctx.packed.wrapper, ctx.port, ctx.envWithShims)
+  stopDaemon(ctx.oldBinary, ctx.port, ctx.envWithShims)
+  await crashDaemon(ctx.daemon).catch((killErr) => {
+    if (stagesPassed) throw killErr
+    process.stderr.write(`[upgrade-regression] ERROR: sandbox daemon survived teardown: ${killErr.message}\n`)
+  })
+  persistEvidence()
+  stagesPassed ? cleanupHost() : runCleanupReportingErrors()
+  cleanupHost = () => {}
 }
 
 main().catch((err) => {
