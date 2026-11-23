@@ -163,6 +163,10 @@ arrow is broken:
   per-context rules. Observation Capture, Event Recording, Connection & Sync
   and Extension Ingestion each list the upstream contexts they may not import.
   Violations print the context name from this guide.
+- `scripts/contracts/layering/context_roots.go:contextRoots` enforces the
+  physical layout: every package under `internal/` sits in a declared context
+  root (`internal/<context>/...`). A new top-level folder fails the build until
+  it is moved into a context or declared there with its owning context.
 
 ## Wire types
 
